@@ -6,18 +6,34 @@
 #[macro_use]
 extern crate serde_derive;
 
-use rustc_driver::{self, Compilation};
-use rustc_driver::driver::{CompileController, PhaseController, CompileState};
+#[allow(unused_extern_crates)]
+extern crate rustc_driver;
+
+#[allow(unused_extern_crates)]
+extern crate rustc;
+
+#[allow(unused_extern_crates)]
+extern crate rustc_plugin;
+
+#[allow(unused_extern_crates)]
+extern crate syntax;
+
+use self::rustc_driver::{driver::CompileController, driver::PhaseController, Compilation};
+use self::rustc_driver::driver::CompileState;
+
+
+//use rustc_driver::driver::{CompileController, PhaseController, CompileState};
 use std::process::{exit, Command};
-use syntax::ast::NodeId;
-use rustc::hir::map::{Map};
-use rustc::hir;
-use rustc::hir::intravisit::{NestedVisitorMap, Visitor, walk_crate};
-use rustc::hir::intravisit::*;
-use rustc::hir::itemlikevisit::ItemLikeVisitor;
-use syntax::ast::Name;
-use syntax::source_map::Span;
+use crate::syntax::ast::NodeId;
+use crate::rustc::hir::map::{Map};
+use crate::rustc::hir;
+use crate::rustc::hir::intravisit::{NestedVisitorMap, Visitor, walk_crate};
+use crate::rustc::hir::intravisit::*;
+use crate::rustc::hir::itemlikevisit::ItemLikeVisitor;
+use crate::syntax::ast::Name;
+use crate::syntax::source_map::Span;
 use std::env;
+
 
 pub mod data;
 
