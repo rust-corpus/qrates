@@ -29,7 +29,6 @@ use crate::rustc::hir::map::{Map};
 use crate::rustc::hir;
 use crate::rustc::hir::intravisit::{NestedVisitorMap, Visitor, walk_crate};
 use crate::rustc::hir::intravisit::*;
-use crate::rustc::hir::itemlikevisit::ItemLikeVisitor;
 use crate::syntax::ast::Name;
 use crate::syntax::source_map::Span;
 use std::env;
@@ -102,7 +101,10 @@ exit(rustc_driver::run(move || {
         let crate_version_env = env::var("CARGO_PKG_VERSION").unwrap_or_default();
         let crate_name = cs.crate_name.unwrap();
         if crate_name_env != crate_name {
-            println!("\x1b[31mdifferent names!: {}, {}\x1b[0m", crate_name_env, crate_name);
+            // happens when the crate name contains a '-', this will then get
+            // renamed to a '_' to become a rust identifier.
+
+            //println!("\x1b[31mdifferent names!: {}, {}\x1b[0m", crate_name_env, crate_name);
         }
         let tcx = &cs.tcx.expect("no valid tcx");
         let hir_map = &tcx.hir;
@@ -145,16 +147,19 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         if let Some(hir::Node::Item(item)) = maybe_node {
             let name: &str = &item.name.as_str();
             let path = self.map.def_path(self.map.local_def_id(id));
+            let parent_path = data::UniqueIdentifier::from_def_path_of_mod(&path).remove_last_segment();
+            let parent_id = self.crate_data.get_mod_id(&parent_path);
+
             self.crate_data.mods.push(data::Mod {
                 name: String::from(name),
                 functions: vec![],
-                parent_mod_id: Some(0) // TODO get this index
+                parent_mod_id: parent_id
             });
-            println!("{:?}", data::UniqueIdentifier::from_def_path_of_mod(&path));
-        }
-        else if let Some(hir::Node::ForeignItem(item)) = maybe_node {
-            //let name: &str = &item.name.as_str();
-            //println!("visited foreign mod: {:?}", maybe_node);
+            /*println!("{:?}", data::UniqueIdentifier::from_def_path_of_mod(&path));
+            
+            let print_path = self.crate_data.get_mod_id(&data::UniqueIdentifier::from_def_path_of_mod(&path));
+            let modul = &self.crate_data.mods[print_path.unwrap_or(0)];
+            println!("{:?}, {:?}", print_path, modul);*/
         }
         else {
             //println!("visited mod that is not an item: {:?}", maybe_node);
