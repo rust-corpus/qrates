@@ -7,4 +7,5 @@ authors = ["Nicolas Winkler <niwinkle@student.ethz.ch>"]
 edition = "2018"
 
 [dependencies]
-
+serde = "*"
+serde_derive = "*"
