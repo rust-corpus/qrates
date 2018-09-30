@@ -2,7 +2,10 @@
 #![feature(rustc_private)]
 //#![feature(rust_2018_preview)]
 
-//extern crate serde;
+extern crate serde;
+extern crate serde_json;
+extern crate bincode;
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -26,16 +29,20 @@ use self::rustc_driver::driver::CompileState;
 use std::process::{exit, Command};
 use crate::syntax::ast::NodeId;
 use crate::rustc::hir::map::{Map};
+use crate::rustc::ty::TyCtxt;
 use crate::rustc::hir;
 use crate::rustc::hir::intravisit::{NestedVisitorMap, Visitor, walk_crate};
 use crate::rustc::hir::intravisit::*;
 use crate::syntax::ast::Name;
 use crate::syntax::source_map::Span;
+
+use std::fs::File;
 use std::env;
 
+const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
+const USE_JSON: bool = true;
 
 pub mod data;
-
 
 fn main() {
 exit(rustc_driver::run(move || {
@@ -98,7 +105,11 @@ exit(rustc_driver::run(move || {
 
     controller.after_analysis.callback = box |cs: &mut CompileState| {
         let crate_name_env = env::var("CARGO_PKG_NAME").unwrap_or_default();
-        let crate_version_env = env::var("CARGO_PKG_VERSION").unwrap_or_default();
+        let crate_version = (
+            env::var("CARGO_PKG_VERSION_MAJOR").unwrap_or_default().parse::<u32>().unwrap(),
+            env::var("CARGO_PKG_VERSION_MINOR").unwrap_or_default().parse::<u32>().unwrap(),
+            env::var("CARGO_PKG_VERSION_PATCH").unwrap_or_default().parse::<u32>().unwrap()
+        );
         let crate_name = cs.crate_name.unwrap();
         if crate_name_env != crate_name {
             // happens when the crate name contains a '-', this will then get
@@ -110,14 +121,19 @@ exit(rustc_driver::run(move || {
         let hir_map = &tcx.hir;
         let ref krate = hir_map.krate();
         let mut cv = CrateVisitor {
-            crate_data: data::Crate::new(crate_name, (0, 0, 0)),
+            crate_data: data::Crate::new(crate_name, crate_version),
             crate_name: crate_name,
-            map: hir_map
+            map: hir_map,
+            tcx: *tcx
         };
 
         walk_crate(&mut cv, krate);
 
         println!("{:?}", cv.crate_data);
+        let result = export_crate(&cv.crate_data);
+        if let None = result {
+            println!("ERROR exporting crate: {}", cv.crate_data.get_filename());
+        }
 
         /*let mut clv = CrateLikeVisitor {
             map: hir_map
@@ -135,7 +151,8 @@ struct CrateVisitor<'tcx, 'a>
 {
     crate_data: data::Crate,
     crate_name: &'a str,
-    map: &'tcx Map<'tcx>
+    map: &'a Map<'tcx>,
+    tcx: TyCtxt<'a, 'tcx, 'tcx>
 }
 
 impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
@@ -152,7 +169,6 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 
             self.crate_data.mods.push(data::Mod {
                 name: String::from(name),
-                functions: vec![],
                 parent_mod_id: parent_id
             });
             /*println!("{:?}", data::UniqueIdentifier::from_def_path_of_mod(&path));
@@ -172,16 +188,40 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         /*match &item.node {
             hir::ItemKind::Mod(_m) => {
                 println!("module: {}", item.name);
-            },
+            }
             _ => {}
         }*/
         walk_item(self, item);
     }
 
     fn visit_fn(&mut self, fk: FnKind<'tcx>, fd: &'tcx hir::FnDecl, b: hir::BodyId, s: Span, id: NodeId) {
-        //println!("visited function in crate {} {} {:?} {:?}", self.crate_name, self.map.def_path_from_id(id).expect("invalid node traversed").to_string_no_crate(), fd, id);
-        //println!("visited function in crate {} {:?} {:?} {:?}", self.crate_name, self.map.def_path_from_id(id).expect("invalid node traversed").data, fd, id);
+        let def_id = self.map.local_def_id(id);
+        let def = self.tcx.absolute_item_path_str(def_id);
+        println!("def_id: {}", def);
+
+        let def_path = self.map.def_path_from_id(id).unwrap();
+        let mod_path = data::UniqueIdentifier::from_def_path_of_mod(&def_path);
+        let mod_id = self.crate_data.get_mod_id(&mod_path);
+
+        let maybe_node = self.map.find(id);
+        if let Some(hir::Node::Item(item)) = maybe_node {
+            let func = data::Function {
+                name: item.name.to_string(),
+                is_unsafe: false, // TODO implement
+                calls: vec![], // TODO implement
+                containing_mod_id: mod_id,
+
+                def_id: data::DefIdWrapper(def_id)
+            };
+            self.crate_data.functions.push(func);
+        }
         walk_fn(self, fk, fd, b, s, id);
+    }
+
+    fn visit_body(&mut self, body: &'tcx hir::Body) {
+        let id = body.id();
+        let owner = self.map.body_owner_def_id(id);
+        
     }
 
     fn nested_visit_map<'this>(&'this mut self) -> NestedVisitorMap<'this, 'tcx> {
@@ -189,3 +229,19 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         //NestedVisitorMap::None
     }
 }
+
+fn export_crate(krate: &data::Crate) -> Option<()> {
+    let filename = krate.get_filename();
+    let dirname = env::var(TARGET_DIR_VARNAME).unwrap_or_default();
+    File::create(dirname + "/" + &filename + ".json").ok().and_then(|file| -> Option<()> {
+        if USE_JSON {
+            serde_json::to_writer_pretty(file, krate).unwrap();
+        }
+        else {
+            bincode::serialize_into(file, krate).unwrap();
+        }
+        Some(())
+    }).or(None)
+}
+
+
