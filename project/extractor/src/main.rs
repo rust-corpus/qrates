@@ -1,4 +1,4 @@
-#![feature(box_syntax)]
+#![feature(box_syntax, box_patterns)]
 #![feature(rustc_private)]
 //#![feature(rust_2018_preview)]
 
@@ -122,14 +122,14 @@ exit(rustc_driver::run(move || {
         let ref krate = hir_map.krate();
         let mut cv = CrateVisitor {
             crate_data: data::Crate::new(crate_name, crate_version),
-            crate_name: crate_name,
+//            crate_name: crate_name,
             map: hir_map,
             tcx: *tcx
         };
 
         walk_crate(&mut cv, krate);
 
-        println!("{:?}", cv.crate_data);
+        //println!("{:?}", cv.crate_data);
         let result = export_crate(&cv.crate_data);
         if let None = result {
             println!("ERROR exporting crate: {}", cv.crate_data.get_filename());
@@ -150,7 +150,6 @@ exit(rustc_driver::run(move || {
 struct CrateVisitor<'tcx, 'a>
 {
     crate_data: data::Crate,
-    crate_name: &'a str,
     map: &'a Map<'tcx>,
     tcx: TyCtxt<'a, 'tcx, 'tcx>
 }
@@ -197,7 +196,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
     fn visit_fn(&mut self, fk: FnKind<'tcx>, fd: &'tcx hir::FnDecl, b: hir::BodyId, s: Span, id: NodeId) {
         let def_id = self.map.local_def_id(id);
         let def = self.tcx.absolute_item_path_str(def_id);
-        println!("def_id: {}", def);
+        //println!("def_id: {}", def);
 
         let def_path = self.map.def_path_from_id(id).unwrap();
         let mod_path = data::UniqueIdentifier::from_def_path_of_mod(&def_path);
@@ -205,15 +204,31 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 
         let maybe_node = self.map.find(id);
         if let Some(hir::Node::Item(item)) = maybe_node {
-            let func = data::Function {
-                name: item.name.to_string(),
-                is_unsafe: false, // TODO implement
-                calls: vec![], // TODO implement
-                containing_mod_id: mod_id,
-
-                def_id: data::DefIdWrapper(def_id)
+            match fk {
+                FnKind::Method(name, method_sig, vis, attr) => {
+                    let func = data::Function {
+                        name: item.name.to_string(),
+                        is_unsafe: method_sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
+                        calls: vec![], // TODO implement
+                        containing_mod_id: mod_id,
+                        def_id: data::DefIdWrapper(def_id)
+                    };
+                    //println!("found function: {:?}", def_id);
+                    self.crate_data.functions.push(func);
+                },
+                FnKind::Closure(_) => {},
+                FnKind::ItemFn(name, generics, header, vis, block) => {
+                    let func = data::Function {
+                        name: item.name.to_string(),
+                        is_unsafe: header.unsafety == rustc::hir::Unsafety::Unsafe,
+                        calls: vec![], // TODO implement
+                        containing_mod_id: mod_id,
+                        def_id: data::DefIdWrapper(def_id)
+                    };
+                    //println!("found function: {:?}", def_id);
+                    self.crate_data.functions.push(func);
+                }
             };
-            self.crate_data.functions.push(func);
         }
         walk_fn(self, fk, fd, b, s, id);
     }
@@ -221,7 +236,27 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
     fn visit_body(&mut self, body: &'tcx hir::Body) {
         let id = body.id();
         let owner = self.map.body_owner_def_id(id);
-        
+        if let Some(function) = self.crate_data.get_function(owner) {
+            
+            //println!("found body of {:?}: {:?}", function, owner);
+        }
+        //println!("found body of {:?}: {:?}", function, owner);
+        walk_body(self, body);
+    }
+
+    fn visit_expr(&mut self, expr: &'tcx hir::Expr) {
+        if let hir::ExprKind::Call(target, args) = &expr.node {
+            //println!("found call to: {:?}", target);
+            use self::hir::*;
+            let target_kind = &target.node;
+            if let ExprKind::Path(QPath::Resolved(_, p)) = target_kind {
+                //println!("def id: {:?}", p.def);
+                if let Some(id) = self.crate_data.get_function(p.def.def_id()) {
+                    println!("found func: {:?} ", id);
+                }
+            }
+        }
+        walk_expr(self, expr);
     }
 
     fn nested_visit_map<'this>(&'this mut self) -> NestedVisitorMap<'this, 'tcx> {

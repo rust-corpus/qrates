@@ -23,7 +23,7 @@ pub struct Function {
     pub is_unsafe: bool,
     pub calls: Vec<UniqueIdentifier>,
     pub containing_mod_id: Option<usize>,
-    //#[serde(skip_serializing, skip_deserializing)]
+    #[serde(skip_serializing, skip_deserializing)]
     pub def_id: DefIdWrapper
 }
 
@@ -32,7 +32,7 @@ pub struct UniqueIdentifier {
     pub path: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DefIdWrapper(pub hir::def_id::DefId);
 
 
@@ -68,6 +68,10 @@ impl Crate {
             }
         }
         current_mod
+    }
+    
+    pub fn get_function(&self, def_id: hir::def_id::DefId) -> Option<&Function> {
+        self.functions.iter().find(|f| f.def_id == DefIdWrapper(def_id) )
     }
 
     /**
@@ -110,6 +114,10 @@ impl Default for DefIdWrapper {
 impl UniqueIdentifier {
     pub fn new(data: Vec<String>) -> UniqueIdentifier {
         UniqueIdentifier{ path: data }
+    }
+
+    pub fn from_qpath(qpath: &hir::QPath) -> UniqueIdentifier {
+        UniqueIdentifier{ path: vec![]}
     }
 
     pub fn from_def_path_of_mod(def_path: &DefPath) -> UniqueIdentifier {
