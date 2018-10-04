@@ -1,0 +1,11 @@
+[package]
+name = "rustql-common"
+version = "0.1.0"
+authors = ["Nicolas Winkler <nicolas.winkler@gmx.ch>"]
+edition = "2018"
+
+[dependencies]
+serde = "*"
+serde_json = "*"
+bincode = "*"
+serde_derive = "*"

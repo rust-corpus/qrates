@@ -1,7 +1,7 @@
 #cargo-features = ["edition"]
 
 [package]
-name = "extractor"
+name = "rustql-extractor"
 version = "0.1.0"
 authors = ["Nicolas Winkler <niwinkle@student.ethz.ch>"]
 edition = "2018"
@@ -9,6 +9,9 @@ edition = "2018"
 [dependencies]
 serde = "*"
 serde_json = "*"
-rustc-serialize = "*"
 bincode = "*"
 serde_derive = "*"
+
+[dependencies.rustql-common]
+path = "../rustql-common"
+

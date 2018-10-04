@@ -6,6 +6,8 @@ extern crate serde;
 extern crate serde_json;
 extern crate bincode;
 
+extern crate rustql_common;
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -24,6 +26,7 @@ extern crate syntax;
 use self::rustc_driver::{driver::CompileController, driver::PhaseController, Compilation};
 use self::rustc_driver::driver::CompileState;
 
+use rustql_common::data;
 
 //use rustc_driver::driver::{CompileController, PhaseController, CompileState};
 use std::process::{exit, Command};
@@ -44,7 +47,7 @@ use std::u64;
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 const USE_JSON: bool = true;
 
-pub mod data;
+//pub mod data;
 
 fn main() {
 exit(rustc_driver::run(move || {
@@ -181,7 +184,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 
             self.crate_data.mods.push(data::Mod {
                 name: String::from(name),
-                parent_mod: Some(data::GlobalDefPath{ path: path.data, crate_ident: self.crate_data.metadata.clone() })
+                parent_mod: Some(data::GlobalDefPath::new(&path, &self.crate_data.metadata ))
             });
             /*println!("{:?}", data::UniqueIdentifier::from_def_path_of_mod(&path));
             
@@ -229,9 +232,10 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                         name: item.name.to_string(),
                         is_unsafe: method_sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
                         calls: vec![], // TODO implement
-                        containing_mod: Some(data::GlobalDefPath{ path: def_path.data, crate_ident: self.crate_data.metadata.clone() }),
+                        containing_mod: Some(data::GlobalDefPath::new(&def_path, &self.crate_data.metadata)),
                         //def_id: //data::DefIdWrapper(def_id)
                     });
+
                     std::mem::swap(&mut self.current_function, &mut func);
                     if let Some(f) = func {
                         self.crate_data.functions.push(f);
@@ -244,7 +248,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                         is_unsafe: header.unsafety == rustc::hir::Unsafety::Unsafe,
                         calls: vec![], // TODO implement
                         //containing_mod: Some(def_path),
-                        containing_mod: Some(data::GlobalDefPath{ path: def_path.data, crate_ident: self.crate_data.metadata.clone() }),
+                        containing_mod: Some(data::GlobalDefPath::new(&def_path, &self.crate_data.metadata)),
                         //def_id: //data::DefIdWrapper(def_id)
                     });
 
@@ -276,6 +280,10 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             let target_kind = &target.node;
             if let ExprKind::Path(QPath::Resolved(_, p)) = target_kind {
                 if let Some(ref mut f) = self.current_function {
+                    let def_id = std::panic::catch_unwind(|| p.def.def_id());
+                    if let Ok(id) = def_id {
+                        f.calls.push(data::GlobalDefPath::new(&self.map.def_path(id), &self.crate_data.metadata));
+                    }
                     //f.calls.push(data::GlobalDefPath{ path: p.path, crate_ident: self.crate_data.metadata });
                 }
                 //println!("def id: {:?}", p.def);
