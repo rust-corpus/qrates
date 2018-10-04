@@ -1,4 +1,4 @@
-#![feature(box_syntax, box_patterns)]
+#![feature(box_syntax, box_patterns, const_string_new)]
 #![feature(rustc_private)]
 //#![feature(rust_2018_preview)]
 
@@ -38,6 +38,8 @@ use crate::syntax::source_map::Span;
 
 use std::fs::File;
 use std::env;
+
+use std::u64;
 
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 const USE_JSON: bool = true;
@@ -96,7 +98,19 @@ exit(rustc_driver::run(move || {
     };
     
     if !args.iter().any(|s| s.starts_with("--print=")) {
-        // may print stuff
+        // may print arbitrary stuff here
+        //println!("{:?}", orig_args);
+    }
+
+    let mut local_config_hash: String = "".to_owned();
+    //let h = rustc::session::config::
+    for arg in &args {
+        if arg.starts_with("metadata=") {
+            println!("{}", arg);
+            // hacky but works
+            local_config_hash = arg[arg.char_indices().nth(9).unwrap().0 ..].to_owned();
+            //local_config_hash = u64::from_str_radix(hash, 16).unwrap();
+        }
     }
 
 
@@ -106,9 +120,9 @@ exit(rustc_driver::run(move || {
     controller.after_analysis.callback = box |cs: &mut CompileState| {
         let crate_name_env = env::var("CARGO_PKG_NAME").unwrap_or_default();
         let crate_version = (
-            env::var("CARGO_PKG_VERSION_MAJOR").unwrap_or_default().parse::<u32>().unwrap(),
-            env::var("CARGO_PKG_VERSION_MINOR").unwrap_or_default().parse::<u32>().unwrap(),
-            env::var("CARGO_PKG_VERSION_PATCH").unwrap_or_default().parse::<u32>().unwrap()
+            env::var("CARGO_PKG_VERSION_MAJOR").unwrap_or_default().parse::<u64>().unwrap(),
+            env::var("CARGO_PKG_VERSION_MINOR").unwrap_or_default().parse::<u64>().unwrap(),
+            env::var("CARGO_PKG_VERSION_PATCH").unwrap_or_default().parse::<u64>().unwrap()
         );
         let crate_name = cs.crate_name.unwrap();
         if crate_name_env != crate_name {
@@ -121,7 +135,8 @@ exit(rustc_driver::run(move || {
         let hir_map = &tcx.hir;
         let ref krate = hir_map.krate();
         let mut cv = CrateVisitor {
-            crate_data: data::Crate::new(crate_name, crate_version),
+            crate_data: data::Crate::new(crate_name, crate_version, &local_config_hash),
+            current_function: None,
 //            crate_name: crate_name,
             map: hir_map,
             tcx: *tcx
@@ -132,7 +147,7 @@ exit(rustc_driver::run(move || {
         //println!("{:?}", cv.crate_data);
         let result = export_crate(&cv.crate_data);
         if let None = result {
-            println!("ERROR exporting crate: {}", cv.crate_data.get_filename());
+            println!("ERROR exporting crate: {}", cv.crate_data.metadata.get_filename());
         }
 
         /*let mut clv = CrateLikeVisitor {
@@ -150,25 +165,23 @@ exit(rustc_driver::run(move || {
 struct CrateVisitor<'tcx, 'a>
 {
     crate_data: data::Crate,
+    current_function: Option<data::Function>,
     map: &'a Map<'tcx>,
     tcx: TyCtxt<'a, 'tcx, 'tcx>
 }
 
 impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
-    fn visit_name(&mut self, _: Span, name: Name) {
-    }
-
     fn visit_mod(&mut self, m: &'tcx hir::Mod, _s: Span, id: NodeId) {
         let maybe_node = self.map.find(id);
         if let Some(hir::Node::Item(item)) = maybe_node {
             let name: &str = &item.name.as_str();
             let path = self.map.def_path(self.map.local_def_id(id));
-            let parent_path = data::UniqueIdentifier::from_def_path_of_mod(&path).remove_last_segment();
-            let parent_id = self.crate_data.get_mod_id(&parent_path);
+            //let parent_path = data::GlobalDefPath::from_def_path_of_mod(&path).remove_last_segment();
+            //let parent_id = self.crate_data.get_mod_id(&parent_path);
 
             self.crate_data.mods.push(data::Mod {
                 name: String::from(name),
-                parent_mod_id: parent_id
+                parent_mod: Some(data::GlobalDefPath{ path: path.data, crate_ident: self.crate_data.metadata.clone() })
             });
             /*println!("{:?}", data::UniqueIdentifier::from_def_path_of_mod(&path));
             
@@ -181,6 +194,12 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         }
         
         walk_mod(self, m, id);
+
+        let mut func: Option<data::Function> = None;
+        std::mem::swap(&mut self.current_function, &mut func);
+        if let Some(f) = func {
+            self.crate_data.functions.push(f);
+        }
     }
 
     fn visit_item(&mut self, item: &'tcx hir::Item) {
@@ -199,34 +218,40 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         //println!("def_id: {}", def);
 
         let def_path = self.map.def_path_from_id(id).unwrap();
-        let mod_path = data::UniqueIdentifier::from_def_path_of_mod(&def_path);
-        let mod_id = self.crate_data.get_mod_id(&mod_path);
+        //let mod_path = data::GlobalDefPath::from_def_path_of_mod(&def_path);
+        //let mod_id = self.crate_data.get_mod_id(&mod_path);
 
         let maybe_node = self.map.find(id);
         if let Some(hir::Node::Item(item)) = maybe_node {
             match fk {
                 FnKind::Method(name, method_sig, vis, attr) => {
-                    let func = data::Function {
+                    let mut func = Option::Some(data::Function {
                         name: item.name.to_string(),
                         is_unsafe: method_sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
                         calls: vec![], // TODO implement
-                        containing_mod_id: mod_id,
-                        def_id: data::DefIdWrapper(def_id)
-                    };
-                    //println!("found function: {:?}", def_id);
-                    self.crate_data.functions.push(func);
+                        containing_mod: Some(data::GlobalDefPath{ path: def_path.data, crate_ident: self.crate_data.metadata.clone() }),
+                        //def_id: //data::DefIdWrapper(def_id)
+                    });
+                    std::mem::swap(&mut self.current_function, &mut func);
+                    if let Some(f) = func {
+                        self.crate_data.functions.push(f);
+                    }
                 },
                 FnKind::Closure(_) => {},
                 FnKind::ItemFn(name, generics, header, vis, block) => {
-                    let func = data::Function {
+                    let mut func = Option::Some(data::Function {
                         name: item.name.to_string(),
                         is_unsafe: header.unsafety == rustc::hir::Unsafety::Unsafe,
                         calls: vec![], // TODO implement
-                        containing_mod_id: mod_id,
-                        def_id: data::DefIdWrapper(def_id)
-                    };
-                    //println!("found function: {:?}", def_id);
-                    self.crate_data.functions.push(func);
+                        //containing_mod: Some(def_path),
+                        containing_mod: Some(data::GlobalDefPath{ path: def_path.data, crate_ident: self.crate_data.metadata.clone() }),
+                        //def_id: //data::DefIdWrapper(def_id)
+                    });
+
+                    std::mem::swap(&mut self.current_function, &mut func);
+                    if let Some(f) = func {
+                        self.crate_data.functions.push(f);
+                    }
                 }
             };
         }
@@ -236,10 +261,10 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
     fn visit_body(&mut self, body: &'tcx hir::Body) {
         let id = body.id();
         let owner = self.map.body_owner_def_id(id);
-        if let Some(function) = self.crate_data.get_function(owner) {
+        /*if let Some(function) = self.crate_data.get_function(owner) {
             
             //println!("found body of {:?}: {:?}", function, owner);
-        }
+        }*/
         //println!("found body of {:?}: {:?}", function, owner);
         walk_body(self, body);
     }
@@ -250,10 +275,13 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             use self::hir::*;
             let target_kind = &target.node;
             if let ExprKind::Path(QPath::Resolved(_, p)) = target_kind {
-                //println!("def id: {:?}", p.def);
-                if let Some(id) = self.crate_data.get_function(p.def.def_id()) {
-                    println!("found func: {:?} ", id);
+                if let Some(ref mut f) = self.current_function {
+                    //f.calls.push(data::GlobalDefPath{ path: p.path, crate_ident: self.crate_data.metadata });
                 }
+                //println!("def id: {:?}", p.def);
+                /*if let Some(id) = self.crate_data.get_function(p.def.def_id()) {
+                    println!("found func: {:?} ", id);
+                }*/
             }
         }
         walk_expr(self, expr);
@@ -266,8 +294,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 }
 
 fn export_crate(krate: &data::Crate) -> Option<()> {
-    let filename = krate.get_filename();
-    let dirname = env::var(TARGET_DIR_VARNAME).unwrap_or_default();
+    let filename = krate.metadata.get_filename();
+    let dirname = env::var(TARGET_DIR_VARNAME).unwrap_or(env::var("HOME").unwrap_or("/".to_owned()) + "/.rustql/crates");
     File::create(dirname + "/" + &filename + ".json").ok().and_then(|file| -> Option<()> {
         if USE_JSON {
             serde_json::to_writer_pretty(file, krate).unwrap();

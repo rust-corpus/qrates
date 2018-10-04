@@ -9,5 +9,6 @@ edition = "2018"
 [dependencies]
 serde = "*"
 serde_json = "*"
+rustc-serialize = "*"
 bincode = "*"
 serde_derive = "*"
