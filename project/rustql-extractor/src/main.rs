@@ -8,9 +8,6 @@ extern crate bincode;
 
 extern crate rustql_common;
 
-#[macro_use]
-extern crate serde_derive;
-
 #[allow(unused_extern_crates)]
 extern crate rustc_driver;
 
@@ -292,7 +289,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                         => Some(id),
                         Def::Local(node_id) |
                         Def::Upvar(node_id, _, _)
-                        => { Some(self.map.local_def_id(node_id)) },
+                        => { println!("semi-unknown call to {}", p.def.kind_name()); None }//Some(self.map.local_def_id(node_id)) },
                         _ => { println!("unknown call to {}", p.def.kind_name()); None }
                     };
 

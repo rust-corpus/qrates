@@ -1,16 +1,14 @@
-#cargo-features = ["edition"]
-
 [package]
-name = "rustql-extractor"
+name = "rustql-linker"
 version = "0.1.0"
-authors = ["Nicolas Winkler <niwinkle@student.ethz.ch>"]
+authors = ["Nicolas Winkler <nicolas.winkler@gmx.ch>"]
 edition = "2018"
 
 [dependencies]
+datafrog = "0.1.0"
 serde = "*"
 serde_json = "*"
 bincode = "*"
 
 [dependencies.rustql-common]
 path = "../rustql-common"
-
