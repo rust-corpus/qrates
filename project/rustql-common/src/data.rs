@@ -19,31 +19,31 @@ pub struct CrateIdentifier {
 	pub config_hash: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Crate {
 	pub metadata: CrateIdentifier,
 	pub mods: Vec<Mod>,
 	pub functions: Vec<Function>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
 	pub name: String,
-	pub parent_mod: Option<GlobalDefPath>,
+	pub parent_mod: Option<usize>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Function {
 	pub name: String,
 	pub is_unsafe: bool,
 	pub calls: Vec<GlobalDefPath>,
-	pub containing_mod: Option<GlobalDefPath>,
+	pub containing_mod: Option<usize>,
 	//#[serde(skip_serializing, skip_deserializing)]
 	//pub def_id: DefIdWrapper
 }
 
 /// Analogous to rustc::hir::map::definitions::DefPathData
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum GlobalDefPathData {
 	CrateRoot,
 	Misc,
@@ -67,13 +67,13 @@ pub enum GlobalDefPathData {
 	GlobalMetaData(String),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlobalDisambiguatedDefPathData {
 	pub data: GlobalDefPathData,
 	pub disambiguator: u32
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GlobalDefPath {
 	pub path: Vec<GlobalDisambiguatedDefPathData>,
 	pub crate_ident: CrateIdentifier
