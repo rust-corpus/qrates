@@ -277,12 +277,29 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         if let hir::ExprKind::Call(target, args) = &expr.node {
             //println!("found call to: {:?}", target);
             use self::hir::*;
+            use self::hir::def::Def;
             let target_kind = &target.node;
             if let ExprKind::Path(QPath::Resolved(_, p)) = target_kind {
                 if let Some(ref mut f) = self.current_function {
-                    let def_id = std::panic::catch_unwind(|| p.def.def_id());
-                    if let Ok(id) = def_id {
-                        f.calls.push(data::GlobalDefPath::new(&self.map.def_path(id), &self.crate_data.metadata));
+                    //let def_id = std::panic::catch_unwind(|| p.def.def_id());
+                    let def_id = match p.def {
+                        Def::Fn(id) |
+                        Def::Variant(id) |
+                        Def::StructCtor(id, _) |
+                        Def::VariantCtor(id, _) |
+                        Def::SelfCtor(id) |
+                        Def::Method(id)
+                        => Some(id),
+                        Def::Local(node_id) |
+                        Def::Upvar(node_id, _, _)
+                        => { Some(self.map.local_def_id(node_id)) },
+                        _ => { println!("unknown call to {}", p.def.kind_name()); None }
+                    };
+
+                    if let Some(id) = def_id {
+                        if (id.is_local()) {
+                            f.calls.push(data::GlobalDefPath::new(&self.map.def_path(id), &self.crate_data.metadata));
+                        }
                     }
                     //f.calls.push(data::GlobalDefPath{ path: p.path, crate_ident: self.crate_data.metadata });
                 }
