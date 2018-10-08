@@ -39,6 +39,31 @@ impl Database {
         }
     }
 
+    pub fn get_crate(&self, ci: &data::CrateIdentifier) -> Option<Crate> {
+        self.crates.iter().find(|(_, c)| c == ci).map(|x| x.0)
+    }
+
+    pub fn get_module_in_crate(&self, c_id: Crate, mod_name: &str) -> Option<Mod> {
+        self.modules_in_crates.iter().filter(|(m, c)| *c == c_id).next().map(|x| x.0)
+    }
+
+    pub fn get_module_in_module(&self, m_id: Mod, mod_name: &str) -> Option<Mod> {
+        self.modules_in_modules.iter().filter(|(m, m2)| *m2 == m_id).next().map(|x| x.0)
+    }
+
+    pub fn find_function(&self, path: &data::GlobalDefPath) -> Option<Function> {
+        let krate = self.get_crate(&path.crate_ident);
+
+        if let Some(krate) = krate {
+            for data::GlobalDisambiguatedDefPathData {data: path, disambiguator: dis } in &path.path {
+                if let data::GlobalDefPathData::Module(name) == path.data {
+                    if get
+                }
+            }
+        }
+        None
+    }
+
     pub fn search_module(&self, name: &str) -> Option<Mod> {
         self.modules.iter().filter(|m| m.1.name == name).next().map(|(m, _)| *m)
     }
