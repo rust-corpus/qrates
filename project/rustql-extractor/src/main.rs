@@ -146,6 +146,9 @@ exit(rustc_driver::run(move || {
             local_modules: BTreeMap::new()
         };
 
+        // add root module
+        cv.visit_mod(&krate.module, krate.span, hir::NodeId::new(0));
+
         walk_crate(&mut cv, krate);
 
         //println!("{:?}", cv.crate_data);
