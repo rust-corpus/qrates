@@ -6,6 +6,7 @@ extern crate serde_json;
 mod tuples;
 
 use rustql_common::data;
+use std::collections::HashMap;
 
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 
@@ -26,6 +27,9 @@ fn main() {
     for val in database.functions_in_modules {
         println!("{:?}", val);
     }
+    for val in database.function_calls {
+        println!("{:?}", val);
+    }
 }
 
 fn create_database() -> tuples::Database {
@@ -33,7 +37,7 @@ fn create_database() -> tuples::Database {
     let crates = read_crates();
     database.crates = crates.iter().map(|c| c.metadata.clone()).zip(0..).map(|(a, b)| (tuples::Crate(b), a)).collect();
 
-    for (krate, krate_id) in crates.into_iter().zip(0..) {
+    for (krate, krate_id) in crates.iter().zip(0..) {
         let mod_offset = database.modules.len();
         let fn_offset = database.functions.len();
         let module_map_to_global = |index: usize| index + mod_offset;
@@ -42,6 +46,8 @@ fn create_database() -> tuples::Database {
                 mod_offset..).map(|(a, b)| (tuples::Mod(b as u64), a.clone())));
         database.functions.extend(krate.functions.iter().zip(
                 database.functions.len()..).map(|(a, b)| (tuples::Function(b as u64), a.clone())));
+        database.function_finder.extend(krate.functions.iter().zip(
+                database.function_finder.len()..).map(|(a, b)| ((krate.metadata.clone(), a.def_path.clone()), (tuples::Function(b as u64)))));
 
         for (m, mod_id) in krate.mods.iter().zip((0..).map(module_map_to_global)) {
             let tuple = (tuples::Mod(mod_id as u64), tuples::Crate(krate_id));
@@ -53,11 +59,23 @@ fn create_database() -> tuples::Database {
         }
 
         for (f, fn_id) in krate.functions.iter().zip((0..).map(fn_map_to_global)) {
-            if let Some(parent_id) = f.containing_mod.map(module_map_to_global) {
-                let tuple = (tuples::Function(fn_id as u64), tuples::Mod(parent_id as u64));
-                database.functions_in_modules.push(tuple);
+            let parent_id = module_map_to_global(f.containing_mod);
+            let tuple = (tuples::Function(fn_id as u64), tuples::Mod(parent_id as u64));
+            database.functions_in_modules.push(tuple);
+        }
+    }
+
+    // create function call links
+    for (f_id, func) in &database.functions {
+        for call in &func.calls {
+            //let crate_id = database.get_crate(&call.crate_ident).unwrap();
+            //let called_id = database.get_function_in_crate(crate_id, &call.def_path);
+            let called_id = database.function_finder.get(&(call.crate_ident.clone(), call.def_path.clone()));
+            if let Some(called_id) = called_id {
+                database.function_calls.push((*f_id, *called_id));
             }
         }
+        println!("linked function {}", func.name);
     }
 
     database

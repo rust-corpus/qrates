@@ -36,6 +36,7 @@ use crate::rustc::hir::intravisit::{NestedVisitorMap, Visitor, walk_crate};
 use crate::rustc::hir::intravisit::*;
 use crate::syntax::ast::Name;
 use crate::syntax::source_map::Span;
+use crate::syntax::ast::CRATE_NODE_ID;
 
 use std::collections::BTreeMap;
 
@@ -147,7 +148,13 @@ exit(rustc_driver::run(move || {
         };
 
         // add root module
-        cv.visit_mod(&krate.module, krate.span, hir::NodeId::new(0));
+        //cv.visit_mod(&krate.module, krate.span, CRATE_NODE_ID);
+        cv.crate_data.mods.push(
+            data::Mod {
+                name: crate_name.to_owned(),
+                parent_mod: None
+            }
+        );
 
         walk_crate(&mut cv, krate);
 
@@ -188,14 +195,14 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             let def_id = self.map.local_def_id(id);
             let path = self.map.def_path(def_id);
             let parent = self.map.get_module_parent(self.map.as_local_node_id(def_id).unwrap());
-            let local_parent_index = self.local_modules.get(&parent).map(|x| *x);
+            let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
             //let parent_path = data::GlobalDefPath::from_def_path_of_mod(&path).remove_last_segment();
             //let parent_id = self.crate_data.get_mod_id(&parent_path);
 
             self.local_modules.insert(def_id, self.crate_data.mods.len());
             self.crate_data.mods.push(data::Mod {
                 name: String::from(name),
-                parent_mod: local_parent_index
+                parent_mod: Some(local_parent_index)
             });
             /*println!("{:?}", data::UniqueIdentifier::from_def_path_of_mod(&path));
             
@@ -236,7 +243,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         //let mod_id = self.crate_data.get_mod_id(&mod_path);
 
         let parent = self.map.get_module_parent(self.map.as_local_node_id(def_id).unwrap());
-        let local_parent_index = self.local_modules.get(&parent).map(|x| *x);
+        let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
         let maybe_node = self.map.find(id);
         if let Some(hir::Node::Item(item)) = maybe_node {
@@ -247,6 +254,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                         is_unsafe: method_sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
                         calls: vec![], // TODO implement
                         containing_mod: local_parent_index,
+                        def_path: def_path.to_string_no_crate()
                         //def_id: //data::DefIdWrapper(def_id)
                     });
 
@@ -263,6 +271,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                         calls: vec![], // TODO implement
                         //containing_mod: Some(def_path),
                         containing_mod: local_parent_index,//Some(data::GlobalDefPath::new(&def_path, &self.crate_data.metadata)),
+                        def_path: def_path.to_string_no_crate()
                         //def_id: //data::DefIdWrapper(def_id)
                     });
 
@@ -312,6 +321,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 
                     if let Some(id) = def_id {
                         if (id.is_local()) {
+                            println!("DefPath of call: {}", self.map.def_path(id).to_string_no_crate());
                             f.calls.push(data::GlobalDefPath::new(&self.map.def_path(id), &self.crate_data.metadata));
                         }
                     }

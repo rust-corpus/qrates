@@ -12,7 +12,7 @@ use serde::{Serializer, Deserializer, Serialize, Deserialize};
 
 /// Structure that identifies a crate uniquely.
 /// Two crates with the same CrateIdentifier are guaranteed to have the same ast.
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Hash, Eq, Clone, Debug)]
 pub struct CrateIdentifier {
     pub name: String,
     pub version: (u64, u64, u64),
@@ -29,15 +29,18 @@ pub struct Crate {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Mod {
     pub name: String,
+
+    /// if this is none, then the module is the root module of a crate
     pub parent_mod: Option<usize>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Function {
     pub name: String,
     pub is_unsafe: bool,
     pub calls: Vec<GlobalDefPath>,
-    pub containing_mod: Option<usize>,
+    pub containing_mod: usize,
+    pub def_path: String,
     //#[serde(skip_serializing, skip_deserializing)]
     //pub def_id: DefIdWrapper
 }
@@ -73,10 +76,11 @@ pub struct GlobalDisambiguatedDefPathData {
     pub disambiguator: u32
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct GlobalDefPath {
-    pub path: Vec<GlobalDisambiguatedDefPathData>,
-    pub crate_ident: CrateIdentifier
+    //pub path: Vec<GlobalDisambiguatedDefPathData>,
+    pub crate_ident: CrateIdentifier,
+    pub def_path: String
 }
 
 impl From<&hir::map::definitions::DisambiguatedDefPathData> for GlobalDisambiguatedDefPathData {
@@ -113,8 +117,9 @@ impl From<&hir::map::definitions::DisambiguatedDefPathData> for GlobalDisambigua
 impl GlobalDefPath {
     pub fn new(def: &hir::map::definitions::DefPath, c: &CrateIdentifier) -> Self {
         GlobalDefPath {
-            path: def.data.iter().map(GlobalDisambiguatedDefPathData::from).collect::<Vec<GlobalDisambiguatedDefPathData>>(),
-            crate_ident: c.clone()
+            //path: def.data.iter().map(GlobalDisambiguatedDefPathData::from).collect::<Vec<GlobalDisambiguatedDefPathData>>(),
+            crate_ident: c.clone(),
+            def_path: def.to_string_no_crate()
         }
     }
 }
@@ -237,7 +242,8 @@ impl Default for Function {
             name: "".to_owned(),
             is_unsafe: false,
             calls: vec![],
-            containing_mod: None,
+            containing_mod: 0,
+            def_path: "".to_owned()
             //def_id: DefIdWrapper::default(),
         }
     }
