@@ -7,6 +7,7 @@ mod tuples;
 
 use rustql_common::data;
 use std::collections::HashMap;
+use datafrog::{Iteration, Relation, Variable};
 
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 
@@ -16,9 +17,11 @@ fn main() {
     // println!("{:?}", database.modules);
     // println!("{:?}", database.functions.iter().map(|(_, f)| &f.name).collect::<Vec<&String>>());
 
-    let m = database.search_module("tables");
-    println!("{:?}", m);
-    for val in database.modules_in_crates {
+    println!("number of function calls {}", database.function_calls.len());
+
+    run_query(&database);
+
+    /*for val in database.modules_in_crates {
         println!("{:?}", val);
     }
     for val in database.modules_in_modules {
@@ -29,6 +32,30 @@ fn main() {
     }
     for val in database.function_calls {
         println!("{:?}", val);
+    }*/
+}
+
+fn run_query(database: &tuples::Database) {
+    let mut iteration = Iteration::new();
+
+    let calls = Relation::from(database.function_calls.clone().into_iter().map(|(a, b)| (b, a)));
+
+    let calls_var = iteration.variable::<(tuples::Function, tuples::Function)>("calls");
+    calls_var.insert(calls.into());
+
+    let unsafe_infected = iteration.variable::<(tuples::Function, ())>("infected");
+
+    // add all unsafe function to infected-variable
+    unsafe_infected.insert(database.functions.iter().filter(|(_id, f)| f.is_unsafe ).map(|x| (x.0, ())).into());
+
+    while iteration.changed() {
+        unsafe_infected.from_join(&unsafe_infected, &calls_var, |_k, _, &l| (l, ()));
+    }
+    let infected: Vec<tuples::Function> = unsafe_infected.complete().into_iter().map(|x| x.0).collect();
+
+    println!("functions that call unsafe functions are:");
+    for f in infected.iter().map(|tuples::Function(id)| &database.functions[*id as usize].1.name) {
+        println!("{:?}", f);
     }
 }
 
@@ -75,7 +102,6 @@ fn create_database() -> tuples::Database {
                 database.function_calls.push((*f_id, *called_id));
             }
         }
-        println!("linked function {}", func.name);
     }
 
     database
