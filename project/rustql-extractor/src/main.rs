@@ -110,7 +110,7 @@ exit(rustc_driver::run(move || {
     //let h = rustc::session::config::
     for arg in &args {
         if arg.starts_with("metadata=") {
-            println!("{}", arg);
+            //println!("{}", arg);
             // hacky but works
             local_config_hash = arg[arg.char_indices().nth(9).unwrap().0 ..].to_owned();
             //local_config_hash = u64::from_str_radix(hash, 16).unwrap();
@@ -213,7 +213,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         else {
             //println!("visited mod that is not an item: {:?}", maybe_node);
         }
-        
+
         walk_mod(self, m, id);
 
         let mut func: Option<data::Function> = None;
@@ -230,6 +230,13 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             }
             _ => {}
         }*/
+        if let hir::ItemKind::Struct(var_data, generics) = &item.node {
+            println!("struct found: {:?}", item.name);
+            self.crate_data.structs.push(data::Struct {
+                name: item.name.to_string(),
+                fields: vec![]
+            });
+        }
         walk_item(self, item);
     }
 
@@ -252,7 +259,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     let mut func = Option::Some(data::Function {
                         name: item.name.to_string(),
                         is_unsafe: method_sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
-                        calls: vec![], // TODO implement
+                        calls: vec![],
                         containing_mod: local_parent_index,
                         def_path: def_path.to_string_no_crate()
                         //def_id: //data::DefIdWrapper(def_id)
@@ -268,7 +275,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     let mut func = Option::Some(data::Function {
                         name: item.name.to_string(),
                         is_unsafe: header.unsafety == rustc::hir::Unsafety::Unsafe,
-                        calls: vec![], // TODO implement
+                        calls: vec![],
                         //containing_mod: Some(def_path),
                         containing_mod: local_parent_index,//Some(data::GlobalDefPath::new(&def_path, &self.crate_data.metadata)),
                         def_path: def_path.to_string_no_crate()
@@ -280,9 +287,38 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                         self.crate_data.functions.push(f);
                     }
                 }
-            };
+            }
         }
         walk_fn(self, fk, fd, b, s, id);
+    }
+
+    fn visit_impl_item(&mut self, ii: &'tcx hir::ImplItem) {
+        //println!("visited impl item: {:?}", ii);
+
+        let def_id = self.map.local_def_id(ii.id);
+        let def_path = self.map.def_path_from_id(ii.id).unwrap();
+        let parent = self.map.get_module_parent(self.map.as_local_node_id(def_id).unwrap());
+        let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
+
+        match &ii.node {
+            hir::ImplItemKind::Method(sig, body_id) => {
+                let mut func = Option::Some(data::Function {
+                    name: ii.ident.to_string(),
+                    is_unsafe: sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
+                    calls: vec![],
+                    containing_mod: local_parent_index,
+                    def_path: def_path.to_string_no_crate()
+                    //def_id: //data::DefIdWrapper(def_id)
+                });
+
+                std::mem::swap(&mut self.current_function, &mut func);
+                if let Some(f) = func {
+                    self.crate_data.functions.push(f);
+                }
+            },
+            _ => {}
+        }
+        walk_impl_item(self, ii);
     }
 
     fn visit_body(&mut self, body: &'tcx hir::Body) {
@@ -321,8 +357,10 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 
                     if let Some(id) = def_id {
                         if (id.is_local()) {
-                            println!("DefPath of call: {}", self.map.def_path(id).to_string_no_crate());
+                            //println!("DefPath of call: {}", self.map.def_path(id).to_string_no_crate());
                             f.calls.push(data::GlobalDefPath::new(&self.map.def_path(id), &self.crate_data.metadata));
+                        } else {
+                            println!("non-local call detected: {:?}", p);
                         }
                     }
                     //f.calls.push(data::GlobalDefPath{ path: p.path, crate_ident: self.crate_data.metadata });
@@ -332,6 +370,14 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     println!("found func: {:?} ", id);
                 }*/
             }
+            else {
+                println!("call to function with unrecognized path.");
+            }
+        }
+        else if let hir::ExprKind::MethodCall(path_seg, span, args) = &expr.node {
+            let slf = &args[0];
+            let method = path_seg;
+            println!("unrecognized method call {:?}", expr);
         }
         walk_expr(self, expr);
     }

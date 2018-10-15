@@ -17,7 +17,6 @@ fn main() {
     // println!("{:?}", database.modules);
     // println!("{:?}", database.functions.iter().map(|(_, f)| &f.name).collect::<Vec<&String>>());
 
-    println!("number of function calls {}", database.function_calls.len());
 
     run_query(&database);
 
@@ -54,7 +53,7 @@ fn run_query(database: &tuples::Database) {
     let infected: Vec<tuples::Function> = unsafe_infected.complete().into_iter().map(|x| x.0).collect();
 
     println!("functions that call unsafe functions are:");
-    for f in infected.iter().map(|tuples::Function(id)| &database.functions[*id as usize].1.name) {
+    for f in infected.iter().map(|tuples::Function(id)| &database.functions[*id as usize].1) {
         println!("{:?}", f);
     }
 }
@@ -93,6 +92,7 @@ fn create_database() -> tuples::Database {
     }
 
     // create function call links
+    let mut fails: usize = 0;
     for (f_id, func) in &database.functions {
         for call in &func.calls {
             //let crate_id = database.get_crate(&call.crate_ident).unwrap();
@@ -101,8 +101,13 @@ fn create_database() -> tuples::Database {
             if let Some(called_id) = called_id {
                 database.function_calls.push((*f_id, *called_id));
             }
+            else {
+                println!("unresolved function call to {:?}", call.def_path);
+                fails += 1;
+            }
         }
     }
+    println!("ratio fails / calls: {}", fails as f64 / (database.function_calls.len() + fails) as f64);
 
     database
 }
