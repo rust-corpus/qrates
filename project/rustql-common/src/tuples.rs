@@ -1,7 +1,5 @@
-
-use rustql_common::data;
 use std::collections::HashMap;
-use datafrog::{Variable, Relation, Iteration};
+use super::data;
 
 pub struct Database {
     pub crates: Vec<(Crate, data::CrateIdentifier)>,
@@ -32,7 +30,6 @@ pub struct Function(pub u64);
 
 impl Database {
     pub fn new() -> Self {
-        let mut iteration = Iteration::new();
         Database {
             crates: vec![],
             modules: vec![],

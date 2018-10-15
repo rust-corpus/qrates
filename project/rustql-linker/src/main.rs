@@ -1,4 +1,3 @@
-
 extern crate rustql_common;
 extern crate datafrog;
 extern crate serde_json;

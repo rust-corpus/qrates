@@ -19,12 +19,12 @@ QueryList: BTreeMap<String, Box<Query>> = {
 
 Query: Box<Query> = {
     <fc:FromClause?> <wc:WhereClause?> <sc:SelectClause> => 
-        Box::new(Query::Simple {
+        Box::new(Query {
             var_decls: fc.unwrap_or(vec![]), // match fc { Some(fc) => fc, None => vec![] },
             conditions: wc, // match wc { Some(wc) => wc, None => vec![] },
             selections: sc,
         }), 
-    "(" <q1:Query> ")" "union" "(" <q2:Query> ")" => Box::new(Query::Union(q1, q2))
+    //"(" <q1:Query> ")" "union" "(" <q2:Query> ")" => Box::new(Query::Union(q1, q2))
 };
 
 WhereClause: Box<Expr> = {

@@ -1,12 +1,14 @@
+#![feature(box_patterns)]
 extern crate lalrpop_util;
 extern crate rustql_common;
 
-use std::io::{self, Read};
-
 pub mod querylang;
 pub mod ast;
+pub mod sem;
 pub mod engine;
 
+use std::io::{self, Read};
+use engine::execute_query;
 
 fn main() -> io::Result<()> {
     let mut buffer = String::new();
@@ -27,11 +29,6 @@ fn main() -> io::Result<()> {
         }
     }
     Ok(())
-}
-
-
-fn execute_query(context: Box<ast::Context>) {
-
 }
 
 
