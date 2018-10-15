@@ -39,6 +39,10 @@ pub struct Mod {
 pub struct Function {
     pub name: String,
     pub is_unsafe: bool,
+    pub is_const: bool,
+    pub is_async: bool,
+    pub abi: String,
+    pub is_closure: bool,
     pub calls: Vec<GlobalDefPath>,
     pub containing_mod: usize,
     pub def_path: String,
@@ -88,7 +92,7 @@ impl Crate {
     }
 }
 
-impl Default for Function {
+/*impl Default for Function {
     fn default() -> Self {
         Function {
             name: "".to_owned(),
@@ -100,6 +104,7 @@ impl Default for Function {
         }
     }
 }
+*/
 
 
 

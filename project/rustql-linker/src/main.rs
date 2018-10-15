@@ -3,8 +3,8 @@ extern crate rustql_common;
 extern crate datafrog;
 extern crate serde_json;
 
-mod tuples;
 
+use rustql_common::tuples;
 use rustql_common::data;
 use std::collections::HashMap;
 use datafrog::{Iteration, Relation, Variable};

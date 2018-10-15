@@ -1,0 +1,19 @@
+[package]
+name = "rustql-query"
+version = "0.1.0"
+authors = ["Nicolas Winkler <nicolas.winkler@gmx.ch>"]
+build = "build.rs"
+
+[build-dependencies.lalrpop]
+version = "0.15.1"
+
+[dependencies]
+regex = "0.2.1"
+
+[dependencies.lalrpop-util]
+version = "0.15.1"
+
+[dependencies.rustql-common]
+path = "../rustql-common"
+
+
