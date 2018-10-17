@@ -38,6 +38,8 @@ fn run_query(database: &tuples::Database) {
 
     let calls = Relation::from(database.function_calls.clone().into_iter().map(|(a, b)| (b, a)));
 
+    let other_relation: Relation<(tuples::Function, tuples::Function)> = Relation::from(calls.iter().filter(|x| true));
+
     let calls_var = iteration.variable::<(tuples::Function, tuples::Function)>("calls");
     calls_var.insert(calls.into());
 

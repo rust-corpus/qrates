@@ -23,7 +23,7 @@ fn main() -> io::Result<()> {
                              exp.iter().fold(String::new(), |acc, new| acc + &new + ", "));
                 },
                 _ => {
-                    println!("error parsing input");
+                    println!("error parsing input {:?}", e);
                 }
             }
         }

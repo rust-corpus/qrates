@@ -8,11 +8,15 @@ pub struct Context {
 }
 
 #[derive(Debug)]
-pub struct Query {
-    pub var_decls: Vec<VarDecl>,
-    pub conditions: Option<Box<Expr>>,
-    pub selections: Vec<Box<Expr>>,
+pub enum Query {
+    Simple {
+        var_decls: Vec<VarDecl>,
+        conditions: Option<Box<Expr>>,
+        selections: Vec<Box<Expr>>,
+    },
+    Union(Box<Query>, Box<Query>)
 }
+
 
 #[derive(Debug)]
 pub struct VarDecl {
