@@ -1,4 +1,6 @@
+
 use std::collections::BTreeMap;
+use std::fs::File;
 
 use super::ast;
 use super::sem;
@@ -7,8 +9,8 @@ use rustql_common::tuples;
 
 pub fn create_sem_query(q: ast::Query, ctxt: &mut sem::Context) -> sem::Query
 {
+    // maps variable names to their type
     let mut variables: BTreeMap<String, String> = BTreeMap::new();
-    variables.insert("d".to_owned(), "Dirty".to_owned());
     match q {
         ast::Query::Simple{ var_decls, conditions, selections } => {
             read_variables(&var_decls, &mut variables);
@@ -24,7 +26,7 @@ pub fn create_sem_query(q: ast::Query, ctxt: &mut sem::Context) -> sem::Query
                     .filter(|x| x.is_some())
                     .map(Option::unwrap)
                     .map(|s| sem::Transformation::Filter{
-                        var: sem::Variable::Native(s), filter: sem::FilterFunc{}})
+                        var: sem::Variable{ name: s }, filter: sem::FilterFunc{}})
                     .collect()
             }
         },
@@ -44,13 +46,23 @@ pub fn read_variables(decls: &Vec<ast::VarDecl>, map: &mut BTreeMap<String, Stri
 
 pub fn execute_query(context: Box<ast::Context>) {
     let database: tuples::Database = tuples::Database::new();
-    let mut ctxt = sem::Context::new();
+    let ctxt_file = File::open("context.json").expect("file not found");
+    let mut ctxt = serde_json::from_reader(ctxt_file).unwrap();// = sem::Context::new();
 
     let functions: Vec<u64> = Vec::new();
 
     let semq = create_sem_query(*context.main_query, &mut ctxt);
 
+    for trans in &semq.transfromations {
+        let sem::Transformation::Filter{ var, filter } = trans;
+        {
+            let typ = ctxt.get_type(&var.name);
+            println!("type {:?}", typ);
+        }
+    }
+
     println!("{:?}", semq);
+    //println!("{}", serde_json::to_string_pretty(&ctxt).unwrap());
 
     //let trans1 = sem::Transformation::Filter { scan: sem::RelationId(0), filter: sem::FilterFunc{} };
     //let rs = generate_rust(&ctxt, &trans1);
@@ -62,7 +74,7 @@ pub fn execute_query(context: Box<ast::Context>) {
 
 
 pub fn query_to_rust(q: sem::Query) {
-
+    for 
 }
 
 /*

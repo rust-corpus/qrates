@@ -9,6 +9,9 @@ version = "0.15.1"
 
 [dependencies]
 regex = "0.2.1"
+serde_derive = "*"
+serde_json = "*"
+serde = "*"
 
 [dependencies.lalrpop-util]
 version = "0.15.1"

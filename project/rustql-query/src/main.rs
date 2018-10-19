@@ -2,6 +2,10 @@
 extern crate lalrpop_util;
 extern crate rustql_common;
 
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
+
 pub mod querylang;
 pub mod ast;
 pub mod sem;
