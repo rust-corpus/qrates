@@ -62,6 +62,7 @@ pub fn execute_query(context: Box<ast::Context>) {
     }
 
     println!("{:?}", semq);
+    println!("{}", query_to_rust(semq));
     //println!("{}", serde_json::to_string_pretty(&ctxt).unwrap());
 
     //let trans1 = sem::Transformation::Filter { scan: sem::RelationId(0), filter: sem::FilterFunc{} };
@@ -73,8 +74,20 @@ pub fn execute_query(context: Box<ast::Context>) {
 }
 
 
-pub fn query_to_rust(q: sem::Query) {
-    for 
+pub fn query_to_rust(q: sem::Query) -> String {
+    let mut query = String::new();
+    let mut index = 0;
+    for trans in &q.transfromations {
+        match trans {
+            sem::Transformation::Filter{ var, filter } => {
+                query += &("fn filter_".to_owned() + &index.to_string() + 
+                           "(var: Vec<" + &var.name + ">) -> Vec<" + &var.name + "> {\n");
+                query += "}";
+            }
+        }
+        index += 1;
+    }
+    query
 }
 
 /*
