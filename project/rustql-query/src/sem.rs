@@ -38,18 +38,15 @@ pub struct Function {
 pub struct FilterFunc {
 }
 
+/// representation of a stream of tuples
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Relation {
-    pub types: Vec<String>,
+pub enum Relation {
+    Native(String),
+    Transformation(Box<Transformation>)
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct RelationId(pub usize);
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Query {
-    pub transfromations: Vec<Transformation>,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Variable {
@@ -62,6 +59,10 @@ pub enum Transformation {
         var: Variable,
         filter: FilterFunc
     },
+    Join {
+        first: Box<Transformation>,
+        second: Box<Transformation>,
+    }
 }
 
 
