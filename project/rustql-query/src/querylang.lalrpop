@@ -4,39 +4,22 @@ use ast::*; // (0)
 
 grammar;
 
-pub QueryContext: Box<Context> = {
-    <ql:QueryList> <q:Query> => Box::new(Context{ queries: ql, main_query: q })
-};
-
-QueryList: BTreeMap<String, Box<Query>> = {
-     => BTreeMap::new(),
-    <qs: QueryList> "let" <id:Ident> "=" <last: Query> ";" => {
-        let mut qs = qs;
-        qs.insert(id, last);
-        qs
+pub RuleList: Vec<Rule> = {
+     => Vec::new(),
+    <rs: RuleList> <r: Rule> "." => {
+        let mut rs = rs;
+        rs.push(r);
+        rs
     }
 };
 
-Query: Box<Query> = {
-    <fc:FromClause?> <wc:WhereClause?> <sc:SelectClause> => 
-        Box::new(Query::Simple {
-            var_decls: fc.unwrap_or(vec![]), // match fc { Some(fc) => fc, None => vec![] },
-            conditions: wc, // match wc { Some(wc) => wc, None => vec![] },
-            selections: sc,
-        }), 
-    "(" <q1:Query> ")" "union" "(" <q2:Query> ")" => Box::new(Query::Union(q1, q2))
+Rule: Rule = {
+    <name:Ident> "(" <args: CommaList<Ident>> ")" ":-" <rs: CommaList<Fact>> =>
+        Rule{ name: name, args: args, facts: rs },
 };
 
-WhereClause: Box<Expr> = {
-    "where" <e:Expr> => e
-};
-
-FromClause: Vec<VarDecl> = {
-    "from" <vs:VarDecls> => vs
-};
-
-SelectClause: Vec<Box<Expr>> = {
-    "select" <es:Exprs> => es
+Fact: Fact = {
+    <i: Ident> "(" <args: CommaList<Ident>> ")" => Fact{ name: i, args: args }
 };
 
 CommaList<Rule>: Vec<Rule> = {
@@ -56,15 +39,6 @@ Exprs: Vec<Box<Expr>> = {
 //     <es:Exprs> "," <e:Expr> => { es.push(e); es }
 //}
 
-VarDecls: Vec<VarDecl> = {
-    <decls: CommaList<VarDecl>> => decls
-//    VarDecl => vec![<>; 1],
-//    <vs:VarDecls> "," <v:VarDecl> => { let mut vsn = vs.clone(); vsn.push(v); vsn }
-};
-
-VarDecl: VarDecl = {
-    <n:Ident> ":" <tn:Ident> => VarDecl{name: n, type_name: tn}
-};
 
 Expr: Box<Expr> = { // (1)
     Expr ExprOp Factor => Box::new(Expr::Op(<>)), // (2)
@@ -88,15 +62,9 @@ FactorOp: Op = {
 
 Term: Box<Expr> = {
     Num => Box::new(Expr::Number(<>)), // (4)
-    MethodCall => <>,
     Ident => Box::new(Expr::Ident(<>)),
     Str => Box::new(Expr::Str(<>)),
     "(" <ex:Expr> ")" => ex
-};
-
-MethodCall: Box<Expr> = {
-    <t:Term> "." <n:Ident> "(" <a: CommaList<Expr>> ")" =>
-        Box::new(Expr::MethodCall{ target: t, name: n, args: a })
 };
 
 Num: i32 = {

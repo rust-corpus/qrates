@@ -1,144 +1,234 @@
-
 use std::collections::BTreeMap;
-use std::fs::File;
+use std::cmp::Ordering;
+use super::ast::*;
 
-use super::ast;
-use super::sem;
-use rustql_common::tuples;
+pub fn compile_query(query: Vec<Rule>) -> String {
+    let mut code: String = String::new();
+
+    // add preamble
+    
+    code += r#"#![feature(rustc_private)]
+extern crate datafrog;
+extern crate rustql_common;
+
+use datafrog::{Variable, Relation, Iteration};
+use rustql_common::tuples::{Function, Mod, Crate, Database};
+
+"#;
 
 
-pub fn create_sem_query(q: ast::Query, ctxt: &mut sem::Context) -> sem::Relation
-{
-    // maps variable names to their type
-    let mut variables: BTreeMap<String, String> = BTreeMap::new();
-    match q {
-        ast::Query::Simple{ var_decls, conditions, selections } => {
-            read_variables(&var_decls, &mut variables);
-            let mut relations: Vec<sem::Relation> = vec![];
-            let mut relation: sem::Relation = sem::Relation::Native("None".to_owned());
+    // group rules by name
+    let mut rule_map: BTreeMap<&str, Vec<&Rule>> = BTreeMap::new();
+    for rule in &query {
+        rule_map.entry(&rule.name).or_insert(Vec::new()).push(&rule);
+    }
 
-            let selection = selections.iter().next();
-            if let Some(box ast::Expr::Ident(name)) = selection {
-                let var_type = variables.get(name);
-                if let Some(typ) = var_type {
-                    if let Some(typ) = ctxt.get_type(typ) {
-                        relation = sem::Relation::Native(typ.rust_name.clone());
-                    }
-                    else {
-                        panic!("type not found!");
-                    }
-                }
-                else {
-                    panic!("not a valid type!");
-                }
+    for (name, rules) in &rule_map {
+        let rule_code = compile_rules(name, &rules);
+        code += &rule_code;
+    }
+    println!("{}", code);
+    code 
+}
+
+#[derive(Debug)]
+enum QueryNode<'a> {
+    Input(&'a Fact),
+    Join(Box<QueryNode<'a>>, Box<QueryNode<'a>>)
+}
+
+fn compile_rules(name: &str, rules: &Vec<&Rule>) -> String {
+    let mut code: String = String::new();
+
+    for (id, rule) in rules.iter().enumerate() {
+        code += &compile_rule(rule, id);
+    }
+    let mut fn_code: String = "fn rules_".to_owned() + name + "(db: &Database) {\n";
+
+    assert!(rules.len() > 0);
+
+    let natives = generate_native_facts();
+
+    let (id, rule) = rules.iter().enumerate().next().unwrap();
+    let args = rule_argument_datanames(&rule, &natives, );
+    fn_code += &format!("    let rel = rule_{}{}({});\n", name, id, "");
+
+    for (id, rule) in rules.iter().enumerate().skip(1) {
+        fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, "");
+    }
+    fn_code += "    rel\n}\n";
+
+
+    fn_code + &code
+}
+
+fn generate_native_facts() -> BTreeMap<&'static str, (Vec<&'static str>, &'static str)> {
+    let mut natives = BTreeMap::new();
+
+    natives.insert("calls", (vec!["Function", "Function"], "calls"));
+    natives.insert("function", (vec!["Function"], "functions"));
+    natives.insert("in_module", (vec!["Function", "Mod"], "functions_in_modules"));
+
+    natives
+}
+
+fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<&'static str, (Vec<&'static str>, &'static str)>) -> Vec<&'static str>{
+    let mut datanames = Vec::new();
+    let mut dedup_facts = rule.facts.clone();
+    dedup_facts.sort_unstable_by(|l, r|
+        if l.name < r.name { Ordering::Less }
+        else if l.name == r.name { Ordering::Equal }
+        else { Ordering::Greater });
+    dedup_facts.dedup_by(|l, r| l.name == r.name);
+    for fact in dedup_facts {
+        let types = natives.get(&*fact.name);
+        if let Some((_t, name)) = types {
+            datanames.push(*name);
+        }
+        else {
+            panic!("unknown relation: {}", fact.name);
+        }
+    }
+    datanames
+}
+
+fn rule_arguments(rule: &Rule, natives: &BTreeMap<&'static str, (Vec<&'static str>, &'static str)>) -> String {
+    let mut args = String::new();
+    let mut dedup_facts = rule.facts.clone();
+    dedup_facts.sort_unstable_by(|l, r|
+        if l.name < r.name { Ordering::Less }
+        else if l.name == r.name { Ordering::Equal }
+        else { Ordering::Greater });
+    dedup_facts.dedup_by(|l, r| l.name == r.name);
+    for fact in dedup_facts {
+        args += &fact.name;
+        args += ": Relation<(";
+        let types = natives.get(&*fact.name);
+        if let Some((types, _name)) = types {
+            for t in types {
+                args += t;
+                args += ", ";
             }
+        }
+        else {
+            panic!("unknown relation: {}", fact.name);
+        }
+        args += ")>, ";
+    }
+    args
+}
 
-            relation
+fn compile_rule(rule: &Rule, index: usize) -> String {
+    let natives = generate_native_facts();
+    /*
+    let mut args: String = String::new();
+    let mut dedup_facts = rule.facts.clone();
+    dedup_facts.sort_unstable_by(|l, r|
+        if l.name < r.name { Ordering::Less }
+        else if l.name == r.name { Ordering::Equal }
+        else { Ordering::Greater });
+    dedup_facts.dedup_by(|l, r| l.name == r.name);
+    for fact in dedup_facts {
+        args += &fact.name;
+        args += ": Relation<(";
+        let types = natives.get(&*fact.name);
+        if let Some(types) = types {
+            for t in types {
+                args += t;
+                args += ", ";
+            }
+        }
+        else {
+            panic!("unknown relation: {}", fact.name);
+        }
+        args += ")>, ";
+    }
+    */
+    let args = rule_arguments(rule, &natives);//.into_iter().fold("".to_owned(), |s, n| s + n + ", ");
 
-            /*
-            sem::Query {
-                transfromations: selections.into_iter().map(|box s| -> Option<String> {
-                        if let ast::Expr::Ident(ref id) = s {
-                            variables.get(id).map(String::clone)
-                        }
-                        else {
-                            None
-                        }
-                    })
-                    .filter(|x| x.is_some())
-                    .map(Option::unwrap)
-                    .map(|s| sem::Transformation::Filter{
-                        var: sem::Variable{ name: s }, filter: sem::FilterFunc{}})
-                    .collect()
-            }*/
-        },
-        ast::Query::Union(box query1, box query2) => {
-            //sem::Query { transfromations: vec![] }
-            sem::Relation::Native("NotSupported".to_owned())
+    let node = build_join_tree(rule);
+    let (rule_code, fact) = compile_join_tree(node, rule);
+    println!("new fact: {:?}", fact);
+
+    format!(r#"fn rule_{}{}({}) {{
+    let iteration = Iteration::new();
+{}
+}}"#,
+        rule.name, index, args,
+        rule_code
+    )
+}
+
+fn build_join_tree(rule: &Rule) -> QueryNode {
+    assert!(rule.facts.len() > 0);
+
+    let mut node = QueryNode::Input(&rule.facts[0]);
+
+    for fact in rule.facts.iter().skip(1) {
+        node = QueryNode::Join(box node, box QueryNode::Input(&fact));
+    }
+
+    node
+}
+
+fn compile_join_tree(node: QueryNode, rule: &Rule) -> (String, Fact) {
+    match node {
+        QueryNode::Input(name) => { ("".to_owned(), name.clone()) },
+        QueryNode::Join(box left, box right) => {
+            let (left_code, lfact) = compile_join_tree(left, rule);
+            let (right_code, rfact) = compile_join_tree(right, rule);
+
+            let (join, joinfact) = compile_join(&lfact, &rfact);
+
+            (left_code + &right_code + &join, joinfact)
         }
     }
 }
 
+fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
+    let overlap = fact1.get_overlapping(fact2);
+    
+    let map1 = format!("|({})| (({}), ({}))",
+        fact1.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        overlap.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        fact1.args.iter().filter(|s| !overlap.contains(&s)).fold("".to_owned(), |s, x| s + x + ", ")
+    );
 
-pub fn read_variables(decls: &Vec<ast::VarDecl>, map: &mut BTreeMap<String, String>) {
-    for var in decls {
-        map.insert(var.name.clone(), var.type_name.clone());
-    }
+    let map2 = format!("|({})| (({}), ({}))",
+        fact2.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        overlap.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + x + ", ")
+    );
+
+    let new_fact = Fact{
+        name: "temp_fact".to_owned(),
+        args: overlap.iter()
+            .chain(fact1.args.iter().filter(|s| !overlap.contains(s)))
+            .chain(fact2.args.iter().filter(|s| !overlap.contains(s)))
+            .map(|s| s.clone())
+            .collect()
+    };
+
+    let code = format!(r#"
+    let {} = {{
+        let var1 = iteration.variable::<()>("left");
+        let var2 = iteration.variable::<()>("right");
+        var1.insert({}.iter().map({}));
+        var2.insert({}.iter().map({}));
+
+        let variable = iteration.variable::<()>("join");
+        variable.from_join(&var1, &var2, |&key, &val1, &val2| (key, val1, val2)).complete()
+    }};
+    "#,
+        new_fact.name,
+        fact1.name, map1,
+        fact2.name, map2,
+    );
+
+    (code, new_fact)
 }
 
 
-pub fn execute_query(context: Box<ast::Context>) {
-    let database: tuples::Database = tuples::Database::new();
-    let ctxt_file = File::open("context.json").expect("context file not found");
-    let mut ctxt = serde_json::from_reader(ctxt_file).unwrap();// = sem::Context::new();
 
-    let functions: Vec<u64> = Vec::new();
-
-    let semq = create_sem_query(*context.main_query, &mut ctxt);
-
-    if let sem::Relation::Transformation(box sem::Transformation::Filter{ ref var, ref filter }) = semq {
-        let typ = ctxt.get_type(&var.name);
-        println!("type {:?}", typ);
-    }
-
-    println!("{:?}", semq);
-    //println!("{}", query_to_rust(semq, &ctxt));
-    //println!("{}", serde_json::to_string_pretty(&ctxt).unwrap());
-
-    //let trans1 = sem::Transformation::Filter { scan: sem::RelationId(0), filter: sem::FilterFunc{} };
-    //let rs = generate_rust(&ctxt, &trans1);
-    //println!("{}", rs);
-
-
-    let mut from_vars: Vec<Vec<u64>> = Vec::new();
-}
-
-
-/*
-pub fn query_to_rust(q: sem::Relation, ctxt: &sem::Context) -> String {
-    let mut query = String::new();
-    let mut index = 0;
-    for trans in &q.transfromations {
-        match trans {
-            sem::Transformation::Filter{ var, filter } => {
-                let var_type = &ctxt.get_type(&var.name).unwrap().rust_name;
-                query += &("fn filter_".to_owned() + &index.to_string() + 
-                           "(var: Relation<(" + var_type + ")>) -> Relation<(" + var_type + ")> {\n");
-                query += "}";
-            }
-        }
-        index += 1;
-    }
-    query
-}
-*/
-
-/*
-pub fn generate_rust(c: &sem::Context, trans: &sem::Transformation) -> String {
-    use sem::Transformation::*;
-    match trans {
-        Filter { scan, filter } => {
-            //let scan_rel = c.get_relation(*scan);
-            /*
-            let mut header = "fn filter".to_owned() + &scan.0.to_string() + "(";
-            for (ref ty, id) in scan_rel.types.iter().zip(0..) {
-                header += "arg";
-                header += &id.to_string();
-                header += ": ";
-                header += &c.get_type(ty).unwrap().rust_name;
-                header += ", ";
-            }
-            header += ")";
-
-            let mut body = "";
-            
-
-            header*/
-            "".to_owned()
-        },
-        _ => {"".to_owned()}
-    }
-}
-*/
 
 

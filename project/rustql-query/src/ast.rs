@@ -1,27 +1,19 @@
 
 use std::collections::BTreeMap;
 
-#[derive(Debug)]
-pub struct Context {
-    pub queries: BTreeMap<String, Box<Query>>,
-    pub main_query: Box<Query>
-}
 
 #[derive(Debug)]
-pub enum Query {
-    Simple {
-        var_decls: Vec<VarDecl>,
-        conditions: Option<Box<Expr>>,
-        selections: Vec<Box<Expr>>,
-    },
-    Union(Box<Query>, Box<Query>)
-}
-
-
-#[derive(Debug)]
-pub struct VarDecl {
+pub struct Rule {
     pub name: String,
-    pub type_name: String
+    pub args: Vec<String>,
+    pub facts: Vec<Fact>
+}
+
+
+#[derive(Debug, Clone)]
+pub struct Fact { 
+    pub name: String,
+    pub args: Vec<String> 
 }
 
 #[derive(Debug)]
@@ -40,5 +32,13 @@ pub enum Op {
     Mul,
     Div
 }
+
+
+impl Fact {
+    pub fn get_overlapping(&self, other: &Fact) -> Vec<String> {
+        self.args.iter().filter(|s| other.args.contains(s)).map(|s| { s.clone() }).collect()
+    }
+}
+
 
 

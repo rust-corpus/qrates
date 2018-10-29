@@ -1,4 +1,6 @@
 #![feature(box_patterns)]
+#![feature(box_syntax)]
+
 extern crate lalrpop_util;
 extern crate rustql_common;
 
@@ -8,17 +10,16 @@ extern crate serde_json;
 
 pub mod querylang;
 pub mod ast;
-pub mod sem;
 pub mod engine;
 
-use std::io::{self, Read};
-use engine::execute_query;
+use std::io::{self, Read, Write};
+use std::fs::File;
 
 fn main() -> io::Result<()> {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer)?;
-    match querylang::QueryContextParser::new().parse(&buffer) {
-        Ok(ast) => execute_query(ast),
+    match querylang::RuleListParser::new().parse(&buffer) {
+        Ok(ast) => compile(ast),
         Err(e) => {
             use lalrpop_util::ParseError::*;
             match e {
@@ -33,6 +34,14 @@ fn main() -> io::Result<()> {
         }
     }
     Ok(())
+}
+
+
+fn compile(ast: Vec<ast::Rule>) {
+    let code = engine::compile_query(ast);
+
+    let mut rust_file = File::create("temp_rust_file.rs").expect("couldn't create temp file");
+    rust_file.write_all(code.as_bytes());
 }
 
 
