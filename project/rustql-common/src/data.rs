@@ -4,9 +4,6 @@
 // 'linked' together.
 //
 
-use crate::rustc::hir::map::definitions::{DefPath, DefPathData};
-use crate::rustc::hir;
-use crate::rustc::hir::def_id::DefIndex;
 use serde::{Serializer, Deserializer, Serialize, Deserialize};
 
 
@@ -107,13 +104,12 @@ impl Crate {
 */
 
 
-
 impl GlobalDefPath {
-    pub fn new(def: &hir::map::definitions::DefPath, c: &CrateIdentifier) -> Self {
+    pub fn new(def_path_str: String, c: &CrateIdentifier) -> Self {
         GlobalDefPath {
             //path: def.data.iter().map(GlobalDisambiguatedDefPathData::from).collect::<Vec<GlobalDisambiguatedDefPathData>>(),
             crate_ident: c.clone(),
-            def_path: def.to_string_no_crate()
+            def_path: def_path_str
         }
     }
 }

@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::cmp::Ordering;
 use super::ast::*;
 
+
 pub fn compile_query(query: Vec<Rule>) -> String {
     let mut code: String = String::new();
 
@@ -12,7 +13,7 @@ extern crate datafrog;
 extern crate rustql_common;
 
 use datafrog::{Variable, Relation, Iteration};
-use rustql_common::tuples::{Function, Mod, Crate, Database};
+use rustql_common::tuples::{Function, Mod, Crate, RawDatabase};
 
 "#;
 
@@ -38,23 +39,50 @@ enum QueryNode<'a> {
 }
 
 fn compile_rules(name: &str, rules: &Vec<&Rule>) -> String {
+    let natives = generate_native_facts();
+
     let mut code: String = String::new();
 
     for (id, rule) in rules.iter().enumerate() {
         code += &compile_rule(rule, id);
     }
-    let mut fn_code: String = "fn rules_".to_owned() + name + "(db: &Database) {\n";
+
+    let rule = &rules[0];
+    let result_names = &rule.args;
+    for name in result_names {
+        for rule in rules {
+            for fact in &rule.facts {
+                if let Some(id) = fact.args.iter().position(|t| t == name) {
+                    if let Some((types, _n)) = natives.get(&fact.name) {
+
+                    }
+                }
+            }
+        }
+    }
+
+    let mut fn_code: String = "#[no_mangle]\npub extern \"C\" fn rules_".to_owned() + name + "(db: &RawDatabase) {\n";
 
     assert!(rules.len() > 0);
 
-    let natives = generate_native_facts();
+    for (rel_name, (types, native_name)) in &natives {
+        let mut typelist = types.iter().fold("".to_owned(), |s, t| s + t + ", ");
+        //if types.len() <= 1 { typelist += "()"; }
+        fn_code += &format!("    let {}: &Relation<({})> = &db.{};\n",
+            native_name, typelist, native_name);
+    }
 
     let (id, rule) = rules.iter().enumerate().next().unwrap();
-    let args = rule_argument_datanames(&rule, &natives, );
-    fn_code += &format!("    let rel = rule_{}{}({});\n", name, id, "");
+    let args = rule_argument_datanames(&rule, &natives)
+        .into_iter()
+        .fold("".to_owned(), |s, a| s + a + ", ");
+    fn_code += &format!("    let rel = rule_{}{}({});\n", name, id, args); 
 
     for (id, rule) in rules.iter().enumerate().skip(1) {
-        fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, "");
+        let args = rule_argument_datanames(&rule, &natives)
+            .into_iter()
+            .fold("".to_owned(), |s, a| s + a + ", ");
+        fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, args);
     }
     fn_code += "    rel\n}\n";
 
@@ -65,7 +93,7 @@ fn compile_rules(name: &str, rules: &Vec<&Rule>) -> String {
 fn generate_native_facts() -> BTreeMap<&'static str, (Vec<&'static str>, &'static str)> {
     let mut natives = BTreeMap::new();
 
-    natives.insert("calls", (vec!["Function", "Function"], "calls"));
+    natives.insert("calls", (vec!["Function", "Function"], "function_calls"));
     natives.insert("function", (vec!["Function"], "functions"));
     natives.insert("in_module", (vec!["Function", "Mod"], "functions_in_modules"));
 
@@ -102,7 +130,7 @@ fn rule_arguments(rule: &Rule, natives: &BTreeMap<&'static str, (Vec<&'static st
     dedup_facts.dedup_by(|l, r| l.name == r.name);
     for fact in dedup_facts {
         args += &fact.name;
-        args += ": Relation<(";
+        args += ": &Relation<(";
         let types = natives.get(&*fact.name);
         if let Some((types, _name)) = types {
             for t in types {
@@ -151,7 +179,7 @@ fn compile_rule(rule: &Rule, index: usize) -> String {
     println!("new fact: {:?}", fact);
 
     format!(r#"fn rule_{}{}({}) {{
-    let iteration = Iteration::new();
+    let mut iteration = Iteration::new();
 {}
 }}"#,
         rule.name, index, args,
@@ -187,17 +215,21 @@ fn compile_join_tree(node: QueryNode, rule: &Rule) -> (String, Fact) {
 
 fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
     let overlap = fact1.get_overlapping(fact2);
+
+    let vals1 = fact1.args.iter().filter(|s| !overlap.contains(&s)).collect::<Vec<&String>>(); 
+    let vals2 = fact2.args.iter().filter(|s| !overlap.contains(s)).collect::<Vec<&String>>(); 
     
     let map1 = format!("|({})| (({}), ({}))",
         fact1.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        overlap.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        fact1.args.iter().filter(|s| !overlap.contains(&s)).fold("".to_owned(), |s, x| s + x + ", ")
+        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        vals1.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
     let map2 = format!("|({})| (({}), ({}))",
         fact2.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        overlap.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + x + ", ")
+        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        // fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + "*" + x + ", ")
+        vals2.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
     let new_fact = Fact{
@@ -211,18 +243,21 @@ fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
 
     let code = format!(r#"
     let {} = {{
-        let var1 = iteration.variable::<()>("left");
-        let var2 = iteration.variable::<()>("right");
-        var1.insert({}.iter().map({}));
-        var2.insert({}.iter().map({}));
+        let var1 = iteration.variable("left");
+        let var2 = iteration.variable("right");
+        var1.insert({}.iter().map({}).into());
+        var2.insert({}.iter().map({}).into());
 
-        let variable = iteration.variable::<()>("join");
-        variable.from_join(&var1, &var2, |&key, &val1, &val2| (key, val1, val2)).complete()
+        let variable = iteration.variable("join");
+        variable.from_join(&var1, &var2, |&key, &val1, &val2| (key, {}{}));
+        variable.complete()
     }};
     "#,
         new_fact.name,
         fact1.name, map1,
         fact2.name, map2,
+        if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
+        if vals2.len() > 0 { (0..vals2.len()).map(|i| "val2.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
     );
 
     (code, new_fact)

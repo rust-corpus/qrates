@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use super::data;
+use datafrog::Relation;
 
+#[derive(Serialize, Deserialize)]
 pub struct Database {
     pub crates: Vec<(Crate, data::CrateIdentifier)>,
     pub modules: Vec<(Mod, data::Mod)>,
@@ -17,14 +19,21 @@ pub struct Database {
 
     /// hashmap used for reverse lookups of functions
     /// TODO refactor and probably only use one storage for functions
+    #[serde(skip_serializing, skip_deserializing)]
     pub function_finder: HashMap<(data::CrateIdentifier, String), Function>,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
+pub struct RawDatabase {
+    pub functions: Relation<(Function, )>,
+    pub function_calls: Relation<(Function, Function)>,
+    pub functions_in_modules: Relation<(Function, Mod)>,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Crate(pub u64);
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Mod(pub u64);
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Function(pub u64);
 
 
@@ -90,6 +99,14 @@ impl Database {
 
     pub fn get_module(&self, m: Mod) -> &data::Mod {
         &self.modules[m.0 as usize].1
+    }
+
+    pub fn get_raw_database(self) -> RawDatabase {
+        RawDatabase {
+            functions: self.functions.into_iter().map(|(c, _cd)| (c, )).into(),
+            function_calls: self.function_calls.into_iter().into(),
+            functions_in_modules: self.functions_in_modules.into_iter().into(),
+        }
     }
 }
 

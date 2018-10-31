@@ -218,7 +218,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     if let Some(id) = def_id {
                         if (id.is_local()) {
                             //println!("DefPath of call: {}", self.map.def_path(id).to_string_no_crate());
-                            f.calls.push(data::GlobalDefPath::new(&self.map.def_path(id), &self.crate_data.metadata));
+                            f.calls.push(data::GlobalDefPath::new(self.map.def_path(id).to_string_no_crate(), &self.crate_data.metadata));
                         } else {
                             println!("non-local call detected: {:?}", p);
                         }

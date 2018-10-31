@@ -7,6 +7,7 @@ use rustql_common::tuples;
 use rustql_common::data;
 use std::collections::HashMap;
 use datafrog::{Iteration, Relation, Variable};
+use std::fs::File;
 
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 
@@ -16,8 +17,9 @@ fn main() {
     // println!("{:?}", database.modules);
     // println!("{:?}", database.functions.iter().map(|(_, f)| &f.name).collect::<Vec<&String>>());
 
+    save_database(&database, "database.json");
 
-    run_query(&database);
+    //run_query(&database);
 
     /*for val in database.modules_in_crates {
         println!("{:?}", val);
@@ -33,12 +35,17 @@ fn main() {
     }*/
 }
 
+fn save_database(database: &tuples::Database, name: &str) {
+    let file = File::create(name).expect("could not create database file");
+    serde_json::to_writer_pretty(file, database).expect("could not serialize to json");
+}
+
 fn run_query(database: &tuples::Database) {
     let mut iteration = Iteration::new();
 
     let calls = Relation::from(database.function_calls.clone().into_iter().map(|(a, b)| (b, a)));
 
-    let other_relation: Relation<(tuples::Function, tuples::Function)> = Relation::from(calls.iter().filter(|x| true));
+    let other_relation: Relation<(tuples::Function, tuples::Function)> = calls.iter().filter(|_| true).map(|x| *x).into();
 
     let calls_var = iteration.variable::<(tuples::Function, tuples::Function)>("calls");
     calls_var.insert(calls.into());
