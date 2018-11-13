@@ -1,6 +1,7 @@
 extern crate rustql_common;
 extern crate datafrog;
 extern crate serde_json;
+extern crate bincode;
 
 
 use rustql_common::tuples;
@@ -17,7 +18,7 @@ fn main() {
     // println!("{:?}", database.modules);
     // println!("{:?}", database.functions.iter().map(|(_, f)| &f.name).collect::<Vec<&String>>());
 
-    save_database(&database, "database.json");
+    save_database(&database, "database.db");
 
     //run_query(&database);
 
@@ -37,7 +38,8 @@ fn main() {
 
 fn save_database(database: &tuples::Database, name: &str) {
     let file = File::create(name).expect("could not create database file");
-    serde_json::to_writer_pretty(file, database).expect("could not serialize to json");
+    //serde_json::to_writer_pretty(file, database).expect("could not serialize to json");
+    bincode::serialize_into(file, database).expect("could not serialize to json");
 }
 
 fn run_query(database: &tuples::Database) {

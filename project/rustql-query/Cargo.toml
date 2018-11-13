@@ -12,6 +12,7 @@ regex = "0.2.1"
 serde_derive = "*"
 serde_json = "*"
 serde = "*"
+bincode = "*"
 libloading = "*"
 
 [dependencies.lalrpop-util]

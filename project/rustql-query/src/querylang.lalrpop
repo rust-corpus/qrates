@@ -4,11 +4,16 @@ use ast::*; // (0)
 
 grammar;
 
-pub RuleList: Vec<Rule> = {
-     => Vec::new(),
+pub RuleList: (Vec<Rule>, Vec<Decl>) = {
+     => (Vec::new(), Vec::new()),
     <rs: RuleList> <r: Rule> "." => {
         let mut rs = rs;
-        rs.push(r);
+        rs.0.push(r);
+        rs
+    },
+    <rs: RuleList> <r: Decl> ";" => {
+        let mut rs = rs;
+        rs.1.push(r);
         rs
     }
 };
@@ -16,6 +21,11 @@ pub RuleList: Vec<Rule> = {
 Rule: Rule = {
     <name:Ident> "(" <args: CommaList<Ident>> ")" ":-" <rs: CommaList<Fact>> =>
         Rule{ name: name, args: args, facts: rs },
+};
+
+Decl: Decl = {
+    "decl" <name:Ident> "(" <arg_types: CommaList<Ident>> ")" =>
+        Decl{ name: name, arg_types: arg_types },
 };
 
 Fact: Fact = {
@@ -30,52 +40,7 @@ CommaList<Rule>: Vec<Rule> = {
     }
 };
 
-Exprs: Vec<Box<Expr>> = {
-    <elems: CommaList<Expr>> => elems
-};
-
-//Exprs: Vec<Box<Expr>> = {
-//     Expr => vec![<>; 1],
-//     <es:Exprs> "," <e:Expr> => { es.push(e); es }
-//}
-
-
-Expr: Box<Expr> = { // (1)
-    Expr ExprOp Factor => Box::new(Expr::Op(<>)), // (2)
-    Factor,
-};
-
-ExprOp: Op = { // (3)
-    "+" => Op::Add,
-    "-" => Op::Sub,
-};
-
-Factor: Box<Expr> = {
-    Factor FactorOp Term => Box::new(Expr::Op(<>)),
-    Term,
-};
-
-FactorOp: Op = {
-    "*" => Op::Mul,
-    "/" => Op::Div,
-};
-
-Term: Box<Expr> = {
-    Num => Box::new(Expr::Number(<>)), // (4)
-    Ident => Box::new(Expr::Ident(<>)),
-    Str => Box::new(Expr::Str(<>)),
-    "(" <ex:Expr> ")" => ex
-};
-
-Num: i32 = {
-    r"[0-9]+" => i32::from_str(<>).unwrap()
-};
-
 Ident: String = {
     r"[A-Za-z_][A-Za-z0-9_]*" => String::from(<>)
 };
-
-Str: String = {
-    r#""[^"]*""# => String::from(<>.trim_matches('"'))
-}
 

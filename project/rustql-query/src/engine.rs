@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use super::ast::*;
 
 
-pub fn compile_query(query: Vec<Rule>) -> String {
+pub fn compile_query(query: Vec<Rule>, decls: Vec<Decl>) -> String {
     let mut code: String = String::new();
 
     // add preamble
@@ -24,12 +24,23 @@ use rustql_common::tuples::{Function, Mod, Crate, RawDatabase};
         rule_map.entry(&rule.name).or_insert(Vec::new()).push(&rule);
     }
 
-    for (name, rules) in &rule_map {
-        let rule_code = compile_rules(name, &rules);
+    for (&name, rules) in &rule_map {
+        let decl = decls.iter().filter(|&d| d.name == name).next().expect("found rule without declaration");
+        code += &generate_print_code(decl);
+        let rule_code = compile_rules(name, &rules, decl);
         code += &rule_code;
     }
     println!("{}", code);
     code 
+}
+
+fn generate_print_code(decl: &Decl) -> String {
+    let code = format!(r#"#[no_mangle]
+pub extern "C" fn print_{}(db: &RawDatabase) {{
+    rules_{}(db).iter().for_each(|element| println!("tuple: {{:?}}", element));
+}}
+"#, decl.name, decl.name);
+    code
 }
 
 #[derive(Debug)]
@@ -38,16 +49,16 @@ enum QueryNode<'a> {
     Join(Box<QueryNode<'a>>, Box<QueryNode<'a>>)
 }
 
-fn compile_rules(name: &str, rules: &Vec<&Rule>) -> String {
+fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl) -> String {
     let natives = generate_native_facts();
 
     let mut code: String = String::new();
 
     for (id, rule) in rules.iter().enumerate() {
-        code += &compile_rule(rule, id);
+        code += &compile_rule(rule, decl, id);
     }
 
-    let rule = &rules[0];
+    /*let rule = &rules[0];
     let result_names = &rule.args;
     for name in result_names {
         for rule in rules {
@@ -59,9 +70,11 @@ fn compile_rules(name: &str, rules: &Vec<&Rule>) -> String {
                 }
             }
         }
-    }
+    }*/
+    let return_type:String = decl.arg_types.iter().fold("Relation<(".to_owned(), |s, t| s + t + ", ") + ")>";
 
-    let mut fn_code: String = "#[no_mangle]\npub extern \"C\" fn rules_".to_owned() + name + "(db: &RawDatabase) {\n";
+    let mut fn_code: String = "#[no_mangle]\npub extern \"C\" fn rules_".to_owned() + name + "(db: &RawDatabase) -> "
+        + &return_type + " {\n";
 
     assert!(rules.len() > 0);
 
@@ -146,7 +159,7 @@ fn rule_arguments(rule: &Rule, natives: &BTreeMap<&'static str, (Vec<&'static st
     args
 }
 
-fn compile_rule(rule: &Rule, index: usize) -> String {
+fn compile_rule(rule: &Rule, decl: &Decl, index: usize) -> String {
     let natives = generate_native_facts();
     /*
     let mut args: String = String::new();
@@ -173,17 +186,29 @@ fn compile_rule(rule: &Rule, index: usize) -> String {
     }
     */
     let args = rule_arguments(rule, &natives);//.into_iter().fold("".to_owned(), |s, n| s + n + ", ");
+    let return_type = decl.arg_types.iter().fold("Relation<(".to_owned(), |s, t| s + t + ", ") + ")>";
 
     let node = build_join_tree(rule);
     let (rule_code, fact) = compile_join_tree(node, rule);
+
+    let final_map = format!("|({})| ({})",
+        fact.args.iter().fold("".to_owned(), |s, t| s + t + ", "),
+        rule.args.iter().fold("".to_owned(), |s, t| s + "*" + t + ", "),
+        );
+
     println!("new fact: {:?}", fact);
 
-    format!(r#"fn rule_{}{}({}) {{
+    format!(r#"fn rule_{}{}({}) -> {} {{
     let mut iteration = Iteration::new();
 {}
+    {}.into_iter().map({}).into()
 }}"#,
+// {}.into_iter().map(|((x,), ())| (*x,)).into()
         rule.name, index, args,
-        rule_code
+        return_type,
+        rule_code,
+        fact.name,
+        final_map
     )
 }
 
@@ -247,15 +272,18 @@ fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
         let var2 = iteration.variable("right");
         var1.insert({}.iter().map({}).into());
         var2.insert({}.iter().map({}).into());
+        iteration.changed();
 
         let variable = iteration.variable("join");
-        variable.from_join(&var1, &var2, |&key, &val1, &val2| (key, {}{}));
+        variable.from_join(&var1, &var2, |&key, &val1, &val2| ({}{}{}));
+        while iteration.changed() {{}}
         variable.complete()
     }};
     "#,
         new_fact.name,
         fact1.name, map1,
         fact2.name, map2,
+        (0..overlap.len()).map(|i| "key.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", "),
         if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
         if vals2.len() > 0 { (0..vals2.len()).map(|i| "val2.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
     );

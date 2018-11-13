@@ -2,6 +2,15 @@
 use std::collections::BTreeMap;
 
 
+///
+/// represents a "decl f(Mod, Mod)
+///
+#[derive(Debug)]
+pub struct Decl {
+    pub name: String,
+    pub arg_types: Vec<String>,
+}
+
 #[derive(Debug)]
 pub struct Rule {
     pub name: String,
