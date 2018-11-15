@@ -69,7 +69,7 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>) {
         println!("compilation worked!");
 
         let lib = Library::new(lib_path).unwrap();
-        let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase) -> ()> = unsafe { lib.get(b"print_a").unwrap() };
+        let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase) -> ()> = unsafe { lib.get(b"print_calls_unsafe").unwrap() };
 
 
         let db = File::open("../rustql-linker/database.db").expect("unable to open database file");

@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 
 
 ///
-/// represents a "decl f(Mod, Mod)
+/// represents a "decl f(Mod, Mod);"
 ///
 #[derive(Debug)]
 pub struct Decl {
@@ -42,6 +42,12 @@ pub enum Op {
     Div
 }
 
+
+impl Rule {
+    pub fn is_recursive(&self) -> bool {
+        self.facts.iter().filter(|f| f.name == self.name).next().is_some()
+    }
+}
 
 impl Fact {
     pub fn get_overlapping(&self, other: &Fact) -> Vec<String> {

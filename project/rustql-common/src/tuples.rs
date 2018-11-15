@@ -27,6 +27,7 @@ pub struct RawDatabase {
     pub functions: Relation<(Function, )>,
     pub function_calls: Relation<(Function, Function)>,
     pub functions_in_modules: Relation<(Function, Mod)>,
+    pub is_unsafe: Relation<(Function, )>,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
@@ -103,9 +104,10 @@ impl Database {
 
     pub fn get_raw_database(self) -> RawDatabase {
         RawDatabase {
-            functions: self.functions.into_iter().map(|(c, _cd)| (c, )).into(),
+            functions: self.functions.iter().map(|(c, _cd)| (*c, )).into(),
             function_calls: self.function_calls.into_iter().into(),
             functions_in_modules: self.functions_in_modules.into_iter().into(),
+            is_unsafe: self.functions.iter().filter(|(f, info)| info.is_unsafe).map(|(c, _cd)| (*c, )).into()
         }
     }
 }

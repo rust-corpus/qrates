@@ -3,11 +3,49 @@ use std::cmp::Ordering;
 use super::ast::*;
 
 
+#[derive(Debug)]
+struct RelationInfo {
+    arg_types: Vec<String>,
+    variable_name: String,
+    is_native: bool
+}
+
+fn generate_native_facts() -> BTreeMap<String, RelationInfo> {
+    let mut natives = BTreeMap::new();
+
+    natives.insert("calls".to_owned(), RelationInfo{
+        arg_types: vec!["Function".to_owned(), "Function".to_owned()],
+        variable_name: "function_calls".to_owned(),
+        is_native: true
+    });
+    natives.insert("function".to_owned(), RelationInfo{
+        arg_types: vec!["Function".to_owned()],
+        variable_name: "functions".to_owned(),
+        is_native: true
+    });
+    natives.insert("in_module".to_owned(), RelationInfo{
+        arg_types: vec!["Function".to_owned(), "Mod".to_owned()],
+        variable_name: "functions_in_modules".to_owned(),
+        is_native: true
+    });
+    natives.insert("is_unsafe".to_owned(), RelationInfo{
+        arg_types: vec!["Function".to_owned()],
+        variable_name: "is_unsafe".to_owned(),
+        is_native: true
+    });
+    //natives.insert("function".to_owned(), (vec!["Function"], "functions"));
+    //natives.insert("in_module".to_owned(), (vec!["Function", "Mod"], "functions_in_modules"));
+    //natives.insert("is_unsafe".to_owned(), (vec!["Function"], "is_unsafe"));
+
+    natives
+}
+
 pub fn compile_query(query: Vec<Rule>, decls: Vec<Decl>) -> String {
     let mut code: String = String::new();
 
     // add preamble
     
+    // TODO add some nice templating mechanism
     code += r#"#![feature(rustc_private)]
 extern crate datafrog;
 extern crate rustql_common;
@@ -18,6 +56,13 @@ use rustql_common::tuples::{Function, Mod, Crate, RawDatabase};
 "#;
 
 
+    let mut existing_rules = generate_native_facts();
+
+    for decl in &decls {
+        println!("inserting decl for {:?}", decl);
+        existing_rules.insert(decl.name.clone(), RelationInfo { arg_types: decl.arg_types.clone(), variable_name: decl.name.clone(), is_native: false });
+    }
+
     // group rules by name
     let mut rule_map: BTreeMap<&str, Vec<&Rule>> = BTreeMap::new();
     for rule in &query {
@@ -27,7 +72,7 @@ use rustql_common::tuples::{Function, Mod, Crate, RawDatabase};
     for (&name, rules) in &rule_map {
         let decl = decls.iter().filter(|&d| d.name == name).next().expect("found rule without declaration");
         code += &generate_print_code(decl);
-        let rule_code = compile_rules(name, &rules, decl);
+        let rule_code = compile_rules(name, &rules, decl, &existing_rules);
         code += &rule_code;
     }
     println!("{}", code);
@@ -49,72 +94,81 @@ enum QueryNode<'a> {
     Join(Box<QueryNode<'a>>, Box<QueryNode<'a>>)
 }
 
-fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl) -> String {
-    let natives = generate_native_facts();
+fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &BTreeMap<String, RelationInfo>) -> String {
 
     let mut code: String = String::new();
 
     for (id, rule) in rules.iter().enumerate() {
-        code += &compile_rule(rule, decl, id);
+        code += &compile_rule(rule, decl, id, existing_rules);
     }
 
-    /*let rule = &rules[0];
-    let result_names = &rule.args;
-    for name in result_names {
-        for rule in rules {
-            for fact in &rule.facts {
-                if let Some(id) = fact.args.iter().position(|t| t == name) {
-                    if let Some((types, _n)) = natives.get(&fact.name) {
-
-                    }
-                }
-            }
-        }
-    }*/
-    let return_type:String = decl.arg_types.iter().fold("Relation<(".to_owned(), |s, t| s + t + ", ") + ")>";
+    let return_type: String = decl.arg_types.iter().fold("Relation<(".to_owned(), |s, t| s + t + ", ") + ")>";
 
     let mut fn_code: String = "#[no_mangle]\npub extern \"C\" fn rules_".to_owned() + name + "(db: &RawDatabase) -> "
         + &return_type + " {\n";
 
     assert!(rules.len() > 0);
 
-    for (rel_name, (types, native_name)) in &natives {
-        let mut typelist = types.iter().fold("".to_owned(), |s, t| s + t + ", ");
+    let mut variable_map: BTreeMap<String, String> = BTreeMap::new();
+    for (rel_name, rel_info) in existing_rules {
+        let mut typelist = rel_info.arg_types.iter().fold("".to_owned(), |s, t| s + t + ", ");
         //if types.len() <= 1 { typelist += "()"; }
-        fn_code += &format!("    let {}: &Relation<({})> = &db.{};\n",
-            native_name, typelist, native_name);
+        if rel_info.is_native {
+            fn_code += &format!("    let {}: &Relation<({})> = &db.{};\n",
+                rel_info.variable_name, typelist, rel_info.variable_name);
+            //variable_map.insert(rel_name.to_owned(), format!("    let {}: &Relation<({})> = &db.{};\n",
+            //    rel_info.variable_name, typelist, rel_info.variable_name));
+        }
+        else {
+            //fn_code += &format!("    let {}: &Relation<({})> = &rules_{}(&db);\n",
+            //    rel_info.variable_name, typelist, rel_info.variable_name);
+            variable_map.insert(rel_name.to_owned(), format!("    let {}: &Relation<({})> = &rules_{}(&db);\n",
+                rel_info.variable_name, typelist, rel_info.variable_name));
+        }
     }
 
     let (id, rule) = rules.iter().enumerate().next().unwrap();
-    let args = rule_argument_datanames(&rule, &natives)
-        .into_iter()
+    let arg_datanames = rule_argument_datanames(&rule, &existing_rules);
+
+    for dataname in &arg_datanames {
+        if let Some(code) = variable_map.get(dataname) {
+            fn_code += code;
+        }
+    }
+
+
+    let args = arg_datanames
+        .iter()
         .fold("".to_owned(), |s, a| s + a + ", ");
     fn_code += &format!("    let rel = rule_{}{}({});\n", name, id, args); 
 
     for (id, rule) in rules.iter().enumerate().skip(1) {
-        let args = rule_argument_datanames(&rule, &natives)
-            .into_iter()
-            .fold("".to_owned(), |s, a| s + a + ", ");
-        fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, args);
+        /*if rule.is_recursive() {
+            let args = rule_argument_datanames(&rule, &existing_rules)
+                .into_iter()
+            //    .chain(vec![("&rel".to_owned())].into_iter())
+                .fold("".to_owned(), |s, a| s + &a + ", ");
+            //fn_code += &format!("    let variable = iteration.variable(\"variable\");\n");
+            //fn_code += &format!("    variable.insert(rel.into());\n");
+            //fn_code += &format!("    while iteration.changed() {{\n");
+            //fn_code += &format!("        .merge(rule_{}{}({}));\n", name, id, args);
+            fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, args);
+        }
+        else {*/
+            let args = rule_argument_datanames(&rule, &existing_rules)
+                .into_iter()
+                .map(|n| if n == name { "rel".to_owned() } else { n })
+                .fold("".to_owned(), |s, a| s + &a + ", ");
+            fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, args);
+        /*}*/
     }
     fn_code += "    rel\n}\n";
-
 
     fn_code + &code
 }
 
-fn generate_native_facts() -> BTreeMap<&'static str, (Vec<&'static str>, &'static str)> {
-    let mut natives = BTreeMap::new();
-
-    natives.insert("calls", (vec!["Function", "Function"], "function_calls"));
-    natives.insert("function", (vec!["Function"], "functions"));
-    natives.insert("in_module", (vec!["Function", "Mod"], "functions_in_modules"));
-
-    natives
-}
-
-fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<&'static str, (Vec<&'static str>, &'static str)>) -> Vec<&'static str>{
-    let mut datanames = Vec::new();
+fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<String, RelationInfo>) -> Vec<String> {
+    let mut datanames: Vec<String> = Vec::new();
     let mut dedup_facts = rule.facts.clone();
     dedup_facts.sort_unstable_by(|l, r|
         if l.name < r.name { Ordering::Less }
@@ -123,17 +177,19 @@ fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<&'static str, (Vec<&'
     dedup_facts.dedup_by(|l, r| l.name == r.name);
     for fact in dedup_facts {
         let types = natives.get(&*fact.name);
-        if let Some((_t, name)) = types {
-            datanames.push(*name);
+        if let Some(rel_info) = types {
+            datanames.push(rel_info.variable_name.to_string());
         }
         else {
+            println!("{:?}", natives);
             panic!("unknown relation: {}", fact.name);
+            //datanames.push("rule_".to_owned() + &fact.name);
         }
     }
     datanames
 }
 
-fn rule_arguments(rule: &Rule, natives: &BTreeMap<&'static str, (Vec<&'static str>, &'static str)>) -> String {
+fn rule_arguments(rule: &Rule, decl: &Decl, natives: &BTreeMap<String, RelationInfo>) -> String {
     let mut args = String::new();
     let mut dedup_facts = rule.facts.clone();
     dedup_facts.sort_unstable_by(|l, r|
@@ -145,22 +201,33 @@ fn rule_arguments(rule: &Rule, natives: &BTreeMap<&'static str, (Vec<&'static st
         args += &fact.name;
         args += ": &Relation<(";
         let types = natives.get(&*fact.name);
-        if let Some((types, _name)) = types {
-            for t in types {
-                args += t;
+        if let Some(ref rel_info) = types {
+            for t in &rel_info.arg_types {
+                args += &t;
                 args += ", ";
             }
         }
         else {
+            println!("{:?}", natives);
             panic!("unknown relation: {}", fact.name);
         }
         args += ")>, ";
     }
+
+    // if the rule is a recursive rule, then add a self argument
+    /*if rule.is_recursive() {
+        args += "self_rel: &Relation<(";
+        for t in &decl.arg_types {
+            args += &t;
+            args += ", ";
+        }
+        args += ")>";
+    }*/
+
     args
 }
 
-fn compile_rule(rule: &Rule, decl: &Decl, index: usize) -> String {
-    let natives = generate_native_facts();
+fn compile_rule(rule: &Rule, decl: &Decl, index: usize, existing_rules: &BTreeMap<String, RelationInfo>) -> String {
     /*
     let mut args: String = String::new();
     let mut dedup_facts = rule.facts.clone();
@@ -185,7 +252,7 @@ fn compile_rule(rule: &Rule, decl: &Decl, index: usize) -> String {
         args += ")>, ";
     }
     */
-    let args = rule_arguments(rule, &natives);//.into_iter().fold("".to_owned(), |s, n| s + n + ", ");
+    let args = rule_arguments(rule, decl, &existing_rules);//.into_iter().fold("".to_owned(), |s, n| s + n + ", ");
     let return_type = decl.arg_types.iter().fold("Relation<(".to_owned(), |s, t| s + t + ", ") + ")>";
 
     let node = build_join_tree(rule);
