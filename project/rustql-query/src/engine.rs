@@ -91,7 +91,8 @@ pub extern "C" fn print_{}(db: &RawDatabase) {{
 #[derive(Debug)]
 enum QueryNode<'a> {
     Input(&'a Fact),
-    Join(Box<QueryNode<'a>>, Box<QueryNode<'a>>)
+    Join(Box<QueryNode<'a>>, Box<QueryNode<'a>>),
+    RecursiveJoin(Box<QueryNode<'a>>, Box<QueryNode<'a>>),
 }
 
 fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &BTreeMap<String, RelationInfo>) -> String {
@@ -108,6 +109,8 @@ fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &B
         + &return_type + " {\n";
 
     assert!(rules.len() > 0);
+
+    fn_code += "    let iteration = Iteration::new();\n";
 
     let mut variable_map: BTreeMap<String, String> = BTreeMap::new();
     for (rel_name, rel_info) in existing_rules {
@@ -148,17 +151,25 @@ fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &B
                 .into_iter()
             //    .chain(vec![("&rel".to_owned())].into_iter())
                 .fold("".to_owned(), |s, a| s + &a + ", ");
-            //fn_code += &format!("    let variable = iteration.variable(\"variable\");\n");
-            //fn_code += &format!("    variable.insert(rel.into());\n");
-            //fn_code += &format!("    while iteration.changed() {{\n");
-            //fn_code += &format!("        .merge(rule_{}{}({}));\n", name, id, args);
+            fn_code += &format!("    let variable = iteration.variable(\"variable\");\n");
+            fn_code += &format!("    variable.insert(rel.into());\n");
+            fn_code += &format!("    while iteration.changed() {{\n");
+            fn_code += &format!("        variable.insert(rel.merge(rule_{}{}({})));\n", name, id, args);
+            fn_code += &format!("    }}\n");
             fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, args);
         }
         else {*/
-            let args = rule_argument_datanames(&rule, &existing_rules)
+            let arg_names = rule_argument_datanames(&rule, &existing_rules);
+            let temp_var_decl = if arg_names.contains(&name.to_string() /* why */) {
+                format!("    let {}: Relation<_> = rel.iter().map(|x| x.clone()).collect::<Vec<_>>().into();", name)
+            }
+            else { "".to_owned() };
+            let args = arg_names
                 .into_iter()
-                .map(|n| if n == name { "rel".to_owned() } else { n })
+                .map(|n| if n == name { "&".to_owned() + &n } else { n })
                 .fold("".to_owned(), |s, a| s + &a + ", ");
+            //fn_code += &format!("    let temp = rel.merge(rule_{}{}({}));\n", name, id, args);
+            fn_code += &temp_var_decl;
             fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, args);
         /*}*/
     }
@@ -261,7 +272,7 @@ fn compile_rule(rule: &Rule, decl: &Decl, index: usize, existing_rules: &BTreeMa
     let final_map = format!("|({})| ({})",
         fact.args.iter().fold("".to_owned(), |s, t| s + t + ", "),
         rule.args.iter().fold("".to_owned(), |s, t| s + "*" + t + ", "),
-        );
+    );
 
     println!("new fact: {:?}", fact);
 
@@ -269,7 +280,8 @@ fn compile_rule(rule: &Rule, decl: &Decl, index: usize, existing_rules: &BTreeMa
     let mut iteration = Iteration::new();
 {}
     {}.into_iter().map({}).into()
-}}"#,
+}}
+"#,
 // {}.into_iter().map(|((x,), ())| (*x,)).into()
         rule.name, index, args,
         return_type,
@@ -285,9 +297,13 @@ fn build_join_tree(rule: &Rule) -> QueryNode {
     let mut node = QueryNode::Input(&rule.facts[0]);
 
     for fact in rule.facts.iter().skip(1) {
-        node = QueryNode::Join(box node, box QueryNode::Input(&fact));
+        if fact.name == rule.name {
+            node = QueryNode::RecursiveJoin(box node, box QueryNode::Input(&fact));
+        }
+        else {
+            node = QueryNode::Join(box node, box QueryNode::Input(&fact));
+        }
     }
-
     node
 }
 
@@ -302,7 +318,78 @@ fn compile_join_tree(node: QueryNode, rule: &Rule) -> (String, Fact) {
 
             (left_code + &right_code + &join, joinfact)
         }
+        QueryNode::RecursiveJoin(box left, box right) => {
+            let (left_code, lfact) = compile_join_tree(left, rule);
+            let (right_code, rfact) = compile_join_tree(right, rule);
+
+            let (join, mut joinfact) = compile_recursive_join(&lfact, &rfact);
+            //joinfact.name = "var.complete()".to_owned();
+            (left_code + &right_code + &join, joinfact)
+
+            /*(format!(r#"
+    let var = iteration.variable("var");
+    var.insert({}.iter().into());
+    while iteration.changed() {{
+        {}{}{}
+        var.insert(temp_fact);
+        println!("one loop iteration");
+    }}
+    "#, rfact.name, left_code, &right_code, &join),
+
+             joinfact)*/
+        }
     }
+}
+
+fn compile_recursive_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
+    let overlap = fact1.get_overlapping(fact2);
+
+    let vals1 = fact1.args.iter().filter(|s| !overlap.contains(&s)).collect::<Vec<&String>>(); 
+    let vals2 = fact2.args.iter().filter(|s| !overlap.contains(s)).collect::<Vec<&String>>(); 
+    
+    let map1 = format!("|({})| (({}), ({}))",
+        fact1.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        vals1.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
+    );
+
+    let map2 = format!("|({})| (({}), ({}{}))",
+        fact2.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        vals2.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
+    );
+
+    let new_fact = Fact{
+        name: "temp_fact".to_owned(),
+        args: overlap.iter()
+            .chain(fact1.args.iter().filter(|s| !overlap.contains(s)))
+            .chain(fact2.args.iter().filter(|s| !overlap.contains(s)))
+            .map(|s| s.clone())
+            .collect()
+    };
+    println!("new fact: {:?}", new_fact);
+
+    let code = format!(r#"
+    let recursive = iteration.variable("rec");
+    recursive.insert({}.iter().map({}).into());
+    while iteration.changed() {{
+        let var1 = iteration.variable("left");
+        var1.insert({}.iter().map({}).into());
+
+        recursive.from_join(&var1, &recursive, |&key, &val1, &val2| ({}, {}, {}));
+    }}
+    let {} = recursive.complete();
+    "#,
+        fact2.name, map2,
+        fact1.name, map1,
+        (0..overlap.len()).map(|i| "key.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")",
+        if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")" } else { "".to_owned() },
+        if vals2.len() > 0 { (0..vals2.len()).map(|i| "val2.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")" } else { "".to_owned() },
+        new_fact.name,
+    );
+
+    (code, new_fact)
 }
 
 fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
