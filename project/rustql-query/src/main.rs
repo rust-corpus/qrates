@@ -24,7 +24,7 @@ fn main() -> io::Result<()> {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer)?;
     match querylang::RuleListParser::new().parse(&buffer) {
-        Ok((rules, decls)) => compile(rules, decls),
+        Ok((rules, decls, actions)) => compile(rules, decls, actions),
         Err(e) => {
             use lalrpop_util::ParseError::*;
             match e {
@@ -42,10 +42,10 @@ fn main() -> io::Result<()> {
 }
 
 
-fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>) {
+fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>) {
 
 
-    let code = engine::compile_query(ast, decls);
+    let code = engine::compile_query(ast, decls, &actions);
 
     let mut rust_file = File::create("temp_rust_file.rs").expect("couldn't create temp file");
     rust_file.write_all(code.as_bytes());
@@ -69,14 +69,25 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>) {
         println!("compilation worked!");
 
         let lib = Library::new(lib_path).unwrap();
-        let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase) -> ()> = unsafe { lib.get(b"print_calls_unsafe").unwrap() };
-
+        /*
+        let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase) -> ()> = unsafe { lib.get(b"print_cool").unwrap() };
+        */
 
         let db = File::open("../rustql-linker/database.db").expect("unable to open database file");
         let database: rustql_common::tuples::Database = bincode::deserialize_from(db).expect("unable to parse database");
         let raw = database.get_raw_database();
 
-        unsafe { func(&raw) };
+        for action in &actions {
+            if action.name == "for_each" {
+                let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, ) -> ()> =
+                    unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()).unwrap() };
+                unsafe { func(&raw) };
+            }
+            else {
+                println!("unknown action: {}", action.name);
+            }
+        }
+        //unsafe { func(&raw) };
     }
     else {
         println!("compilation error. compiler says the following:");

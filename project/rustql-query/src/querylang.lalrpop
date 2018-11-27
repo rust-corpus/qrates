@@ -4,8 +4,8 @@ use ast::*; // (0)
 
 grammar;
 
-pub RuleList: (Vec<Rule>, Vec<Decl>) = {
-     => (Vec::new(), Vec::new()),
+pub RuleList: (Vec<Rule>, Vec<Decl>, Vec<Action>) = {
+     => (Vec::new(), Vec::new(), Vec::new()),
     <rs: RuleList> <r: Rule> "." => {
         let mut rs = rs;
         rs.0.push(r);
@@ -14,6 +14,11 @@ pub RuleList: (Vec<Rule>, Vec<Decl>) = {
     <rs: RuleList> <r: Decl> ";" => {
         let mut rs = rs;
         rs.1.push(r);
+        rs
+    },
+    <rs: RuleList> <a: Action> ";" => {
+        let mut rs = rs;
+        rs.2.push(a);
         rs
     }
 };
@@ -43,4 +48,13 @@ CommaList<Rule>: Vec<Rule> = {
 Ident: String = {
     r"[A-Za-z_][A-Za-z0-9_]*" => String::from(<>)
 };
+
+Action: Action = {
+    "!" <name: Ident> "(" <target: Ident> "," <c:RustCode> ")" => Action{ name: name, target: target, rust_code: c }
+}
+
+RustCode: String = {
+    r"\{(.|\s)*\}" => { let mut r_str = String::from(<>); let l = r_str.len(); r_str.remove(l - 1); r_str.remove(0); r_str }
+}
+
 

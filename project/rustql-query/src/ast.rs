@@ -42,6 +42,13 @@ pub enum Op {
     Div
 }
 
+#[derive(Debug)]
+pub struct Action {
+    pub name: String,
+    pub target: String,
+    pub rust_code: String
+}
+
 
 impl Rule {
     pub fn is_recursive(&self) -> bool {

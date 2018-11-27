@@ -40,7 +40,7 @@ fn generate_native_facts() -> BTreeMap<String, RelationInfo> {
     natives
 }
 
-pub fn compile_query(query: Vec<Rule>, decls: Vec<Decl>) -> String {
+pub fn compile_query(query: Vec<Rule>, decls: Vec<Decl>, actions: &Vec<Action>) -> String {
     let mut code: String = String::new();
 
     // add preamble
@@ -75,6 +75,20 @@ use rustql_common::tuples::{Function, Mod, Crate, RawDatabase};
         let rule_code = compile_rules(name, &rules, decl, &existing_rules);
         code += &rule_code;
     }
+
+    for action in actions {
+        if action.name == "for_each" {
+            code += &format!(r#"#[no_mangle] pub extern "C" fn {}_{}(db: &RawDatabase) {{
+    rules_{}(db).iter().for_each({});
+}}
+"#,
+            action.name, action.target, action.target, action.rust_code);
+        }
+        else {
+            panic!("unknown action: {}", action.name);
+        }
+    }
+
     println!("{}", code);
     code 
 }
