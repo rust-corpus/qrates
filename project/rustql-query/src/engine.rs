@@ -267,12 +267,19 @@ fn compile_rule(rule: &Rule, decl: &Decl, index: usize, existing_rules: &BTreeMa
     let return_type = decl.arg_types.iter().fold("Relation<(".to_owned(), |s, t| s + t + ", ") + ")>";
 
     let node = build_join_tree(rule);
-    let (rule_code, fact) = compile_join_tree(node, rule);
+    let (rule_code, fact) = compile_join_tree(&node, rule);
 
-    let final_map = format!("|({})| ({})",
-        fact.args.iter().fold("".to_owned(), |s, t| s + t + ", "),
-        rule.args.iter().fold("".to_owned(), |s, t| s + "*" + t + ", "),
-    );
+    let final_map = if let QueryNode::RecursiveJoin(_, _) = &node {
+        format!("|({})| {}",
+            fact.args.iter().fold("".to_owned(), |s, t| s + t + ", "),
+            rule.args.iter().fold("".to_owned(), |s, t| s + "*" + t + ", "),
+        )
+    } else {
+        format!("|({})| ({})",
+            fact.args.iter().fold("".to_owned(), |s, t| s + t + ", "),
+            rule.args.iter().fold("".to_owned(), |s, t| s + "*" + t + ", "),
+        )
+    };
 
     println!("new fact: {:?}", fact);
 
@@ -307,9 +314,9 @@ fn build_join_tree(rule: &Rule) -> QueryNode {
     node
 }
 
-fn compile_join_tree(node: QueryNode, rule: &Rule) -> (String, Fact) {
+fn compile_join_tree(node: &QueryNode, rule: &Rule) -> (String, Fact) {
     match node {
-        QueryNode::Input(name) => { ("".to_owned(), name.clone()) },
+        QueryNode::Input(ref name) => { ("".to_owned(), Fact{name: name.name.clone(), args: name.args.clone()}) },
         QueryNode::Join(box left, box right) => {
             let (left_code, lfact) = compile_join_tree(left, rule);
             let (right_code, rfact) = compile_join_tree(right, rule);
@@ -389,9 +396,13 @@ fn compile_recursive_join(fact1: &Fact, fact2: &Fact, target: &Fact) -> (String,
         vals2.iter().fold("".to_owned(), |s, x| s + x + ", "),
         //new_fact.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
         //target.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        overlap.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + x + ", "),
-        vals2.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        
+        target.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        "", "",
+
+        //overlap.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        //fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + x + ", "),
+        //target.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
 
         //(0..overlap.len()).map(|i| "key.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")",
         //if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")" } else { "".to_owned() },
