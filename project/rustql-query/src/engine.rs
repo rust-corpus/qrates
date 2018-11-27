@@ -322,7 +322,9 @@ fn compile_join_tree(node: QueryNode, rule: &Rule) -> (String, Fact) {
             let (left_code, lfact) = compile_join_tree(left, rule);
             let (right_code, rfact) = compile_join_tree(right, rule);
 
-            let (join, mut joinfact) = compile_recursive_join(&lfact, &rfact);
+            let target_fact = Fact { name: rule.name.clone(), args: rule.args.clone() };
+
+            let (join, mut joinfact) = compile_recursive_join(&lfact, &rfact, &target_fact);
             //joinfact.name = "var.complete()".to_owned();
             (left_code + &right_code + &join, joinfact)
 
@@ -341,7 +343,7 @@ fn compile_join_tree(node: QueryNode, rule: &Rule) -> (String, Fact) {
     }
 }
 
-fn compile_recursive_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
+fn compile_recursive_join(fact1: &Fact, fact2: &Fact, target: &Fact) -> (String, Fact) {
     let overlap = fact1.get_overlapping(fact2);
 
     let vals1 = fact1.args.iter().filter(|s| !overlap.contains(&s)).collect::<Vec<&String>>(); 
@@ -360,35 +362,44 @@ fn compile_recursive_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
         vals2.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
-    let new_fact = Fact{
+    /*let new_fact = Fact {
         name: "temp_fact".to_owned(),
         args: overlap.iter()
             .chain(fact1.args.iter().filter(|s| !overlap.contains(s)))
             .chain(fact2.args.iter().filter(|s| !overlap.contains(s)))
             .map(|s| s.clone())
             .collect()
-    };
-    println!("new fact: {:?}", new_fact);
+    };*/
+    let mut new_fact = target.clone();
 
     let code = format!(r#"
+    let var1 = iteration.variable("left");
+    var1.insert({}.iter().map({}).into());
     let recursive = iteration.variable("rec");
     recursive.insert({}.iter().map({}).into());
     while iteration.changed() {{
-        let var1 = iteration.variable("left");
-        var1.insert({}.iter().map({}).into());
-
-        recursive.from_join(&var1, &recursive, |&key, &val1, &val2| ({}, {}, {}));
+        recursive.from_join(&var1, &recursive, |&({}), &({}), &({})| (({}), ({}{})));
     }}
     let {} = recursive.complete();
     "#,
-        fact2.name, map2,
         fact1.name, map1,
-        (0..overlap.len()).map(|i| "key.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")",
-        if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")" } else { "".to_owned() },
-        if vals2.len() > 0 { (0..vals2.len()).map(|i| "val2.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")" } else { "".to_owned() },
+        fact2.name, map2,
+        overlap.iter().fold("".to_owned(), |s, t| s + &t + ", "), 
+        vals1.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        vals2.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        //new_fact.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        //target.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        overlap.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + x + ", "),
+        vals2.iter().fold("".to_owned(), |s, x| s + x + ", "),
+
+        //(0..overlap.len()).map(|i| "key.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")",
+        //if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")" } else { "".to_owned() },
+        //if vals2.len() > 0 { (0..vals2.len()).map(|i| "val2.".to_owned() + &i.to_string()).fold("(".to_owned(), |s, t| s + &t + ", ") + ")" } else { "".to_owned() },
         new_fact.name,
     );
 
+    new_fact.args.push("()".to_owned());
     (code, new_fact)
 }
 
