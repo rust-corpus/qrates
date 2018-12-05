@@ -7,6 +7,8 @@ pub struct Database {
     pub crates: Vec<(Crate, data::CrateIdentifier)>,
     pub modules: Vec<(Mod, data::Mod)>,
     pub functions: Vec<(Function, data::Function)>,
+    pub structs: Vec<(Struct, data::Struct)>,
+    pub types: Vec<(Type, data::Type)>,
 
     /// An entry here means that the module is contained in the crate
     pub modules_in_crates: Vec<(Mod, Crate)>,
@@ -17,6 +19,8 @@ pub struct Database {
     pub functions_in_modules: Vec<(Function, Mod)>,
     pub function_calls: Vec<(Function, Function)>,
 
+    pub is_reference_to: Vec<(Type, Type)>,
+
     /// hashmap used for reverse lookups of functions
     /// TODO refactor and probably only use one storage for functions
     #[serde(skip_serializing, skip_deserializing)]
@@ -25,9 +29,15 @@ pub struct Database {
 
 pub struct RawDatabase {
     pub functions: Relation<(Function, )>,
+    pub structs: Relation<(Struct, )>,
     pub function_calls: Relation<(Function, Function)>,
     pub functions_in_modules: Relation<(Function, Mod)>,
     pub is_unsafe: Relation<(Function, )>,
+    pub is_type: Relation<(Type, )>,
+    pub is_reference_to: Relation<(Type, Type)>,
+    pub is_mutable_reference: Relation<(Type, )>,
+    pub function_argument_of_type: Relation<(Function, Type)>,
+
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
@@ -36,7 +46,10 @@ pub struct Crate(pub u64);
 pub struct Mod(pub u64);
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Function(pub u64);
-
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Struct(pub u64);
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Type(pub u64);
 
 impl Database {
     pub fn new() -> Self {
@@ -44,10 +57,14 @@ impl Database {
             crates: vec![],
             modules: vec![],
             functions: vec![],
+            structs: vec![],
+            types: vec![],
             modules_in_crates: vec![],// iteration.variable::<(Mod, Crate)>("modules_in_crates"),
             modules_in_modules: vec![],// iteration.variable::<(Mod, Mod)>("modules_in_modules"),
             functions_in_modules: vec![],// iteration.variable::<(Function, Mod)>("functions_in_modules"),
             function_calls: vec![],// iteration.variable::<(Function, Function)>("function_calls"),
+            is_reference_to: vec![],
+
             function_finder: HashMap::new(),
         }
     }
@@ -102,12 +119,17 @@ impl Database {
         &self.modules[m.0 as usize].1
     }
 
-    pub fn get_raw_database(self) -> RawDatabase {
+    pub fn get_raw_database(&self) -> RawDatabase {
         RawDatabase {
             functions: self.functions.iter().map(|(c, _cd)| (*c, )).into(),
-            function_calls: self.function_calls.into_iter().into(),
-            functions_in_modules: self.functions_in_modules.into_iter().into(),
-            is_unsafe: self.functions.iter().filter(|(f, info)| info.is_unsafe).map(|(c, _cd)| (*c, )).into()
+            structs: self.structs.iter().map(|(c, _cd)| (*c, )).into(),
+            is_type: self.types.iter().map(|(c, _cd)| (*c, )).into(),
+            function_calls: self.function_calls.iter().cloned().into(),
+            functions_in_modules: self.functions_in_modules.iter().cloned().into(),
+            is_unsafe: self.functions.iter().filter(|(f, info)| info.is_unsafe).map(|(c, _cd)| (*c, )).into(),
+            is_reference_to: vec![].into(),
+            is_mutable_reference: self.types.iter().filter(|(i, typ)| if let data::Type::Reference{to: _, is_mutable: m} = typ { *m } else { false }).map(|(i, _t)| (*i, )).into(),
+            function_argument_of_type: vec![].into()
         }
     }
 }

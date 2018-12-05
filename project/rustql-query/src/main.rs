@@ -57,9 +57,9 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
             .arg("-O")
             .arg("--crate-type=cdylib")
             .arg("-L")
-            .arg("../rustql-common/target/debug/deps")
+            .arg("../rustql-common/target/release/deps")
             .arg("--extern")
-            .arg("datafrog=../rustql-common/target/debug/deps/libdatafrog-6b64ac73f4a87f58.rlib")
+            .arg("datafrog=../rustql-common/target/release/deps/libdatafrog-e733c56ee494dea5.rlib")
             .arg("-o")
             .arg(lib_path)
             .output()
@@ -79,9 +79,9 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
 
         for action in &actions {
             if action.name == "for_each" {
-                let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, ) -> ()> =
+                let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, &rustql_common::tuples::Database) -> ()> =
                     unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()).unwrap() };
-                unsafe { func(&raw) };
+                unsafe { func(&raw, &database) };
             }
             else {
                 println!("unknown action: {}", action.name);

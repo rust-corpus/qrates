@@ -33,8 +33,8 @@ Decl: Decl = {
         Decl{ name: name, arg_types: arg_types },
 };
 
-Fact: Fact = {
-    <i: Ident> "(" <args: CommaList<Ident>> ")" => Fact{ name: i, args: args }
+Fact: (Fact, bool) = {
+    <x:("!")?> <i: Ident> "(" <args: CommaList<Ident>> ")" => (Fact{ name: i, args: args }, x.is_some())
 };
 
 CommaList<Rule>: Vec<Rule> = {

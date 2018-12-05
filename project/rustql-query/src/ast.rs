@@ -15,14 +15,14 @@ pub struct Decl {
 pub struct Rule {
     pub name: String,
     pub args: Vec<String>,
-    pub facts: Vec<Fact>
+    /// vector with facts, each with bool indicating if it is negated
+    pub facts: Vec<(Fact, bool)>,
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Fact { 
     pub name: String,
-    pub args: Vec<String> 
+    pub args: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -52,7 +52,7 @@ pub struct Action {
 
 impl Rule {
     pub fn is_recursive(&self) -> bool {
-        self.facts.iter().filter(|f| f.name == self.name).next().is_some()
+        self.facts.iter().filter(|(f, _negated)| f.name == self.name).next().is_some()
     }
 }
 

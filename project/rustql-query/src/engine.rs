@@ -33,6 +33,26 @@ fn generate_native_facts() -> BTreeMap<String, RelationInfo> {
         variable_name: "is_unsafe".to_owned(),
         is_native: true
     });
+    natives.insert("is_struct".to_owned(), RelationInfo{
+        arg_types: vec!["Struct".to_owned()],
+        variable_name: "structs".to_owned(),
+        is_native: true
+    });
+    natives.insert("is_type".to_owned(), RelationInfo{
+        arg_types: vec!["Type".to_owned()],
+        variable_name: "is_type".to_owned(),
+        is_native: true
+    });
+    natives.insert("is_reference_to".to_owned(), RelationInfo{
+        arg_types: vec!["Type".to_owned(), "Type".to_owned()],
+        variable_name: "is_reference_to".to_owned(),
+        is_native: true
+    });
+    natives.insert("is_mutable_reference".to_owned(), RelationInfo{
+        arg_types: vec!["Type".to_owned()],
+        variable_name: "is_mutable_reference".to_owned(),
+        is_native: true
+    });
     //natives.insert("function".to_owned(), (vec!["Function"], "functions"));
     //natives.insert("in_module".to_owned(), (vec!["Function", "Mod"], "functions_in_modules"));
     //natives.insert("is_unsafe".to_owned(), (vec!["Function"], "is_unsafe"));
@@ -51,7 +71,7 @@ extern crate datafrog;
 extern crate rustql_common;
 
 use datafrog::{Variable, Relation, Iteration};
-use rustql_common::tuples::{Function, Mod, Crate, RawDatabase};
+use rustql_common::tuples::*;
 
 "#;
 
@@ -78,7 +98,7 @@ use rustql_common::tuples::{Function, Mod, Crate, RawDatabase};
 
     for action in actions {
         if action.name == "for_each" {
-            code += &format!(r#"#[no_mangle] pub extern "C" fn {}_{}(db: &RawDatabase) {{
+            code += &format!(r#"#[no_mangle] pub extern "C" fn {}_{}(db: &RawDatabase, orig_db: &Database) {{
     rules_{}(db).iter().for_each({});
 }}
 "#,
@@ -105,7 +125,7 @@ pub extern "C" fn print_{}(db: &RawDatabase) {{
 #[derive(Debug)]
 enum QueryNode<'a> {
     Input(&'a Fact),
-    Join(Box<QueryNode<'a>>, Box<QueryNode<'a>>),
+    Join(Box<QueryNode<'a>>, Box<QueryNode<'a>>, bool),
     RecursiveJoin(Box<QueryNode<'a>>, Box<QueryNode<'a>>),
 }
 
@@ -195,19 +215,19 @@ fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &B
 fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<String, RelationInfo>) -> Vec<String> {
     let mut datanames: Vec<String> = Vec::new();
     let mut dedup_facts = rule.facts.clone();
-    dedup_facts.sort_unstable_by(|l, r|
+    dedup_facts.sort_unstable_by(|(l, _negated_l), (r, _negated_r)|
         if l.name < r.name { Ordering::Less }
         else if l.name == r.name { Ordering::Equal }
         else { Ordering::Greater });
-    dedup_facts.dedup_by(|l, r| l.name == r.name);
+    dedup_facts.dedup_by(|(l, _), (r, _)| l.name == r.name);
     for fact in dedup_facts {
-        let types = natives.get(&*fact.name);
+        let types = natives.get(&*fact.0.name);
         if let Some(rel_info) = types {
             datanames.push(rel_info.variable_name.to_string());
         }
         else {
             println!("{:?}", natives);
-            panic!("unknown relation: {}", fact.name);
+            panic!("unknown relation: {}", fact.0.name);
             //datanames.push("rule_".to_owned() + &fact.name);
         }
     }
@@ -217,12 +237,12 @@ fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<String, RelationInfo>
 fn rule_arguments(rule: &Rule, decl: &Decl, natives: &BTreeMap<String, RelationInfo>) -> String {
     let mut args = String::new();
     let mut dedup_facts = rule.facts.clone();
-    dedup_facts.sort_unstable_by(|l, r|
+    dedup_facts.sort_unstable_by(|(l, _), (r, _)|
         if l.name < r.name { Ordering::Less }
         else if l.name == r.name { Ordering::Equal }
         else { Ordering::Greater });
-    dedup_facts.dedup_by(|l, r| l.name == r.name);
-    for fact in dedup_facts {
+    dedup_facts.dedup_by(|(l, _), (r, _)| l.name == r.name);
+    for (fact, _negated) in dedup_facts {
         args += &fact.name;
         args += ": &Relation<(";
         let types = natives.get(&*fact.name);
@@ -315,14 +335,18 @@ fn compile_rule(rule: &Rule, decl: &Decl, index: usize, existing_rules: &BTreeMa
 fn build_join_tree(rule: &Rule) -> QueryNode {
     assert!(rule.facts.len() > 0);
 
-    let mut node = QueryNode::Input(&rule.facts[0]);
+    let mut node = QueryNode::Input(&rule.facts[0].0);
 
-    for fact in rule.facts.iter().skip(1) {
+    if rule.facts[0].1 {
+        panic!("can't have negated fact as first part of a rule");
+    }
+
+    for (fact, negated) in rule.facts.iter().skip(1) {
         if fact.name == rule.name {
             node = QueryNode::RecursiveJoin(box node, box QueryNode::Input(&fact));
         }
         else {
-            node = QueryNode::Join(box node, box QueryNode::Input(&fact));
+            node = QueryNode::Join(box node, box QueryNode::Input(&fact), *negated);
         }
     }
     node
@@ -331,11 +355,16 @@ fn build_join_tree(rule: &Rule) -> QueryNode {
 fn compile_join_tree(node: &QueryNode, rule: &Rule) -> (String, Fact) {
     match node {
         QueryNode::Input(ref name) => { ("".to_owned(), Fact{name: name.name.clone(), args: name.args.clone()}) },
-        QueryNode::Join(box left, box right) => {
+        QueryNode::Join(box left, box right, is_antijoin) => {
             let (left_code, lfact) = compile_join_tree(left, rule);
             let (right_code, rfact) = compile_join_tree(right, rule);
 
-            let (join, joinfact) = compile_join(&lfact, &rfact);
+            let (join, joinfact) = if *is_antijoin {
+                compile_antijoin(&lfact, &rfact)
+            }
+            else {
+                compile_join(&lfact, &rfact)
+            };
 
             (left_code + &right_code + &join, joinfact)
         }
@@ -447,7 +476,7 @@ fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
         vals2.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
-    let new_fact = Fact{
+    let new_fact = Fact {
         name: "temp_fact".to_owned(),
         args: overlap.iter()
             .chain(fact1.args.iter().filter(|s| !overlap.contains(s)))
@@ -473,6 +502,7 @@ fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
         new_fact.name,
         fact1.name, map1,
         fact2.name, map2,
+
         (0..overlap.len()).map(|i| "key.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", "),
         if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
         if vals2.len() > 0 { (0..vals2.len()).map(|i| "val2.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
@@ -481,6 +511,56 @@ fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
     (code, new_fact)
 }
 
+
+fn compile_antijoin(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
+    let overlap = fact1.get_overlapping(fact2);
+
+    let vals1 = fact1.args.iter().filter(|s| !overlap.contains(&s)).collect::<Vec<&String>>(); 
+    let vals2 = fact2.args.iter().filter(|s| !overlap.contains(s)).collect::<Vec<&String>>(); 
+    
+    let map1 = format!("|({})| (({}), ({}))",
+        fact1.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        vals1.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
+    );
+
+    let map2 = format!("|({})| ({})",
+        fact2.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
+        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        // fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + "*" + x + ", ")
+    );
+
+    let new_fact = Fact{
+        name: "temp_fact".to_owned(),
+        args: overlap.iter()
+            .chain(fact1.args.iter().filter(|s| !overlap.contains(s)))
+            .map(|s| s.clone())
+            .collect()
+    };
+
+    let code = format!(r#"
+    let {} = {{
+        let var1 = iteration.variable("left");
+        var1.insert({}.iter().map({}).into());
+        let var2: Relation<_> = {}.iter().map({}).into();
+        iteration.changed();
+
+        let variable = iteration.variable("antijoin");
+        variable.from_antijoin(&var1, &var2, |&key, &val1| ({}{}));
+        while iteration.changed() {{}}
+        variable.complete()
+    }};
+    "#,
+        new_fact.name,
+        fact1.name, map1,
+        fact2.name, map2,
+
+        (0..overlap.len()).map(|i| "key.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", "),
+        if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
+    );
+
+    (code, new_fact)
+}
 
 
 

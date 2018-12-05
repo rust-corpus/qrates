@@ -7,7 +7,9 @@ use crate::syntax::ast::NodeId;
 use crate::rustc::hir::map::{Map};
 use crate::rustc::hir::def_id::DefId;
 use crate::rustc::ty::TyCtxt;
+use crate::rustc::ty;
 use crate::rustc::hir;
+use crate::rustc::mir;
 use crate::rustc::hir::intravisit::{NestedVisitorMap, Visitor, walk_crate};
 use crate::rustc::hir::intravisit::*;
 use crate::syntax::ast::Name;
@@ -25,6 +27,42 @@ pub struct CrateVisitor<'tcx, 'a>
 
     /// maps DefIds of local modules to their index in `crate_data`
     pub local_modules: BTreeMap<DefId, usize>
+}
+
+impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
+    ///
+    /// read out type information and store it in a `data::Type`
+    ///
+    pub fn create_type(&self, t: &hir::Ty) -> data::Type {
+        match &t.node {
+            hir::TyKind::Path(hir::QPath::Resolved(_ty, path)) => {
+                let def = &path.def;
+                if let hir::def::Def::PrimTy(pt) = def {
+                    data::Type::Native(format!("{:?}", pt))
+                }
+                /*else if !def.def_id().is_local() {
+                    println!("found non-local type: {:?}", t.node);
+                    //let def_path = self.map.def_path_from_id(t.id).unwrap();
+                    //data::Type::Path(def_path.to_string_no_crate())
+                    data::Type::Other
+                }*/
+                else {
+                    data::Type::Other
+                    //let p = self.map.def_path(path.def.def_id());
+                    //data::Type::Path(p.to_string_no_crate())
+                }
+            },
+            hir::TyKind::Ptr(ty) | hir::TyKind::Rptr(_, ty) => {
+                data::Type::Reference{
+                    to: box self.create_type(&ty.ty),
+                    is_mutable: ty.mutbl == hir::Mutability::MutMutable
+                }
+            },
+            x => {
+                data::Type::Other
+            }
+        }
+    }
 }
 
 impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
@@ -72,13 +110,23 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             _ => {}
         }*/
         if let hir::ItemKind::Struct(var_data, generics) = &item.node {
+            let fields: Vec<_> = match var_data {
+                hir::VariantData::Struct(fields, node_id) |
+                    hir::VariantData::Tuple(fields, node_id) => {fields.iter().map(|sf| sf.ident.name.as_str().get().to_owned()).collect()},
+                _ => {vec![]}
+            };
             println!("struct found: {:?}", item.name);
             self.crate_data.structs.push(data::Struct {
                 name: item.name.to_string(),
-                fields: vec![]
+                fields: fields
             });
         }
         walk_item(self, item);
+    }
+
+    fn visit_ty(&mut self, t: &'tcx hir::Ty) {
+        //walk_ty(self, t);
+        //self.crate_data.types.push(self.create_type(t));
     }
 
     fn visit_fn(&mut self, fk: FnKind<'tcx>, fd: &'tcx hir::FnDecl, b: hir::BodyId, s: Span, id: NodeId) {
@@ -91,6 +139,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
         let maybe_node = self.map.find(id);
+
+        let argument_types = fd.inputs.iter().map(|t| self.crate_data.insert_type(self.create_type(t))).collect::<Vec<_>>();
 
         let mut add_function = |mut func| {
             std::mem::swap(&mut self.current_function, &mut func);
@@ -112,7 +162,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                             is_closure: false,
                             calls: vec![],
                             containing_mod: local_parent_index,
-                            def_path: def_path.to_string_no_crate()
+                            def_path: def_path.to_string_no_crate(),
+                            argument_types: argument_types
                             //def_id: //data::DefIdWrapper(def_id)
                         })
                     },
@@ -135,7 +186,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                             calls: vec![],
                             //containing_mod: Some(def_path),
                             containing_mod: local_parent_index,//Some(data::GlobalDefPath::new(&def_path, &self.crate_data.metadata)),
-                            def_path: def_path.to_string_no_crate()
+                            def_path: def_path.to_string_no_crate(),
+                            argument_types: argument_types
                             //def_id: //data::DefIdWrapper(def_id)
                         })
                     }
@@ -167,7 +219,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     is_closure: false,
                     calls: vec![],
                     containing_mod: local_parent_index,
-                    def_path: def_path.to_string_no_crate()
+                    def_path: def_path.to_string_no_crate(),
+                    argument_types: vec![],
                     //def_id: //data::DefIdWrapper(def_id)
                 });
 
@@ -189,6 +242,20 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             //println!("found body of {:?}: {:?}", function, owner);
         }*/
         //println!("found body of {:?}: {:?}", function, owner);
+        
+        self.tcx.optimized_mir(owner).basic_blocks().iter().for_each(
+            |bbdata| {
+                if let Some(mir::Terminator{source_info: _, kind: mir::TerminatorKind::Call{func, ..}}) = &bbdata.terminator {
+                    if let mir::Operand::Constant(box mir::Constant { literal: ty::Const {
+                            ty: &ty::TyS { sty: ty::FnDef(def_id, ..), ..
+                                }, ..}, ..  }) = func {
+                        println!("{:?}", self.tcx.original_crate_name(def_id.krate));
+                        println!("{:?}", self.tcx.def_path(def_id).to_string_no_crate());
+                    }
+                }
+            }
+        );
+
         walk_body(self, body);
     }
 
@@ -220,7 +287,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                             //println!("DefPath of call: {}", self.map.def_path(id).to_string_no_crate());
                             f.calls.push(data::GlobalDefPath::new(self.map.def_path(id).to_string_no_crate(), &self.crate_data.metadata));
                         } else {
-                            println!("non-local call detected: {:?}", p);
+                            f.calls.push(data::GlobalDefPath::new(self.tcx.def_path(id).to_string_no_crate(), &self.crate_data.metadata));
+                            //println!("non-local call detected: {:?}", p);
                         }
                     }
                     //f.calls.push(data::GlobalDefPath{ path: p.path, crate_ident: self.crate_data.metadata });
@@ -237,7 +305,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         else if let hir::ExprKind::MethodCall(path_seg, span, args) = &expr.node {
             let slf = &args[0];
             let method = path_seg;
-            println!("unrecognized method call {:?}", expr);
+            
+            println!("unrecognized method call {:?}", path_seg);
         }
         walk_expr(self, expr);
     }

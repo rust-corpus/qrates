@@ -12,7 +12,7 @@ use serde::{Serializer, Deserializer, Serialize, Deserialize};
 #[derive(Serialize, Deserialize, PartialEq, Hash, Eq, Clone, Debug)]
 pub struct CrateIdentifier {
     pub name: String,
-    pub version: (u64, u64, u64),
+//    pub version: (u64, u64, u64),
     pub config_hash: String,
 }
 
@@ -22,6 +22,7 @@ pub struct Crate {
     pub mods: Vec<Mod>,
     pub structs: Vec<Struct>,
     pub functions: Vec<Function>,
+    pub types: Vec<Type>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -43,8 +44,8 @@ pub struct Function {
     pub calls: Vec<GlobalDefPath>,
     pub containing_mod: usize,
     pub def_path: String,
+    pub argument_types: Vec<usize>
 }
-
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Struct {
@@ -58,6 +59,13 @@ pub struct GlobalDefPath {
     pub def_path: String
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+pub enum Type {
+    Native(String),
+    Path(String),
+    Reference{ to: Box<Type>, is_mutable: bool },
+    Other
+}
 
 impl CrateIdentifier {
     /// 
@@ -84,7 +92,17 @@ impl Crate {
 
             mods: vec![],
             structs: vec![],
-            functions: vec![]
+            functions: vec![],
+            types: vec![],
+        }
+    }
+
+    pub fn insert_type(&mut self, t: Type) -> usize {
+        if let Some((existing, _)) = self.types.iter().enumerate().find(|(_, ty)| **ty == t) {
+            existing
+        }
+        else {
+            self.types.push(t); self.types.len() - 1
         }
     }
 }

@@ -76,14 +76,23 @@ fn create_database() -> tuples::Database {
     for (krate, krate_id) in crates.iter().zip(0..) {
         let mod_offset = database.modules.len();
         let fn_offset = database.functions.len();
+        let ty_offset = database.types.len();
+
         let module_map_to_global = |index: usize| index + mod_offset;
         let fn_map_to_global = |index: usize| index + fn_offset;
+        let ty_map_to_global = |index: usize| index + ty_offset;
+
         database.modules.extend(krate.mods.iter().zip(
                 mod_offset..).map(|(a, b)| (tuples::Mod(b as u64), a.clone())));
         database.functions.extend(krate.functions.iter().zip(
                 database.functions.len()..).map(|(a, b)| (tuples::Function(b as u64), a.clone())));
         database.function_finder.extend(krate.functions.iter().zip(
                 database.function_finder.len()..).map(|(a, b)| ((krate.metadata.clone(), a.def_path.clone()), (tuples::Function(b as u64)))));
+
+        database.structs.extend(krate.structs.iter().zip(
+                database.structs.len()..).map(|(a, b)| (tuples::Struct(b as u64), a.clone())));
+        database.types.extend(krate.types.iter().zip(
+                ty_offset..).map(|(a, b)| (tuples::Type(b as u64), a.clone())));
 
         for (m, mod_id) in krate.mods.iter().zip((0..).map(module_map_to_global)) {
             let tuple = (tuples::Mod(mod_id as u64), tuples::Crate(krate_id));
