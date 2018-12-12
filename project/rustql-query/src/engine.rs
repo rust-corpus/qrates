@@ -79,7 +79,7 @@ use rustql_common::tuples::*;
     let mut existing_rules = generate_native_facts();
 
     for decl in &decls {
-        println!("inserting decl for {:?}", decl);
+        //println!("inserting decl for {:?}", decl);
         existing_rules.insert(decl.name.clone(), RelationInfo { arg_types: decl.arg_types.clone(), variable_name: decl.name.clone(), is_native: false });
     }
 
@@ -109,7 +109,7 @@ use rustql_common::tuples::*;
         }
     }
 
-    println!("{}", code);
+    //println!("{}", code);
     code 
 }
 
@@ -226,7 +226,7 @@ fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<String, RelationInfo>
             datanames.push(rel_info.variable_name.to_string());
         }
         else {
-            println!("{:?}", natives);
+            //println!("{:?}", natives);
             panic!("unknown relation: {}", fact.0.name);
             //datanames.push("rule_".to_owned() + &fact.name);
         }
@@ -253,7 +253,7 @@ fn rule_arguments(rule: &Rule, decl: &Decl, natives: &BTreeMap<String, RelationI
             }
         }
         else {
-            println!("{:?}", natives);
+            //println!("{:?}", natives);
             panic!("unknown relation: {}", fact.name);
         }
         args += ")>, ";
@@ -315,7 +315,7 @@ fn compile_rule(rule: &Rule, decl: &Decl, index: usize, existing_rules: &BTreeMa
         )
     };
 
-    println!("new fact: {:?}", fact);
+    //println!("new fact: {:?}", fact);
 
     format!(r#"fn rule_{}{}({}) -> {} {{
     let mut iteration = Iteration::new();

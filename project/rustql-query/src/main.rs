@@ -45,15 +45,16 @@ fn main() -> io::Result<()> {
 fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>) {
 
 
+    let temp_rust_file_path = "/tmp/temp_rust_file.rs";
     let code = engine::compile_query(ast, decls, &actions);
 
-    let mut rust_file = File::create("temp_rust_file.rs").expect("couldn't create temp file");
+    let mut rust_file = File::create(temp_rust_file_path).expect("couldn't create temp file");
     rust_file.write_all(code.as_bytes());
 
     let lib_path = "/tmp/libtemp_rust_file.so";
 
     let output = Command::new("rustc")
-            .arg("temp_rust_file.rs")
+            .arg(temp_rust_file_path)
             .arg("-O")
             .arg("--crate-type=cdylib")
             .arg("-L")
@@ -66,7 +67,7 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
             .expect("failed to execute rustc");
 
     if output.status.success() {
-        println!("compilation worked!");
+        eprintln!("compilation successful!");
 
         let lib = Library::new(lib_path).unwrap();
         /*

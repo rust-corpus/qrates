@@ -109,13 +109,14 @@ exit(rustc_driver::run(move || {
         //println!("{:?}", orig_args);
     }
 
-    let mut local_config_hash: String = "".to_owned();
+    //let mut local_config_hash: String = "".to_owned();
     //let h = rustc::session::config::
     for arg in &args {
         if arg.starts_with("metadata=") {
             //println!("{}", arg);
             // hacky but works
-            local_config_hash = arg[arg.char_indices().nth(9).unwrap().0 ..].to_owned();
+            //println!("{}", arg);
+            //local_config_hash = arg[arg.char_indices().nth(9).unwrap().0 ..].to_owned();
             //local_config_hash = u64::from_str_radix(hash, 16).unwrap();
         }
     }
@@ -141,6 +142,11 @@ exit(rustc_driver::run(move || {
         let tcx = &cs.tcx.expect("no valid tcx");
         let hir_map = &tcx.hir;
         let ref krate = hir_map.krate();
+        
+        // 
+        // assume, crate num of 0 means current crate
+        //
+        let local_config_hash = tcx.crate_hash(hir::def_id::CrateNum::new(0)).to_string();
         let mut cv = CrateVisitor {
             crate_data: data::Crate::new(crate_name, crate_version, &local_config_hash),
             current_function: None,

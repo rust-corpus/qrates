@@ -63,6 +63,7 @@ pub struct GlobalDefPath {
 pub enum Type {
     Native(String),
     Path(String),
+    Struct(String),
     Reference{ to: Box<Type>, is_mutable: bool },
     Other
 }
@@ -74,9 +75,9 @@ impl CrateIdentifier {
     /// 
     pub fn get_filename(&self) -> String {
         self.name.clone() + "_"
-            + &self.version.0.to_string() + "_" 
-            + &self.version.1.to_string() + "_" 
-            + &self.version.2.to_string() + "-"
+            //+ &self.version.0.to_string() + "_" 
+            //+ &self.version.1.to_string() + "_" 
+            //+ &self.version.2.to_string() + "-"
             + &self.config_hash
     }
 }
@@ -86,7 +87,7 @@ impl Crate {
         Crate {
             metadata: CrateIdentifier {
                 name: String::from(name),
-                version: version,
+                //version: version,
                 config_hash: config_hash.to_owned(),
             },
 

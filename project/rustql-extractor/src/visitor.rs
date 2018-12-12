@@ -249,17 +249,28 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     if let mir::Operand::Constant(box mir::Constant { literal: ty::Const {
                             ty: &ty::TyS { sty: ty::FnDef(def_id, ..), ..
                                 }, ..}, ..  }) = func {
-                        println!("{:?}", self.tcx.original_crate_name(def_id.krate));
-                        println!("{:?}", self.tcx.def_path(def_id).to_string_no_crate());
+
+                        //print!("{:?}", self.tcx.original_crate_name(def_id.krate));
+                        //println!("{:?}", self.tcx.def_path(def_id).to_string_no_crate());
+                        let name = self.tcx.original_crate_name(def_id.krate).to_string();
+                        let config_hash = self.tcx.crate_hash(def_id.krate).to_string();
+                        let def_path = self.tcx.def_path(def_id).to_string_no_crate();
+                        //println!("pretty: {}", self.tcx.def_path_debug_str(def_id));
+                        if let Some(ref mut f) = self.current_function {
+                            f.calls.push(data::GlobalDefPath {
+                                crate_ident: data::CrateIdentifier{ name, config_hash },
+                                def_path
+                            });
+                        }
                     }
                 }
             }
         );
-
         walk_body(self, body);
     }
 
     fn visit_expr(&mut self, expr: &'tcx hir::Expr) {
+        /*
         if let hir::ExprKind::Call(target, args) = &expr.node {
             //println!("found call to: {:?}", target);
             use self::hir::*;
@@ -307,7 +318,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             let method = path_seg;
             
             println!("unrecognized method call {:?}", path_seg);
-        }
+        }*/
         walk_expr(self, expr);
     }
 
