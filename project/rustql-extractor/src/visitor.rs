@@ -34,25 +34,31 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
     /// read out type information and store it in a `data::Type`
     ///
     pub fn create_type(&self, t: &hir::Ty) -> data::Type {
+
+        // LocalDecl
+        // use mir::args_iter()
+        //
+        // rustc::ty::TyS
+
         match &t.node {
             hir::TyKind::Path(hir::QPath::Resolved(_ty, path)) => {
                 let def = &path.def;
-                if let hir::def::Def::PrimTy(pt) = def {
-                    data::Type::Native(format!("{:?}", pt))
-                }
-                /*else if !def.def_id().is_local() {
-                    println!("found non-local type: {:?}", t.node);
-                    //let def_path = self.map.def_path_from_id(t.id).unwrap();
-                    //data::Type::Path(def_path.to_string_no_crate())
-                    data::Type::Other
-                }*/
-                else {
-                    data::Type::Other
-                    //let p = self.map.def_path(path.def.def_id());
-                    //data::Type::Path(p.to_string_no_crate())
+                match def {
+                    hir::def::Def::PrimTy(pt) => {
+                        data::Type::Native(format!("{:?}", pt))
+                    },
+                    hir::def::Def::Struct(id) => {
+                        let path = self.tcx.def_path(*id);
+                        data::Type::Struct(data::GlobalDefPath::new(path.to_string_no_crate(),
+                            self.create_identifier(id.krate)
+                        ))
+                    },
+                    _ => { 
+                        data::Type::Other
+                    }
                 }
             },
-            hir::TyKind::Ptr(ty) | hir::TyKind::Rptr(_, ty) => {
+            /*hir::TyKind::Ptr(ty) |*/ hir::TyKind::Rptr(_, ty) => {
                 data::Type::Reference{
                     to: box self.create_type(&ty.ty),
                     is_mutable: ty.mutbl == hir::Mutability::MutMutable
@@ -61,6 +67,13 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
             x => {
                 data::Type::Other
             }
+        }
+    }
+
+    pub fn create_identifier(&self, c: hir::def_id::CrateNum) -> data::CrateIdentifier {
+        data::CrateIdentifier {
+            name: self.tcx.original_crate_name(c).as_str().to_string(),
+            config_hash: self.tcx.crate_hash(c).to_string()
         }
     }
 }
@@ -112,12 +125,14 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         if let hir::ItemKind::Struct(var_data, generics) = &item.node {
             let fields: Vec<_> = match var_data {
                 hir::VariantData::Struct(fields, node_id) |
-                    hir::VariantData::Tuple(fields, node_id) => {fields.iter().map(|sf| sf.ident.name.as_str().get().to_owned()).collect()},
+                    hir::VariantData::Tuple(fields, node_id) => {fields.iter().map(|sf| (sf.ident.name.as_str().get().to_owned(), self.create_type(&sf.ty))).collect()},
                 _ => {vec![]}
             };
             println!("struct found: {:?}", item.name);
+            let path = self.tcx.def_path(self.map.local_def_id(item.id));
             self.crate_data.structs.push(data::Struct {
                 name: item.name.to_string(),
+                def_path: data::GlobalDefPath::new(path.to_string_no_crate(), self.crate_data.metadata.clone()),
                 fields: fields
             });
         }
@@ -140,7 +155,12 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 
         let maybe_node = self.map.find(id);
 
-        let argument_types = fd.inputs.iter().map(|t| self.crate_data.insert_type(self.create_type(t))).collect::<Vec<_>>();
+        let argument_types = fd.inputs.iter().map(|t| self.create_type(t)).collect::<Vec<_>>();
+
+        let return_type = match &fd.output {
+            hir::FunctionRetTy::DefaultReturn(_) => { println!("default return type not supported"); data::Type::Other },
+            hir::FunctionRetTy::Return(pty) => { self.create_type(&pty) }
+        };
 
         let mut add_function = |mut func| {
             std::mem::swap(&mut self.current_function, &mut func);
@@ -163,7 +183,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                             calls: vec![],
                             containing_mod: local_parent_index,
                             def_path: def_path.to_string_no_crate(),
-                            argument_types: argument_types
+                            argument_types: argument_types,
+                            return_type: return_type
                             //def_id: //data::DefIdWrapper(def_id)
                         })
                     },
@@ -187,7 +208,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                             //containing_mod: Some(def_path),
                             containing_mod: local_parent_index,//Some(data::GlobalDefPath::new(&def_path, &self.crate_data.metadata)),
                             def_path: def_path.to_string_no_crate(),
-                            argument_types: argument_types
+                            argument_types: argument_types,
+                            return_type: return_type
                             //def_id: //data::DefIdWrapper(def_id)
                         })
                     }
@@ -208,8 +230,13 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         let parent = self.map.get_module_parent(self.map.as_local_node_id(def_id).unwrap());
         let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
+
         match &ii.node {
             hir::ImplItemKind::Method(sig, body_id) => {
+                let return_type = match &sig.decl.output {
+                    hir::FunctionRetTy::DefaultReturn(_) => { println!("default return type not supported"); data::Type::Other },
+                    hir::FunctionRetTy::Return(pty) => { self.create_type(&pty) }
+                };
                 let mut func = Option::Some(data::Function {
                     name: ii.ident.to_string(),
                     is_unsafe: sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
@@ -221,6 +248,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     containing_mod: local_parent_index,
                     def_path: def_path.to_string_no_crate(),
                     argument_types: vec![],
+                    return_type: return_type,
                     //def_id: //data::DefIdWrapper(def_id)
                 });
 

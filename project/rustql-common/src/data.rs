@@ -22,7 +22,7 @@ pub struct Crate {
     pub mods: Vec<Mod>,
     pub structs: Vec<Struct>,
     pub functions: Vec<Function>,
-    pub types: Vec<Type>,
+    //pub types: Vec<Type>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -44,13 +44,15 @@ pub struct Function {
     pub calls: Vec<GlobalDefPath>,
     pub containing_mod: usize,
     pub def_path: String,
-    pub argument_types: Vec<usize>
+    pub argument_types: Vec<Type>,
+    pub return_type: Type,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Struct {
     pub name: String,
-    pub fields: Vec<String>,
+    pub def_path: GlobalDefPath,
+    pub fields: Vec<(String, Type)>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -63,10 +65,11 @@ pub struct GlobalDefPath {
 pub enum Type {
     Native(String),
     Path(String),
-    Struct(String),
+    Struct(GlobalDefPath),
     Reference{ to: Box<Type>, is_mutable: bool },
     Other
 }
+
 
 impl CrateIdentifier {
     /// 
@@ -94,18 +97,18 @@ impl Crate {
             mods: vec![],
             structs: vec![],
             functions: vec![],
-            types: vec![],
+            //types: vec![],
         }
     }
 
-    pub fn insert_type(&mut self, t: Type) -> usize {
+    /*pub fn insert_type(&mut self, t: Type) -> usize {
         if let Some((existing, _)) = self.types.iter().enumerate().find(|(_, ty)| **ty == t) {
             existing
         }
         else {
             self.types.push(t); self.types.len() - 1
         }
-    }
+    }*/
 }
 
 /*impl Default for Function {
@@ -124,10 +127,10 @@ impl Crate {
 
 
 impl GlobalDefPath {
-    pub fn new(def_path_str: String, c: &CrateIdentifier) -> Self {
+    pub fn new(def_path_str: String, c: CrateIdentifier) -> Self {
         GlobalDefPath {
             //path: def.data.iter().map(GlobalDisambiguatedDefPathData::from).collect::<Vec<GlobalDisambiguatedDefPathData>>(),
-            crate_ident: c.clone(),
+            crate_ident: c,
             def_path: def_path_str
         }
     }

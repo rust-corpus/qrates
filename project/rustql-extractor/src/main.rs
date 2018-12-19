@@ -50,7 +50,7 @@ use std::u64;
 use self::visitor::CrateVisitor;
 
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
-const USE_JSON: bool = true;
+const USE_JSON: bool = false;
 
 
 fn main() {
@@ -188,15 +188,20 @@ exit(rustc_driver::run(move || {
 fn export_crate(krate: &data::Crate) -> Option<()> {
     let filename = krate.metadata.get_filename();
     let dirname = env::var(TARGET_DIR_VARNAME).unwrap_or(env::var("HOME").unwrap_or("/".to_owned()) + "/.rustql/crates");
-    File::create(dirname + "/" + &filename + ".json").ok().and_then(|file| -> Option<()> {
-        if USE_JSON {
+    std::fs::create_dir_all(&dirname);
+
+    if USE_JSON { 
+        File::create(dirname.clone() + "/" + &filename + ".json").ok().and_then(|file| -> Option<()> {
             serde_json::to_writer_pretty(file, krate).unwrap();
-        }
-        else {
+            Some(())
+        }).or(None)
+    }
+    else {
+        File::create(dirname + "/" + &filename + ".bin").ok().and_then(|file| -> Option<()> {
             bincode::serialize_into(file, krate).unwrap();
-        }
-        Some(())
-    }).or(None)
+            Some(())
+        }).or(None)
+    }
 }
 
 

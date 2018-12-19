@@ -28,6 +28,11 @@ fn generate_native_facts() -> BTreeMap<String, RelationInfo> {
         variable_name: "functions_in_modules".to_owned(),
         is_native: true
     });
+    natives.insert("modules_in_crates".to_owned(), RelationInfo{
+        arg_types: vec!["Mod".to_owned(), "Crate".to_owned()],
+        variable_name: "modules_in_crates".to_owned(),
+        is_native: true
+    });
     natives.insert("is_unsafe".to_owned(), RelationInfo{
         arg_types: vec!["Function".to_owned()],
         variable_name: "is_unsafe".to_owned(),
@@ -51,6 +56,26 @@ fn generate_native_facts() -> BTreeMap<String, RelationInfo> {
     natives.insert("is_mutable_reference".to_owned(), RelationInfo{
         arg_types: vec!["Type".to_owned()],
         variable_name: "is_mutable_reference".to_owned(),
+        is_native: true
+    });
+    natives.insert("argument_types".to_owned(), RelationInfo{
+        arg_types: vec!["Function".to_owned(), "Type".to_owned()],
+        variable_name: "argument_types".to_owned(),
+        is_native: true
+    });
+    natives.insert("is_struct_type".to_owned(), RelationInfo{
+        arg_types: vec!["Type".to_owned(), "Struct".to_owned()],
+        variable_name: "is_struct_type".to_owned(),
+        is_native: true
+    });
+    natives.insert("field_types".to_owned(), RelationInfo{
+        arg_types: vec!["Struct".to_owned(), "Type".to_owned()],
+        variable_name: "field_types".to_owned(),
+        is_native: true
+    });
+    natives.insert("return_type".to_owned(), RelationInfo{
+        arg_types: vec!["Function".to_owned(), "Type".to_owned()],
+        variable_name: "return_type".to_owned(),
         is_native: true
     });
     //natives.insert("function".to_owned(), (vec!["Function"], "functions"));

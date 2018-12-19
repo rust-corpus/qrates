@@ -10,6 +10,9 @@ use std::collections::HashMap;
 use datafrog::{Iteration, Relation, Variable};
 use std::fs::File;
 
+
+const USE_JSON: bool = false;
+
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 
 fn main() {
@@ -42,7 +45,7 @@ fn save_database(database: &tuples::Database, name: &str) {
     bincode::serialize_into(file, database).expect("could not serialize to json");
 }
 
-fn run_query(database: &tuples::Database) {
+/*fn run_query(database: &tuples::Database) {
     let mut iteration = Iteration::new();
 
     let calls = Relation::from(database.function_calls.clone().into_iter().map(|(a, b)| (b, a)));
@@ -66,7 +69,7 @@ fn run_query(database: &tuples::Database) {
     for f in infected.iter().map(|tuples::Function(id)| &database.functions[*id as usize].1) {
         println!("{:?}", f);
     }
-}
+}*/
 
 fn create_database() -> tuples::Database {
     let mut database = tuples::Database::new();
@@ -80,7 +83,6 @@ fn create_database() -> tuples::Database {
 
         let module_map_to_global = |index: usize| index + mod_offset;
         let fn_map_to_global = |index: usize| index + fn_offset;
-        let ty_map_to_global = |index: usize| index + ty_offset;
 
         database.modules.extend(krate.mods.iter().zip(
                 mod_offset..).map(|(a, b)| (tuples::Mod(b as u64), a.clone())));
@@ -91,8 +93,8 @@ fn create_database() -> tuples::Database {
 
         database.structs.extend(krate.structs.iter().zip(
                 database.structs.len()..).map(|(a, b)| (tuples::Struct(b as u64), a.clone())));
-        database.types.extend(krate.types.iter().zip(
-                ty_offset..).map(|(a, b)| (tuples::Type(b as u64), a.clone())));
+        /*database.types.extend(krate.types.iter().zip(
+                ty_offset..).map(|(a, b)| (tuples::Type(b as u64), a.clone())));*/
 
         for (m, mod_id) in krate.mods.iter().zip((0..).map(module_map_to_global)) {
             let tuple = (tuples::Mod(mod_id as u64), tuples::Crate(krate_id));
@@ -121,12 +123,50 @@ fn create_database() -> tuples::Database {
                 database.function_calls.push((*f_id, *called_id));
             }
             else {
-                println!("unresolved function call to {:?}", call.def_path);
+                // TODO find out why it didn't work
+                //println!("unresolved function call to {:?}", call.def_path);
                 fails += 1;
             }
         }
+
+        for arg in &func.argument_types {
+            let mut type_id = database.get_type(arg);
+            if let None = type_id {
+                let len = tuples::Type(database.types.len() as u64);
+                type_id = Some(len);
+                database.types.push((len, arg.clone()));
+            }
+            database.argument_types.push((*f_id, type_id.unwrap()))
+        }
     }
     println!("ratio fails / calls: {}", fails as f64 / (database.function_calls.len() + fails) as f64);
+
+    
+    database.link_types();
+    println!("linked structs and types, created {} links.", database.is_struct_type.len());
+
+    // adding field types
+    for (s_id, st) in &database.structs {
+        for (_name, typ) in &st.fields {
+            let mut type_id = database.get_type(&typ);
+            if let None = type_id {
+                let len = tuples::Type(database.types.len() as u64);
+                type_id = Some(len);
+                database.types.push((len, typ.clone()));
+            }
+            database.field_types.push((*s_id, type_id.unwrap()))
+        }
+    }
+
+    for (f_id, f) in &database.functions {
+        let mut type_id = database.get_type(&f.return_type);
+        if let None = type_id {
+            let len = tuples::Type(database.types.len() as u64);
+            type_id = Some(len);
+            database.types.push((len, f.return_type.clone()));
+        }
+        database.return_type.push((*f_id, type_id.unwrap()))
+    }
 
     database
 }
@@ -150,7 +190,13 @@ fn read_crates() -> Vec<data::Crate> {
     for file in files {
         if let Ok(path) = file {
             let f = File::open(path.path()).unwrap();
-            let c = serde_json::from_reader(f);
+            let c = if USE_JSON {
+                serde_json::from_reader(f).map_err(|_| ())
+            }
+            else {
+                bincode::deserialize_from(f).map_err(|_| ())
+            };
+
             if let Ok(cr) = c {
                 crates.push(cr);
             }
