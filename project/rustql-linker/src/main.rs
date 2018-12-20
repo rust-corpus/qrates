@@ -124,7 +124,8 @@ fn create_database() -> tuples::Database {
             }
             else {
                 // TODO find out why it didn't work
-                //println!("unresolved function call to {:?}", call.def_path);
+                println!("unresolved function call to {:?}", call.def_path);
+                println!("fns: {:?}", database.functions);
                 fails += 1;
             }
         }
