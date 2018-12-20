@@ -140,7 +140,7 @@ exit(rustc_driver::run(move || {
             //println!("\x1b[31mdifferent names!: {}, {}\x1b[0m", crate_name_env, crate_name);
         }
         let tcx = &cs.tcx.expect("no valid tcx");
-        let hir_map = &tcx.hir;
+        let hir_map = &tcx.hir();
         let ref krate = hir_map.krate();
         
         // 
