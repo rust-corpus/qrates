@@ -21,6 +21,9 @@ pub struct Database {
 
     pub is_reference_to: Vec<(Type, Type)>,
 
+    pub tuple: Vec<(Type, Type)>,
+    pub slice: Vec<(Type, Type)>,
+
     pub argument_types: Vec<(Function, Type)>,
 
     pub is_struct_type: Vec<(Type, Struct)>,
@@ -42,6 +45,8 @@ pub struct RawDatabase {
     pub is_unsafe: Relation<(Function, )>,
     pub is_type: Relation<(Type, )>,
     pub is_reference_to: Relation<(Type, Type)>,
+    pub tuple: Relation<(Type, Type)>,
+    pub slice: Relation<(Type, Type)>,
     pub is_mutable_reference: Relation<(Type, )>,
     pub argument_types: Relation<(Function, Type)>,
     pub is_struct_type: Relation<(Type, Struct)>,
@@ -73,6 +78,8 @@ impl Database {
             functions_in_modules: vec![],// iteration.variable::<(Function, Mod)>("functions_in_modules"),
             function_calls: vec![],// iteration.variable::<(Function, Function)>("function_calls"),
             is_reference_to: vec![],
+            tuple: vec![],
+            slice: vec![],
             argument_types: vec![],
             is_struct_type: vec![],
             field_types: vec![],
@@ -133,6 +140,15 @@ impl Database {
         None
     }
 
+    pub fn get_type_from_list(types: &Vec<(Type, data::Type)>, typ: &data::Type) -> Option<Type> {
+        for (id, t) in types {
+            if t == typ {
+                return Some(*id);
+            }
+        }
+        None
+    }
+
     pub fn search_module(&self, name: &str) -> Option<Mod> {
         self.modules.iter().filter(|m| m.1.name == name).next().map(|(m, _)| *m)
     }
@@ -141,19 +157,50 @@ impl Database {
         &self.modules[m.0 as usize].1
     }
 
+    pub fn add_type_or_get(types: &mut Vec<(Type, data::Type)>, typ: &data::Type) -> Type {
+        let mut type_id = Self::get_type_from_list(types, &typ);
+        if let None = type_id {
+            let len = self::Type(types.len() as u64);
+            type_id = Some(len);
+            types.push((len, typ.clone()));
+            println!("unknown type found");
+        }
+        type_id.unwrap()
+    }
+
     pub fn link_types(&mut self) {
         for i in 0..self.types.len() {
             let (t_id, typ) = &self.types[i];
-            if let data::Type::Reference{ to, is_mutable } = typ {
-                let mut type_id = self.get_type(&typ);
-                if let None = type_id {
-                    let len = self::Type(self.types.len() as u64);
-                    type_id = Some(len);
-                    self.types.push((len, typ.clone()));
-                    println!("unknown type found during linking types");
-                }
-                let (t_id, typ) = &self.types[i];
-                self.is_reference_to.push((*t_id, type_id.unwrap()));
+            match typ {
+                data::Type::Reference{ to, is_mutable } => {
+                    //let mut type_id = self.get_type(&typ);
+                    //if let None = type_id {
+                    //    let len = self::Type(self.types.len() as u64);
+                    //    type_id = Some(len);
+                    //    self.types.push((len, typ.clone()));
+                    //    println!("unknown type found during linking types");
+                    //}
+                    //let (t_id, typ) = &self.types[i];
+                    let typ = typ.clone();
+                    let added = Self::add_type_or_get(&mut self.types, &typ);
+                    let (t_id, typ) = &self.types[i];
+                    self.is_reference_to.push((*t_id, added));
+                },
+                data::Type::Tuple(types) => {
+                    for typ in types.clone() {
+                        let typ = typ.clone();
+                        let added = Self::add_type_or_get(&mut self.types, &typ);
+                        let (t_id, typ) = &self.types[i];
+                        self.tuple.push((*t_id, added));
+                    }
+                },
+                data::Type::Slice(typ) => {
+                    let typ = typ.clone();
+                    let added = Self::add_type_or_get(&mut self.types, &typ);
+                    let (t_id, typ) = &self.types[i];
+                    self.slice.push((*t_id, added));
+                },
+                _ => {}
             }
         }
 
@@ -186,6 +233,8 @@ impl Database {
             is_unsafe: self.functions.iter().filter(|(f, info)| info.is_unsafe).map(|(c, _cd)| (*c, )).into(),
             is_reference_to: self.is_reference_to.iter().map(|x| *x).into(),
             is_mutable_reference: self.types.iter().filter(|(i, typ)| if let data::Type::Reference{to: _, is_mutable: m} = typ { *m } else { false }).map(|(i, _t)| (*i, )).into(),
+            tuple: self.tuple.iter().cloned().into(),
+            slice: self.slice.iter().cloned().into(),
             argument_types: self.argument_types.iter().map(|x| *x).into(),
             is_struct_type: self.is_struct_type.iter().map(|x| *x).into(),
             field_types: self.field_types.iter().map(|x| *x).into(),

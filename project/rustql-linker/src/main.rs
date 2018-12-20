@@ -4,6 +4,8 @@ extern crate serde_json;
 extern crate bincode;
 
 
+#[feature(nll)]
+
 use rustql_common::tuples;
 use rustql_common::data;
 use std::collections::HashMap;

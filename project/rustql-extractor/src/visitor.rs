@@ -82,6 +82,14 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
                     self.create_identifier(path.krate)
                 ))
             },
+            ty::TyKind::Tuple(types) => {
+                data::Type::Tuple(
+                    types.iter().map(|t| self.create_type2(t)).collect()
+                )
+            },
+            ty::TyKind::Slice(ty) | ty::TyKind::Array(ty, _/* len */) => {
+                data::Type::Slice(box self.create_type2(ty))
+            },
             ty::TyKind::Ref(_, ty, mutbl) => {
                 data::Type::Reference{
                     to: box self.create_type2(&ty),

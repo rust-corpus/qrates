@@ -66,6 +66,8 @@ pub enum Type {
     Native(String),
     Path(String),
     Struct(GlobalDefPath),
+    Tuple(Vec<Type>),
+    Slice(Box<Type>),
     Reference{ to: Box<Type>, is_mutable: bool },
     Other
 }
