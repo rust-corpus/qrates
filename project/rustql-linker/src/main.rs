@@ -19,26 +19,8 @@ const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 
 fn main() {
     let database = create_database();
-    // println!("{:?}", database.crates);
-    // println!("{:?}", database.modules);
-    // println!("{:?}", database.functions.iter().map(|(_, f)| &f.name).collect::<Vec<&String>>());
 
     save_database(&database, "database.db");
-
-    //run_query(&database);
-
-    /*for val in database.modules_in_crates {
-        println!("{:?}", val);
-    }
-    for val in database.modules_in_modules {
-        println!("{:?}", val);
-    }
-    for val in database.functions_in_modules {
-        println!("{:?}", val);
-    }
-    for val in database.function_calls {
-        println!("{:?}", val);
-    }*/
 }
 
 fn save_database(database: &tuples::Database, name: &str) {
@@ -47,31 +29,6 @@ fn save_database(database: &tuples::Database, name: &str) {
     bincode::serialize_into(file, database).expect("could not serialize to json");
 }
 
-/*fn run_query(database: &tuples::Database) {
-    let mut iteration = Iteration::new();
-
-    let calls = Relation::from(database.function_calls.clone().into_iter().map(|(a, b)| (b, a)));
-
-    let other_relation: Relation<(tuples::Function, tuples::Function)> = calls.iter().filter(|_| true).map(|x| *x).into();
-
-    let calls_var = iteration.variable::<(tuples::Function, tuples::Function)>("calls");
-    calls_var.insert(calls.into());
-
-    let unsafe_infected = iteration.variable::<(tuples::Function, ())>("infected");
-
-    // add all unsafe function to infected-variable
-    unsafe_infected.insert(database.functions.iter().filter(|(_id, f)| f.is_unsafe ).map(|x| (x.0, ())).into());
-
-    while iteration.changed() {
-        unsafe_infected.from_join(&unsafe_infected, &calls_var, |_k, _, &l| (l, ()));
-    }
-    let infected: Vec<tuples::Function> = unsafe_infected.complete().into_iter().map(|x| x.0).collect();
-
-    println!("functions that call unsafe functions are:");
-    for f in infected.iter().map(|tuples::Function(id)| &database.functions[*id as usize].1) {
-        println!("{:?}", f);
-    }
-}*/
 
 fn create_database() -> tuples::Database {
     let mut database = tuples::Database::new();
@@ -127,7 +84,7 @@ fn create_database() -> tuples::Database {
             else {
                 // TODO find out why it didn't work
                 println!("unresolved function call to {:?}", call.def_path);
-                println!("fns: {:?}", database.functions);
+                //println!("fns: {:?}", database.functions);
                 fails += 1;
             }
         }

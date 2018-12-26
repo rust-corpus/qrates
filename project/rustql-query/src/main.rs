@@ -60,7 +60,7 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
             .arg("-L")
             .arg("../rustql-common/target/release/deps")
             .arg("--extern")
-            .arg("datafrog=../rustql-common/target/release/deps/libdatafrog-e733c56ee494dea5.rlib")
+            .arg("datafrog=../rustql-common/target/release/deps/libdatafrog-cb5c0d8b60f4dab7.rlib")
             .arg("-o")
             .arg(lib_path)
             .output()
