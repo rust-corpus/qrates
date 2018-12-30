@@ -83,7 +83,7 @@ fn create_database() -> tuples::Database {
             }
             else {
                 // TODO find out why it didn't work
-                println!("unresolved function call to {:?}", call.def_path);
+                //println!("unresolved function call to {:?}", call.def_path);
                 //println!("fns: {:?}", database.functions);
                 fails += 1;
             }
@@ -99,6 +99,7 @@ fn create_database() -> tuples::Database {
             database.argument_types.push((*f_id, type_id.unwrap()))
         }
     }
+    println!("#functions: {}", database.functions.len());
     println!("ratio fails / calls: {}", fails as f64 / (database.function_calls.len() + fails) as f64);
 
     
