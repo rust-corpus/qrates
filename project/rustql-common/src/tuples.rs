@@ -34,6 +34,7 @@ pub struct Database {
     /// TODO refactor and probably only use one storage for functions
     #[serde(skip_serializing, skip_deserializing)]
     pub function_finder: HashMap<(data::CrateIdentifier, String), Function>,
+    pub type_finder: HashMap<data::Type, Type>,
 }
 
 pub struct RawDatabase {
@@ -86,6 +87,7 @@ impl Database {
             return_type: vec![],
 
             function_finder: HashMap::new(),
+            type_finder: HashMap::new(),
         }
     }
 
@@ -132,6 +134,14 @@ impl Database {
     }
 
     pub fn get_type(&self, typ: &data::Type) -> Option<Type> {
+        let t = self.type_finder.get(typ);
+        if let Some(t) = t {
+            return Some(*t);
+        }
+        else {
+            return None;
+        }
+
         for (id, t) in &self.types {
             if t == typ {
                 return Some(*id);
@@ -157,12 +167,13 @@ impl Database {
         &self.modules[m.0 as usize].1
     }
 
-    pub fn add_type_or_get(types: &mut Vec<(Type, data::Type)>, typ: &data::Type) -> Type {
-        let mut type_id = Self::get_type_from_list(types, &typ);
+    pub fn add_type_or_get(links: &mut HashMap<data::Type, Type>, types: &mut Vec<(Type, data::Type)>, typ: &data::Type) -> Type {
+        let mut type_id = links.get(&typ).map(|x| *x);//Self::get_type_from_list(types, &typ);
         if let None = type_id {
             let len = self::Type(types.len() as u64);
             type_id = Some(len);
             types.push((len, typ.clone()));
+            links.insert(typ.clone(), len);
             println!("unknown type found");
         }
         type_id.unwrap()
@@ -182,21 +193,21 @@ impl Database {
                     //}
                     //let (t_id, typ) = &self.types[i];
                     let typ = typ.clone();
-                    let added = Self::add_type_or_get(&mut self.types, &typ);
+                    let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
                     let (t_id, typ) = &self.types[i];
                     self.is_reference_to.push((*t_id, added));
                 },
                 data::Type::Tuple(types) => {
                     for typ in types.clone() {
                         let typ = typ.clone();
-                        let added = Self::add_type_or_get(&mut self.types, &typ);
+                        let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
                         let (t_id, typ) = &self.types[i];
                         self.tuple.push((*t_id, added));
                     }
                 },
                 data::Type::Slice(typ) => {
                     let typ = typ.clone();
-                    let added = Self::add_type_or_get(&mut self.types, &typ);
+                    let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
                     let (t_id, typ) = &self.types[i];
                     self.slice.push((*t_id, added));
                 },
@@ -210,7 +221,7 @@ impl Database {
                 for (s_id, struc) in &self.structs {
                     if struc.def_path == *s {
                         self.is_struct_type.push((*t_id, *s_id));
-                        println!("{:?}, {:?}", struc.def_path, *s);
+                        //println!("{:?}, {:?}", struc.def_path, *s);
                         found = true;
                         break;
                     }

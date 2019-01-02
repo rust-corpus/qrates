@@ -70,6 +70,8 @@ fn create_database() -> tuples::Database {
             database.functions_in_modules.push(tuple);
         }
     }
+    println!("created all entries for static tables: {} functions, {} structs", database.functions.len(), database.structs.len());
+    println!("starting linking function calls");
 
     // create function call links
     let mut fails: usize = 0;
@@ -89,17 +91,24 @@ fn create_database() -> tuples::Database {
             }
         }
 
+        
         for arg in &func.argument_types {
             let mut type_id = database.get_type(arg);
             if let None = type_id {
                 let len = tuples::Type(database.types.len() as u64);
                 type_id = Some(len);
                 database.types.push((len, arg.clone()));
+                database.type_finder.insert(arg.clone(), len);
             }
             database.argument_types.push((*f_id, type_id.unwrap()))
         }
+
+        if f_id.0 % 1000 == 0 {
+            println!("processed function no {}", f_id.0);
+        }
     }
-    println!("#functions: {}", database.functions.len());
+    println!("linked all calls in #functions: {}", database.functions.len());
+    println!("#calls: {}", database.function_calls.len());
     println!("ratio fails / calls: {}", fails as f64 / (database.function_calls.len() + fails) as f64);
 
     
@@ -114,6 +123,7 @@ fn create_database() -> tuples::Database {
                 let len = tuples::Type(database.types.len() as u64);
                 type_id = Some(len);
                 database.types.push((len, typ.clone()));
+                database.type_finder.insert(typ.clone(), len);
             }
             database.field_types.push((*s_id, type_id.unwrap()))
         }
@@ -125,6 +135,7 @@ fn create_database() -> tuples::Database {
             let len = tuples::Type(database.types.len() as u64);
             type_id = Some(len);
             database.types.push((len, f.return_type.clone()));
+            database.type_finder.insert(f.return_type.clone(), len);
         }
         database.return_type.push((*f_id, type_id.unwrap()))
     }
@@ -162,7 +173,7 @@ fn read_crates() -> Vec<data::Crate> {
                 crates.push(cr);
             }
             else {
-                panic!("error deserializing crate {:?}: {:?}", path.path(), c);
+                println!("ERROR deserializing crate {:?}: {:?}", path.path(), c);
             }
         }
     }

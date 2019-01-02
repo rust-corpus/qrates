@@ -1,5 +1,6 @@
 #![feature(box_patterns)]
 #![feature(box_syntax)]
+#![feature(duration_float)]
 
 extern crate lalrpop_util;
 extern crate rustql_common;
@@ -19,6 +20,7 @@ use std::process::Command;
 use std::process::ExitStatus;
 use std::fs::File;
 use libloading::{Library, Symbol};
+use std::time::{Duration, Instant};
 
 fn main() -> io::Result<()> {
     let mut buffer = String::new();
@@ -45,6 +47,8 @@ fn main() -> io::Result<()> {
 fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>) {
 
 
+    let beginning = Instant::now();
+
     let temp_rust_file_path = "/tmp/temp_rust_file.rs";
     let code = engine::compile_query(ast, decls, &actions);
 
@@ -68,16 +72,25 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
 
     if output.status.success() {
         eprintln!("compilation successful!");
+        let after_compilation = Instant::now();
+
+        println!("compiled in {}", after_compilation.duration_since(beginning).as_float_secs());
 
         let lib = Library::new(lib_path).unwrap();
         /*
         let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase) -> ()> = unsafe { lib.get(b"print_cool").unwrap() };
         */
 
+        let before_loading_database = Instant::now();
         let db = File::open("../rustql-linker/database.db").expect("unable to open database file");
         let database: rustql_common::tuples::Database = bincode::deserialize_from(db).expect("unable to parse database");
-        let raw = database.get_raw_database();
 
+        println!("deserialized the database");
+        let raw = database.get_raw_database();
+        println!("created the raw database");
+        let after_loading_database = Instant::now();
+
+        println!("running actions");
         for action in &actions {
             if action.name == "for_each" {
                 let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, &rustql_common::tuples::Database) -> ()> =
@@ -88,6 +101,9 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
                 println!("unknown action: {}", action.name);
             }
         }
+        let after_running = Instant::now();
+        println!("ran all actions in {}", after_running.duration_since(after_loading_database).as_float_secs());
+        println!("database loading took {}", after_loading_database.duration_since(before_loading_database).as_float_secs());
         //unsafe { func(&raw) };
     }
     else {

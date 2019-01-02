@@ -55,13 +55,13 @@ pub struct Struct {
     pub fields: Vec<(String, Type)>,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, Hash, Eq, PartialEq, Debug, Clone)]
 pub struct GlobalDefPath {
     pub crate_ident: CrateIdentifier,
     pub def_path: String
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, Hash, Eq, PartialEq, Debug, Clone)]
 pub enum Type {
     Native(String),
     Path(String),

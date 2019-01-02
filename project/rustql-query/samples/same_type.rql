@@ -1,6 +1,6 @@
 decl type_twins(Function, Function);
 
-type_twins(f, g) :- return_type(f, t), return_type(g, t), calls(f, g).
+type_twins(f, g) :- calls(f, g), return_type(f, t), return_type(g, t).
 
 !for_each(type_twins, {
     |(f, g)| {
