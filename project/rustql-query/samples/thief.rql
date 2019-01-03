@@ -35,9 +35,9 @@ call_to_thief(f, g) :- calls(f, g).
 
 !for_each(thief_with_crate, {
     |(f, c)| {
-        println!("function {} --> {:?}",
-            orig_db.crates[c.0 as usize].1.name,
-            orig_db.functions[f.0 as usize].1.def_path,
-        );
+        //println!("function {} --> {:?}",
+        //    orig_db.crates[c.0 as usize].1.name,
+        //    orig_db.functions[f.0 as usize].1.def_path,
+        //);
     }
 });

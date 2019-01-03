@@ -88,23 +88,27 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
         println!("deserialized the database");
         let raw = database.get_raw_database();
         println!("created the raw database");
-        let after_loading_database = Instant::now();
 
-        println!("running actions");
-        for action in &actions {
-            if action.name == "for_each" {
-                let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, &rustql_common::tuples::Database) -> ()> =
-                    unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()).unwrap() };
-                unsafe { func(&raw, &database) };
+        // measure time
+        for _i in 1..20 {
+            let after_loading_database = Instant::now();
+
+            //println!("running actions");
+            for action in &actions {
+                if action.name == "for_each" {
+                    let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, &rustql_common::tuples::Database) -> ()> =
+                        unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()).unwrap() };
+                    unsafe { func(&raw, &database) };
+                }
+                else {
+                    println!("unknown action: {}", action.name);
+                }
             }
-            else {
-                println!("unknown action: {}", action.name);
-            }
+            let after_running = Instant::now();
+            println!("ran all actions in {}", after_running.duration_since(after_loading_database).as_float_secs());
+            //println!("database loading took {}", after_loading_database.duration_since(before_loading_database).as_float_secs());
+            //println!("#crates {}, #functions {}", database.crates.len(), database.functions.len());
         }
-        let after_running = Instant::now();
-        println!("ran all actions in {}", after_running.duration_since(after_loading_database).as_float_secs());
-        println!("database loading took {}", after_loading_database.duration_since(before_loading_database).as_float_secs());
-        println!("#crates {}, #functions {}", database.crates.len(), database.functions.len());
         //unsafe { func(&raw) };
     }
     else {
