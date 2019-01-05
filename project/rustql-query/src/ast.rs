@@ -5,13 +5,13 @@ use std::collections::BTreeMap;
 ///
 /// represents a "decl f(Mod, Mod);"
 ///
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Decl {
     pub name: String,
     pub arg_types: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Rule {
     pub name: String,
     pub args: Vec<String>,
@@ -25,7 +25,7 @@ pub struct Fact {
     pub args: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expr {
     Number(i32),
     Ident(String),
@@ -34,7 +34,7 @@ pub enum Expr {
     Op(Box<Expr>, Op, Box<Expr>)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Op {
     Add,
     Sub,
@@ -42,7 +42,7 @@ pub enum Op {
     Div
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Action {
     pub name: String,
     pub target: String,

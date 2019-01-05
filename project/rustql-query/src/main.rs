@@ -46,11 +46,20 @@ fn main() -> io::Result<()> {
 
 fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>) {
 
+    let db = File::open("../rustql-linker/database.db").expect("unable to open database file");
+    let database: rustql_common::tuples::Database = bincode::deserialize_from(db).expect("unable to parse database");
+
+    println!("deserialized the database");
+    let raw = database.get_raw_database();
+    println!("created the raw database");
+
+
+    for _i in 0..20 {
 
     let beginning = Instant::now();
 
     let temp_rust_file_path = "/tmp/temp_rust_file.rs";
-    let code = engine::compile_query(ast, decls, &actions);
+    let code = engine::compile_query(ast.clone(), decls.clone(), &actions);
 
     let mut rust_file = File::create(temp_rust_file_path).expect("couldn't create temp file");
     rust_file.write_all(code.as_bytes());
@@ -59,7 +68,8 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
 
     let output = Command::new("rustc")
             .arg(temp_rust_file_path)
-            .arg("-O")
+            .arg("-C")
+            .arg("opt-level=3")
             .arg("--crate-type=cdylib")
             .arg("-L")
             .arg("../rustql-common/target/release/deps")
@@ -82,38 +92,31 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
         */
 
         let before_loading_database = Instant::now();
-        let db = File::open("../rustql-linker/database.db").expect("unable to open database file");
-        let database: rustql_common::tuples::Database = bincode::deserialize_from(db).expect("unable to parse database");
-
-        println!("deserialized the database");
-        let raw = database.get_raw_database();
-        println!("created the raw database");
 
         // measure time
-        for _i in 1..20 {
-            let after_loading_database = Instant::now();
+        let after_loading_database = Instant::now();
 
-            //println!("running actions");
-            for action in &actions {
-                if action.name == "for_each" {
-                    let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, &rustql_common::tuples::Database) -> ()> =
-                        unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()).unwrap() };
-                    unsafe { func(&raw, &database) };
-                }
-                else {
-                    println!("unknown action: {}", action.name);
-                }
+        //println!("running actions");
+        for action in &actions {
+            if action.name == "for_each" {
+                let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, &rustql_common::tuples::Database) -> ()> =
+                    unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()).unwrap() };
+                unsafe { func(&raw, &database) };
             }
-            let after_running = Instant::now();
-            println!("ran all actions in {}", after_running.duration_since(after_loading_database).as_float_secs());
-            //println!("database loading took {}", after_loading_database.duration_since(before_loading_database).as_float_secs());
-            //println!("#crates {}, #functions {}", database.crates.len(), database.functions.len());
+            else {
+                println!("unknown action: {}", action.name);
+            }
         }
+        let after_running = Instant::now();
+        println!("ran all actions in {}", after_running.duration_since(after_loading_database).as_float_secs());
+        //println!("database loading took {}", after_loading_database.duration_since(before_loading_database).as_float_secs());
+        //println!("#crates {}, #functions {}", database.crates.len(), database.functions.len());
         //unsafe { func(&raw) };
     }
     else {
         println!("compilation error. compiler says the following:");
         std::io::stdout().write(&output.stderr);
+    }
     }
 
     //run: rustc temp_rust_file.rs --crate-type=lib -L ../rustql-common/target/debug/deps --extern "datafrog=../rustql-common/target/debug/deps/libdatafrog-6b64ac73f4a87f58.rlib"
