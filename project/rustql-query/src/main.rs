@@ -68,8 +68,9 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
 
     let output = Command::new("rustc")
             .arg(temp_rust_file_path)
-            .arg("-C")
-            .arg("opt-level=3")
+            .arg("-O")
+//            .arg("-C")
+//            .arg("opt-level=3")
             .arg("--crate-type=cdylib")
             .arg("-L")
             .arg("../rustql-common/target/release/deps")
