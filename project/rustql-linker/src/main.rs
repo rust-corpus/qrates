@@ -4,7 +4,6 @@ extern crate serde_json;
 extern crate bincode;
 
 
-#[feature(nll)]
 
 use rustql_common::tuples;
 use rustql_common::data;
@@ -20,7 +19,7 @@ const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 fn main() {
     let database = create_database();
 
-    save_database(&database, "database.db");
+    save_database(&database, "database_1000.db");
 }
 
 fn save_database(database: &tuples::Database, name: &str) {
@@ -32,7 +31,8 @@ fn save_database(database: &tuples::Database, name: &str) {
 
 fn create_database() -> tuples::Database {
     let mut database = tuples::Database::new();
-    let crates = read_crates();
+    let mut crates = read_crates();
+    crates.resize(1000, data::Crate::new("", (1,2,3), ""));
     database.crates = crates.iter().map(|c| c.metadata.clone()).zip(0..).map(|(a, b)| (tuples::Crate(b), a)).collect();
 
     for (krate, krate_id) in crates.iter().zip(0..) {
