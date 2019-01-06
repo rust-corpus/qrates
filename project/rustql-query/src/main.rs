@@ -54,7 +54,7 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
     println!("created the raw database");
 
 
-    for _i in 0..20 {
+    for _i in 0..1 {
 
     let beginning = Instant::now();
 
