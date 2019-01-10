@@ -6,10 +6,10 @@
 # option. This file may not be copied, modified, or distributed
 # except according to those terms.
 
-CRATE_PATH="`dirname \"$0\"`"
+CRATE_PATH=$(realpath "$(dirname \"$0\")")
 
 # variables for compilations
-export RUSTC_WRAPPER=$CRATE_PATH/target/debug/rustql-extractor
+export RUSTC_WRAPPER=$CRATE_PATH/target/release/rustql-extractor
 export RUSTC_BACKTRACE=1
 
 # target directory for extracted data
