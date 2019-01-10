@@ -25,7 +25,7 @@ const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 fn main() {
     let database = create_database();
 
-    save_database(&database, "database_1000.db");
+    save_database(&database, "database.db");
 }
 
 fn save_database(database: &tuples::Database, name: &str) {
