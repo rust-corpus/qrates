@@ -54,6 +54,7 @@ fn main() -> io::Result<()> {
 fn find_library(library_name: &str) -> String {
     let mut pattern = String::from("./target/release/deps/lib");
     pattern.push_str(library_name);
+    pattern.push('-');
     pattern.push_str("*.rlib");
     let paths: Vec<_> = glob(&pattern).unwrap().filter_map(Result::ok).collect();
     assert!(paths.len() == 1, "{:?}", paths);
@@ -95,6 +96,8 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
             .arg("./target/release/deps")
             .arg("--extern")
             .arg(find_library("datafrog"))
+            .arg("--extern")
+            .arg(find_library("csv"))
             .arg("-o")
             .arg(lib_path)
             .output()

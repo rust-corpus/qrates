@@ -108,6 +108,7 @@ pub fn compile_query(query: Vec<Rule>, decls: Vec<Decl>, actions: &Vec<Action>) 
     
     // TODO add some nice templating mechanism
     code += r#"#![feature(rustc_private)]
+extern crate csv;
 extern crate datafrog;
 extern crate rustql_common;
 
