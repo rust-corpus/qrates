@@ -40,10 +40,14 @@ fn main() -> ! {
     let raw = database.get_raw_database();
     println!("created the raw database");
 
+    let mut counter = 0;
+
     loop {
         print!("File with a query: ");
         io::stdout().flush().unwrap();
         let file_name: String = read!("{}\n");
+
+        counter += 1;
 
         if file_name.len() == 0 {
             continue;
@@ -51,7 +55,7 @@ fn main() -> ! {
 
         if let Ok(buffer) = fs::read_to_string(&file_name) {
             match querylang::RuleListParser::new().parse(&buffer) {
-                Ok((rules, decls, actions)) => compile(rules, decls, actions, &raw, &database),
+                Ok((rules, decls, actions)) => compile(rules, decls, actions, &raw, &database, counter),
                 Err(e) => {
                     use lalrpop_util::ParseError::*;
                     match e {
@@ -87,7 +91,8 @@ fn compile(
     decls: Vec<ast::Decl>,
     actions: Vec<ast::Action>,
     raw: &tuples::RawDatabase,
-    database: &tuples::Database
+    database: &tuples::Database,
+    counter: usize,
 ) {
 
     for _i in 0..1 {
@@ -100,7 +105,7 @@ fn compile(
     let mut rust_file = File::create(temp_rust_file_path).expect("couldn't create temp file");
     rust_file.write_all(code.as_bytes()).expect("Failed to write code");
 
-    let lib_path = "/tmp/libtemp_rust_file.so";
+    let lib_path = format!("/tmp/libtemp_rust_file_{}.so", counter);
 
     let output = Command::new("rustc")
             .arg(temp_rust_file_path)
@@ -115,7 +120,7 @@ fn compile(
             .arg("--extern")
             .arg(find_library("csv"))
             .arg("-o")
-            .arg(lib_path)
+            .arg(&lib_path)
             .output()
             .expect("failed to execute rustc");
 
