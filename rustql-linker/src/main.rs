@@ -37,8 +37,7 @@ fn save_database(database: &tuples::Database, name: &str) {
 
 fn create_database() -> tuples::Database {
     let mut database = tuples::Database::new();
-    let mut crates = read_crates();
-    crates.resize(1000, data::Crate::new("", (1,2,3), ""));
+    let crates = read_crates();
     database.crates = crates.iter().map(|c| c.metadata.clone()).zip(0..).map(|(a, b)| (tuples::Crate(b), a)).collect();
 
     for (krate, krate_id) in crates.iter().zip(0..) {
