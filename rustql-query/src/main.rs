@@ -13,7 +13,6 @@ extern crate rustql_common;
 extern crate libloading;
 extern crate glob;
 
-#[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
 extern crate bincode;
@@ -25,17 +24,16 @@ pub mod ast;
 pub mod engine;
 
 use glob::glob;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::process::Command;
-use std::process::ExitStatus;
 use std::fs::{self, File};
 use libloading::{Library, Symbol};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use rustql_common::tuples;
 
-fn main() -> io::Result<()> {
+fn main() -> ! {
 
-    let db = File::open("../rustql-linker/database.db").expect("unable to open database file");
+    let db = File::open("../rustql-linker/database_small.db").expect("unable to open database file");
     let database: rustql_common::tuples::Database = bincode::deserialize_from(db).expect("unable to parse database");
 
     println!("deserialized the database");
@@ -44,8 +42,8 @@ fn main() -> io::Result<()> {
 
     loop {
         print!("File with a query: ");
-        io::stdout().flush();
-        let mut file_name: String = read!("{}\n");
+        io::stdout().flush().unwrap();
+        let file_name: String = read!("{}\n");
 
         if file_name.len() == 0 {
             continue;
@@ -69,7 +67,6 @@ fn main() -> io::Result<()> {
             }
         }
     }
-    Ok(())
 }
 
 fn find_library(library_name: &str) -> String {
@@ -101,7 +98,7 @@ fn compile(
     let code = engine::compile_query(ast.clone(), decls.clone(), &actions);
 
     let mut rust_file = File::create(temp_rust_file_path).expect("couldn't create temp file");
-    rust_file.write_all(code.as_bytes());
+    rust_file.write_all(code.as_bytes()).expect("Failed to write code");
 
     let lib_path = "/tmp/libtemp_rust_file.so";
 
@@ -133,17 +130,22 @@ fn compile(
         let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase) -> ()> = unsafe { lib.get(b"print_cool").unwrap() };
         */
 
-        let before_loading_database = Instant::now();
-
         // measure time
         let after_loading_database = Instant::now();
 
         //println!("running actions");
         for action in &actions {
             if action.name == "for_each" {
-                let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, &rustql_common::tuples::Database) -> ()> =
-                    unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()).unwrap() };
-                unsafe { func(raw, database) };
+                let res: io::Result<Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, &rustql_common::tuples::Database) -> ()>> =
+                    unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()) };
+                match res {
+                    Ok(func) => {
+                        unsafe { func(raw, database) };
+                    }
+                    Err(error) => {
+                        println!("Error: {:?}", error);
+                    }
+                }
             }
             else {
                 println!("unknown action: {}", action.name);
@@ -157,7 +159,7 @@ fn compile(
     }
     else {
         println!("compilation error. compiler says the following:");
-        std::io::stdout().write(&output.stderr);
+        std::io::stdout().write(&output.stderr).unwrap();
     }
     }
 

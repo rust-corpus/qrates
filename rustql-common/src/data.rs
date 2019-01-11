@@ -9,8 +9,6 @@
 // 'linked' together.
 //
 
-use serde::{Serializer, Deserializer, Serialize, Deserialize};
-
 
 /// Structure that identifies a crate uniquely.
 /// Two crates with the same CrateIdentifier are guaranteed to have the same ast.
@@ -93,7 +91,7 @@ impl CrateIdentifier {
 }
 
 impl Crate {
-    pub fn new(name: &str, version: (u64, u64, u64), config_hash: &str) -> Crate {
+    pub fn new(name: &str, _version: (u64, u64, u64), config_hash: &str) -> Crate {
         Crate {
             metadata: CrateIdentifier {
                 name: String::from(name),

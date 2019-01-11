@@ -276,7 +276,7 @@ fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<String, RelationInfo>
     datanames
 }
 
-fn rule_arguments(rule: &Rule, decl: &Decl, natives: &BTreeMap<String, RelationInfo>) -> String {
+fn rule_arguments(rule: &Rule, _decl: &Decl, natives: &BTreeMap<String, RelationInfo>) -> String {
     let mut args = String::new();
     let mut dedup_facts = rule.facts.clone();
     dedup_facts.sort_unstable_by(|(l, _), (r, _)|
@@ -558,7 +558,6 @@ fn compile_antijoin(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
     let overlap = fact1.get_overlapping(fact2);
 
     let vals1 = fact1.args.iter().filter(|s| !overlap.contains(&s)).collect::<Vec<&String>>(); 
-    let vals2 = fact2.args.iter().filter(|s| !overlap.contains(s)).collect::<Vec<&String>>(); 
     
     let map1 = format!("|({})| (({}), ({}))",
         fact1.args.iter().fold("".to_owned(), |s, x| s + x + ", "),

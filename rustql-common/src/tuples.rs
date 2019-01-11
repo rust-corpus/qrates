@@ -101,13 +101,13 @@ impl Database {
         self.crates.iter().find(|(_, c)| c == ci).map(|x| x.0)
     }
 
-    pub fn get_module_in_crate(&self, c_id: Crate, mod_name: &str) -> Option<Mod> {
-        self.modules_in_crates.iter().filter(|(m, c)| *c == c_id).next().map(|x| x.0)
+    pub fn get_module_in_crate(&self, c_id: Crate, _mod_name: &str) -> Option<Mod> {
+        self.modules_in_crates.iter().filter(|(_m, c)| *c == c_id).next().map(|x| x.0)
     }
 
     pub fn get_crate_of_function(&self, f_id: Function) -> Option<Crate> {
-        let parent = self.functions_in_modules.iter().filter(|(f, m)| *f == f_id).map(|x| x.1).next().unwrap();
-        self.modules_in_crates.iter().filter(|(m, c)| *m == parent).map(|x| x.1).next()
+        let parent = self.functions_in_modules.iter().filter(|(f, _m)| *f == f_id).map(|x| x.1).next().unwrap();
+        self.modules_in_crates.iter().filter(|(m, _c)| *m == parent).map(|x| x.1).next()
         /*while let Some(p) = parent {
             parent = self.modules_in_modules.iter().filter(|(m1, m2)| m1 == parent).map(|x| x.1).next();
         }*/
@@ -122,22 +122,22 @@ impl Database {
     }
 
     // maybe rewrite in SQL or Datafrog
-    pub fn get_module_in_module(&self, m_id: Mod, mod_name: &str) -> Option<Mod> {
-        self.modules_in_modules.iter().filter(|(m, m2)| *m2 == m_id).next().map(|x| x.0)
+    pub fn get_module_in_module(&self, m_id: Mod, _mod_name: &str) -> Option<Mod> {
+        self.modules_in_modules.iter().filter(|(_m, m2)| *m2 == m_id).next().map(|x| x.0)
     }
 
-    pub fn find_function(&self, path: &data::GlobalDefPath) -> Option<Function> {
-        let krate = self.get_crate(&path.crate_ident);
+//  pub fn find_function(&self, path: &data::GlobalDefPath) -> Option<Function> {
+//      let krate = self.get_crate(&path.crate_ident);
 
-        if let Some(krate) = krate {
-            /*for data::GlobalDisambiguatedDefPathData {data: path, disambiguator: dis } in &path.path {
-                //if let data::GlobalDefPathData::Module(name) = path.data {
-                //    //if get
-                //}
-            }*/
-        }
-        None
-    }
+//      if let Some(krate) = krate {
+//          /*for data::GlobalDisambiguatedDefPathData {data: path, disambiguator: dis } in &path.path {
+//              //if let data::GlobalDefPathData::Module(name) = path.data {
+//              //    //if get
+//              //}
+//          }*/
+//      }
+//      None
+//  }
 
     pub fn get_type(&self, typ: &data::Type) -> Option<Type> {
         let t = self.type_finder.get(typ);
@@ -147,13 +147,6 @@ impl Database {
         else {
             return None;
         }
-
-        for (id, t) in &self.types {
-            if t == typ {
-                return Some(*id);
-            }
-        }
-        None
     }
 
     pub fn get_type_from_list(types: &Vec<(Type, data::Type)>, typ: &data::Type) -> Option<Type> {
@@ -187,9 +180,9 @@ impl Database {
 
     pub fn link_types(&mut self) {
         for i in 0..self.types.len() {
-            let (t_id, typ) = &self.types[i];
+            let (_t_id, typ) = &self.types[i];
             match typ {
-                data::Type::Reference{ to, is_mutable } => {
+                data::Type::Reference{ .. } => {
                     //let mut type_id = self.get_type(&typ);
                     //if let None = type_id {
                     //    let len = self::Type(self.types.len() as u64);
@@ -200,21 +193,21 @@ impl Database {
                     //let (t_id, typ) = &self.types[i];
                     let typ = typ.clone();
                     let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
-                    let (t_id, typ) = &self.types[i];
+                    let (t_id, _typ) = &self.types[i];
                     self.is_reference_to.push((*t_id, added));
                 },
                 data::Type::Tuple(types) => {
                     for typ in types.clone() {
                         let typ = typ.clone();
                         let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
-                        let (t_id, typ) = &self.types[i];
+                        let (t_id, _typ) = &self.types[i];
                         self.tuple.push((*t_id, added));
                     }
                 },
                 data::Type::Slice(typ) => {
                     let typ = typ.clone();
                     let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
-                    let (t_id, typ) = &self.types[i];
+                    let (t_id, _typ) = &self.types[i];
                     self.slice.push((*t_id, added));
                 },
                 _ => {}
@@ -247,9 +240,9 @@ impl Database {
             function_calls: self.function_calls.iter().cloned().into(),
             functions_in_modules: self.functions_in_modules.iter().cloned().into(),
             modules_in_crates: self.modules_in_crates.iter().cloned().into(),
-            is_unsafe: self.functions.iter().filter(|(f, info)| info.is_unsafe).map(|(c, _cd)| (*c, )).into(),
+            is_unsafe: self.functions.iter().filter(|(_f, info)| info.is_unsafe).map(|(c, _cd)| (*c, )).into(),
             is_reference_to: self.is_reference_to.iter().map(|x| *x).into(),
-            is_mutable_reference: self.types.iter().filter(|(i, typ)| if let data::Type::Reference{to: _, is_mutable: m} = typ { *m } else { false }).map(|(i, _t)| (*i, )).into(),
+            is_mutable_reference: self.types.iter().filter(|(_i, typ)| if let data::Type::Reference{to: _, is_mutable: m} = typ { *m } else { false }).map(|(i, _t)| (*i, )).into(),
             tuple: self.tuple.iter().cloned().into(),
             slice: self.slice.iter().cloned().into(),
             argument_types: self.argument_types.iter().map(|x| *x).into(),
