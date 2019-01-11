@@ -11,6 +11,7 @@
 extern crate lalrpop_util;
 extern crate rustql_common;
 extern crate libloading;
+extern crate glob;
 
 #[macro_use]
 extern crate serde_derive;
@@ -21,6 +22,7 @@ pub mod querylang;
 pub mod ast;
 pub mod engine;
 
+use glob::glob;
 use std::io::{self, Read, Write};
 use std::process::Command;
 use std::process::ExitStatus;
@@ -49,6 +51,17 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
+fn find_library(library_name: &str) -> String {
+    let mut pattern = String::from("./target/release/deps/lib");
+    pattern.push_str(library_name);
+    pattern.push_str("*.rlib");
+    let paths: Vec<_> = glob(&pattern).unwrap().filter_map(Result::ok).collect();
+    assert!(paths.len() == 1, "{:?}", paths);
+    let mut string = paths[0].display().to_string();
+    string.insert(0, '=');
+    string.insert_str(0, library_name);
+    string
+}
 
 fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>) {
 
@@ -79,9 +92,9 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
 //            .arg("opt-level=3")
             .arg("--crate-type=cdylib")
             .arg("-L")
-            .arg("../rustql-common/target/release/deps")
+            .arg("./target/release/deps")
             .arg("--extern")
-            .arg("datafrog=../rustql-common/target/release/deps/libdatafrog-cb5c0d8b60f4dab7.rlib")
+            .arg(find_library("datafrog"))
             .arg("-o")
             .arg(lib_path)
             .output()

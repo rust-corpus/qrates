@@ -15,6 +15,7 @@ serde_json = "*"
 serde = "*"
 bincode = "*"
 libloading = "*"
+glob = "0.2"
 
 [dependencies.lalrpop-util]
 version = "0.15.1"

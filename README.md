@@ -43,18 +43,6 @@ This will create a file `database.db` in the current directory.
 
 ## Query Engine
 
-First, build dependencies:
-```bash
-cd ../rustql-common/
-cargo build --release
-```
-
-Take a note of the Datafrog location:
-```bash
-ls target/release/deps/libdatafrog-*.rlib
-```
-and specify it in the `rustql-query/src/main.rs` file.
-
 To run a query on the database, compile the query engine and run it:
 
 ```bash
