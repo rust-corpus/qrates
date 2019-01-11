@@ -43,9 +43,17 @@ This will create a file `database.db` in the current directory.
 
 ## Query Engine
 
-To run a query on the database, compile the query engine and run it:
+When you run a query engine, it will enter a loop in which you can
+provide paths to queries to you want to execute:
 
 ```bash
 cd ../rustql-query/
-cargo run --release < samples/same_type.rql
+env RUST_BACKTRACE=1 cargo run --release
+```
+
+Example queries to try out:
+
+```plain
+samples/same_type.rql
+samples/thief.rql
 ```
