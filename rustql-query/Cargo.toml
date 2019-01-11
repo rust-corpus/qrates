@@ -17,6 +17,7 @@ bincode = "*"
 libloading = "*"
 glob = "0.2"
 csv = "1.0"
+text_io = "0.1"
 
 [dependencies.lalrpop-util]
 version = "0.15.1"

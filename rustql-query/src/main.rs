@@ -17,6 +17,8 @@ extern crate glob;
 extern crate serde_derive;
 extern crate serde_json;
 extern crate bincode;
+#[macro_use]
+extern crate text_io;
 
 pub mod querylang;
 pub mod ast;
@@ -26,24 +28,43 @@ use glob::glob;
 use std::io::{self, Read, Write};
 use std::process::Command;
 use std::process::ExitStatus;
-use std::fs::File;
+use std::fs::{self, File};
 use libloading::{Library, Symbol};
 use std::time::{Duration, Instant};
+use rustql_common::tuples;
 
 fn main() -> io::Result<()> {
-    let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer)?;
-    match querylang::RuleListParser::new().parse(&buffer) {
-        Ok((rules, decls, actions)) => compile(rules, decls, actions),
-        Err(e) => {
-            use lalrpop_util::ParseError::*;
-            match e {
-                UnrecognizedToken{ token: Some((_, tok, _), ), expected: exp } => {
-                    println!("error parsing input: found token \"{}\" expected one of the following: {}", tok.1,
-                             exp.iter().fold(String::new(), |acc, new| acc + &new + ", "));
-                },
-                _ => {
-                    println!("error parsing input {:?}", e);
+
+    let db = File::open("../rustql-linker/database.db").expect("unable to open database file");
+    let database: rustql_common::tuples::Database = bincode::deserialize_from(db).expect("unable to parse database");
+
+    println!("deserialized the database");
+    let raw = database.get_raw_database();
+    println!("created the raw database");
+
+    loop {
+        print!("File with a query: ");
+        io::stdout().flush();
+        let mut file_name: String = read!("{}\n");
+
+        if file_name.len() == 0 {
+            continue;
+        }
+
+        if let Ok(buffer) = fs::read_to_string(&file_name) {
+            match querylang::RuleListParser::new().parse(&buffer) {
+                Ok((rules, decls, actions)) => compile(rules, decls, actions, &raw, &database),
+                Err(e) => {
+                    use lalrpop_util::ParseError::*;
+                    match e {
+                        UnrecognizedToken{ token: Some((_, tok, _), ), expected: exp } => {
+                            println!("error parsing input: found token \"{}\" expected one of the following: {}", tok.1,
+                                     exp.iter().fold(String::new(), |acc, new| acc + &new + ", "));
+                        },
+                        _ => {
+                            println!("error parsing input {:?}", e);
+                        }
+                    }
                 }
             }
         }
@@ -64,15 +85,13 @@ fn find_library(library_name: &str) -> String {
     string
 }
 
-fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>) {
-
-    let db = File::open("../rustql-linker/database.db").expect("unable to open database file");
-    let database: rustql_common::tuples::Database = bincode::deserialize_from(db).expect("unable to parse database");
-
-    println!("deserialized the database");
-    let raw = database.get_raw_database();
-    println!("created the raw database");
-
+fn compile(
+    ast: Vec<ast::Rule>,
+    decls: Vec<ast::Decl>,
+    actions: Vec<ast::Action>,
+    raw: &tuples::RawDatabase,
+    database: &tuples::Database
+) {
 
     for _i in 0..1 {
 
@@ -124,7 +143,7 @@ fn compile(ast: Vec<ast::Rule>, decls: Vec<ast::Decl>, actions: Vec<ast::Action>
             if action.name == "for_each" {
                 let func: Symbol<unsafe fn(&rustql_common::tuples::RawDatabase, &rustql_common::tuples::Database) -> ()> =
                     unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()).unwrap() };
-                unsafe { func(&raw, &database) };
+                unsafe { func(raw, database) };
             }
             else {
                 println!("unknown action: {}", action.name);
