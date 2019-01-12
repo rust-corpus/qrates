@@ -33,7 +33,7 @@ use rustql_common::tuples;
 
 fn main() -> ! {
 
-    let db = File::open("../rustql-linker/database_small.db").expect("unable to open database file");
+    let db = File::open("../rustql-linker/database.db").expect("unable to open database file");
     let database: rustql_common::tuples::Database = bincode::deserialize_from(db).expect("unable to parse database");
 
     println!("deserialized the database");
