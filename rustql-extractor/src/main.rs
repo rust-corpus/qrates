@@ -1,8 +1,9 @@
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option. This file may not be copied, modified, or distributed
-// except according to those terms.
+// Licensed under the MIT license <LICENSE or
+// http://opensource.org/licenses/MIT>. This file may not be copied,
+// modified, or distributed except according to those terms.
+//
+// The driver code is based on the Clippy driver code
+// https://github.com/rust-lang/rust-clippy/blob/master/src/driver.rs.
 
 #![feature(box_syntax, box_patterns, const_string_new)]
 #![feature(rustc_private)]
