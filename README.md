@@ -56,4 +56,5 @@ Example queries to try out:
 ```plain
 samples/same_type.rql
 samples/thief.rql
+samples/unsafe.rql
 ```
