@@ -9,6 +9,3 @@ extern crate datafrog;
 
 pub mod data;
 pub mod tuples;
-
-
-

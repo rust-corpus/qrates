@@ -2,9 +2,9 @@
 // http://opensource.org/licenses/MIT>. This file may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::collections::HashMap;
 use super::data;
 use datafrog::Relation;
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize)]
 pub struct Database {
@@ -42,17 +42,17 @@ pub struct Database {
 }
 
 pub struct RawDatabase {
-    pub functions: Relation<(Function, )>,
-    pub structs: Relation<(Struct, )>,
+    pub functions: Relation<(Function,)>,
+    pub structs: Relation<(Struct,)>,
     pub function_calls: Relation<(Function, Function)>,
     pub functions_in_modules: Relation<(Function, Mod)>,
     pub modules_in_crates: Relation<(Mod, Crate)>,
-    pub is_unsafe: Relation<(Function, )>,
-    pub is_type: Relation<(Type, )>,
+    pub is_unsafe: Relation<(Function,)>,
+    pub is_type: Relation<(Type,)>,
     pub is_reference_to: Relation<(Type, Type)>,
     pub tuple: Relation<(Type, Type)>,
     pub slice: Relation<(Type, Type)>,
-    pub is_mutable_reference: Relation<(Type, )>,
+    pub is_mutable_reference: Relation<(Type,)>,
     pub argument_types: Relation<(Function, Type)>,
     pub is_struct_type: Relation<(Type, Struct)>,
     pub field_types: Relation<(Struct, Type)>,
@@ -78,10 +78,10 @@ impl Database {
             functions: vec![],
             structs: vec![],
             types: vec![],
-            modules_in_crates: vec![],// iteration.variable::<(Mod, Crate)>("modules_in_crates"),
-            modules_in_modules: vec![],// iteration.variable::<(Mod, Mod)>("modules_in_modules"),
-            functions_in_modules: vec![],// iteration.variable::<(Function, Mod)>("functions_in_modules"),
-            function_calls: vec![],// iteration.variable::<(Function, Function)>("function_calls"),
+            modules_in_crates: vec![], // iteration.variable::<(Mod, Crate)>("modules_in_crates"),
+            modules_in_modules: vec![], // iteration.variable::<(Mod, Mod)>("modules_in_modules"),
+            functions_in_modules: vec![], // iteration.variable::<(Function, Mod)>("functions_in_modules"),
+            function_calls: vec![], // iteration.variable::<(Function, Function)>("function_calls"),
             is_reference_to: vec![],
             tuple: vec![],
             slice: vec![],
@@ -100,49 +100,69 @@ impl Database {
     }
 
     pub fn get_module_in_crate(&self, c_id: Crate, _mod_name: &str) -> Option<Mod> {
-        self.modules_in_crates.iter().filter(|(_m, c)| *c == c_id).next().map(|x| x.0)
+        self.modules_in_crates
+            .iter()
+            .filter(|(_m, c)| *c == c_id)
+            .next()
+            .map(|x| x.0)
     }
 
     pub fn get_crate_of_function(&self, f_id: Function) -> Option<Crate> {
-        let parent = self.functions_in_modules.iter().filter(|(f, _m)| *f == f_id).map(|x| x.1).next().unwrap();
-        self.modules_in_crates.iter().filter(|(m, _c)| *m == parent).map(|x| x.1).next()
+        let parent = self
+            .functions_in_modules
+            .iter()
+            .filter(|(f, _m)| *f == f_id)
+            .map(|x| x.1)
+            .next()
+            .unwrap();
+        self.modules_in_crates
+            .iter()
+            .filter(|(m, _c)| *m == parent)
+            .map(|x| x.1)
+            .next()
         /*while let Some(p) = parent {
             parent = self.modules_in_modules.iter().filter(|(m1, m2)| m1 == parent).map(|x| x.1).next();
         }*/
     }
-    
+
     // maybe rewrite in SQL or Datafrog
     pub fn get_function_in_crate(&self, c_id: Crate, f_def: &str) -> Option<Function> {
-        self.functions.iter().filter(|(f_id, f)| {
-               self.get_crate_of_function(*f_id) == Some(c_id)
-            && f.def_path == f_def
-        }).next().map(|x| x.0)
+        self.functions
+            .iter()
+            .filter(|(f_id, f)| {
+                self.get_crate_of_function(*f_id) == Some(c_id) && f.def_path == f_def
+            })
+            .next()
+            .map(|x| x.0)
     }
 
     // maybe rewrite in SQL or Datafrog
     pub fn get_module_in_module(&self, m_id: Mod, _mod_name: &str) -> Option<Mod> {
-        self.modules_in_modules.iter().filter(|(_m, m2)| *m2 == m_id).next().map(|x| x.0)
+        self.modules_in_modules
+            .iter()
+            .filter(|(_m, m2)| *m2 == m_id)
+            .next()
+            .map(|x| x.0)
     }
 
-//  pub fn find_function(&self, path: &data::GlobalDefPath) -> Option<Function> {
-//      let krate = self.get_crate(&path.crate_ident);
+    //  pub fn find_function(&self, path: &data::GlobalDefPath) -> Option<Function> {
+    //      let krate = self.get_crate(&path.crate_ident);
 
-//      if let Some(krate) = krate {
-//          /*for data::GlobalDisambiguatedDefPathData {data: path, disambiguator: dis } in &path.path {
-//              //if let data::GlobalDefPathData::Module(name) = path.data {
-//              //    //if get
-//              //}
-//          }*/
-//      }
-//      None
-//  }
+    //      if let Some(krate) = krate {
+    //          /*for data::GlobalDisambiguatedDefPathData {data: path, disambiguator: dis } in &path.path {
+    //              //if let data::GlobalDefPathData::Module(name) = path.data {
+    //              //    //if get
+    //              //}
+    //          }*/
+    //      }
+    //      None
+    //  }
 
     pub fn get_type(&self, typ: &data::Type) -> Option<Type> {
         let t = self.type_finder.get(typ);
         if let Some(t) = t {
             return Some(*t);
-        }
-        else {
+        } else {
             return None;
         }
     }
@@ -157,15 +177,23 @@ impl Database {
     }
 
     pub fn search_module(&self, name: &str) -> Option<Mod> {
-        self.modules.iter().filter(|m| m.1.name == name).next().map(|(m, _)| *m)
+        self.modules
+            .iter()
+            .filter(|m| m.1.name == name)
+            .next()
+            .map(|(m, _)| *m)
     }
 
     pub fn get_module(&self, m: Mod) -> &data::Mod {
         &self.modules[m.0 as usize].1
     }
 
-    pub fn add_type_or_get(links: &mut HashMap<data::Type, Type>, types: &mut Vec<(Type, data::Type)>, typ: &data::Type) -> Type {
-        let mut type_id = links.get(&typ).map(|x| *x);//Self::get_type_from_list(types, &typ);
+    pub fn add_type_or_get(
+        links: &mut HashMap<data::Type, Type>,
+        types: &mut Vec<(Type, data::Type)>,
+        typ: &data::Type,
+    ) -> Type {
+        let mut type_id = links.get(&typ).map(|x| *x); //Self::get_type_from_list(types, &typ);
         if let None = type_id {
             let len = self::Type(types.len() as u64);
             type_id = Some(len);
@@ -180,7 +208,7 @@ impl Database {
         for i in 0..self.types.len() {
             let (_t_id, typ) = &self.types[i];
             match typ {
-                data::Type::Reference{ .. } => {
+                data::Type::Reference { .. } => {
                     //let mut type_id = self.get_type(&typ);
                     //if let None = type_id {
                     //    let len = self::Type(self.types.len() as u64);
@@ -193,21 +221,22 @@ impl Database {
                     let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
                     let (t_id, _typ) = &self.types[i];
                     self.is_reference_to.push((*t_id, added));
-                },
+                }
                 data::Type::Tuple(types) => {
                     for typ in types.clone() {
                         let typ = typ.clone();
-                        let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
+                        let added =
+                            Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
                         let (t_id, _typ) = &self.types[i];
                         self.tuple.push((*t_id, added));
                     }
-                },
+                }
                 data::Type::Slice(typ) => {
                     let typ = typ.clone();
                     let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
                     let (t_id, _typ) = &self.types[i];
                     self.slice.push((*t_id, added));
-                },
+                }
                 _ => {}
             }
         }
@@ -232,15 +261,35 @@ impl Database {
 
     pub fn get_raw_database(&self) -> RawDatabase {
         RawDatabase {
-            functions: self.functions.iter().map(|(c, _cd)| (*c, )).into(),
-            structs: self.structs.iter().map(|(c, _cd)| (*c, )).into(),
-            is_type: self.types.iter().map(|(c, _cd)| (*c, )).into(),
+            functions: self.functions.iter().map(|(c, _cd)| (*c,)).into(),
+            structs: self.structs.iter().map(|(c, _cd)| (*c,)).into(),
+            is_type: self.types.iter().map(|(c, _cd)| (*c,)).into(),
             function_calls: self.function_calls.iter().cloned().into(),
             functions_in_modules: self.functions_in_modules.iter().cloned().into(),
             modules_in_crates: self.modules_in_crates.iter().cloned().into(),
-            is_unsafe: self.functions.iter().filter(|(_f, info)| info.is_unsafe).map(|(c, _cd)| (*c, )).into(),
+            is_unsafe: self
+                .functions
+                .iter()
+                .filter(|(_f, info)| info.is_unsafe)
+                .map(|(c, _cd)| (*c,))
+                .into(),
             is_reference_to: self.is_reference_to.iter().map(|x| *x).into(),
-            is_mutable_reference: self.types.iter().filter(|(_i, typ)| if let data::Type::Reference{to: _, is_mutable: m} = typ { *m } else { false }).map(|(i, _t)| (*i, )).into(),
+            is_mutable_reference: self
+                .types
+                .iter()
+                .filter(|(_i, typ)| {
+                    if let data::Type::Reference {
+                        to: _,
+                        is_mutable: m,
+                    } = typ
+                    {
+                        *m
+                    } else {
+                        false
+                    }
+                })
+                .map(|(i, _t)| (*i,))
+                .into(),
             tuple: self.tuple.iter().cloned().into(),
             slice: self.slice.iter().cloned().into(),
             argument_types: self.argument_types.iter().map(|x| *x).into(),
@@ -250,5 +299,3 @@ impl Database {
         }
     }
 }
-
-

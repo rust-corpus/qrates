@@ -7,13 +7,12 @@
 // 'linked' together.
 //
 
-
 /// Structure that identifies a crate uniquely.
 /// Two crates with the same CrateIdentifier are guaranteed to have the same ast.
 #[derive(Serialize, Deserialize, PartialEq, Hash, Eq, Clone, Debug)]
 pub struct CrateIdentifier {
     pub name: String,
-//    pub version: (u64, u64, u64),
+    //    pub version: (u64, u64, u64),
     pub config_hash: String,
 }
 
@@ -59,7 +58,7 @@ pub struct Struct {
 #[derive(Serialize, Deserialize, Hash, Eq, PartialEq, Debug, Clone)]
 pub struct GlobalDefPath {
     pub crate_ident: CrateIdentifier,
-    pub def_path: String
+    pub def_path: String,
 }
 
 #[derive(Serialize, Deserialize, Hash, Eq, PartialEq, Debug, Clone)]
@@ -69,16 +68,15 @@ pub enum Type {
     Struct(GlobalDefPath),
     Tuple(Vec<Type>),
     Slice(Box<Type>),
-    Reference{ to: Box<Type>, is_mutable: bool },
-    Other
+    Reference { to: Box<Type>, is_mutable: bool },
+    Other,
 }
 
-
 impl CrateIdentifier {
-    /// 
+    ///
     /// @return a unique identifier containing the name and version of this crate
     /// that can be used as a filename for storing crate bundles.
-    /// 
+    ///
     pub fn get_filename(&self) -> String {
         self.name.clone() + "_"
             //+ &self.version.0.to_string() + "_" 
@@ -128,14 +126,12 @@ impl Crate {
 }
 */
 
-
 impl GlobalDefPath {
     pub fn new(def_path_str: String, c: CrateIdentifier) -> Self {
         GlobalDefPath {
             //path: def.data.iter().map(GlobalDisambiguatedDefPathData::from).collect::<Vec<GlobalDisambiguatedDefPathData>>(),
             crate_ident: c,
-            def_path: def_path_str
+            def_path: def_path_str,
         }
     }
 }
-
