@@ -2,96 +2,140 @@
 // http://opensource.org/licenses/MIT>. This file may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::collections::BTreeMap;
-use std::cmp::Ordering;
 use super::ast::*;
-
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
 
 #[derive(Debug)]
 struct RelationInfo {
     arg_types: Vec<String>,
     variable_name: String,
-    is_native: bool
+    is_native: bool,
 }
 
 fn generate_native_facts() -> BTreeMap<String, RelationInfo> {
     let mut natives = BTreeMap::new();
 
-    natives.insert("calls".to_owned(), RelationInfo{
-        arg_types: vec!["Function".to_owned(), "Function".to_owned()],
-        variable_name: "function_calls".to_owned(),
-        is_native: true
-    });
-    natives.insert("function".to_owned(), RelationInfo{
-        arg_types: vec!["Function".to_owned()],
-        variable_name: "functions".to_owned(),
-        is_native: true
-    });
-    natives.insert("in_module".to_owned(), RelationInfo{
-        arg_types: vec!["Function".to_owned(), "Mod".to_owned()],
-        variable_name: "functions_in_modules".to_owned(),
-        is_native: true
-    });
-    natives.insert("modules_in_crates".to_owned(), RelationInfo{
-        arg_types: vec!["Mod".to_owned(), "Crate".to_owned()],
-        variable_name: "modules_in_crates".to_owned(),
-        is_native: true
-    });
-    natives.insert("is_unsafe".to_owned(), RelationInfo{
-        arg_types: vec!["Function".to_owned()],
-        variable_name: "is_unsafe".to_owned(),
-        is_native: true
-    });
-    natives.insert("is_struct".to_owned(), RelationInfo{
-        arg_types: vec!["Struct".to_owned()],
-        variable_name: "structs".to_owned(),
-        is_native: true
-    });
-    natives.insert("is_type".to_owned(), RelationInfo{
-        arg_types: vec!["Type".to_owned()],
-        variable_name: "is_type".to_owned(),
-        is_native: true
-    });
-    natives.insert("is_reference_to".to_owned(), RelationInfo{
-        arg_types: vec!["Type".to_owned(), "Type".to_owned()],
-        variable_name: "is_reference_to".to_owned(),
-        is_native: true
-    });
-    natives.insert("is_mutable_reference".to_owned(), RelationInfo{
-        arg_types: vec!["Type".to_owned()],
-        variable_name: "is_mutable_reference".to_owned(),
-        is_native: true
-    });
-    natives.insert("tuple".to_owned(), RelationInfo{
-        arg_types: vec!["Type".to_owned(), "Type".to_owned()],
-        variable_name: "tuple".to_owned(),
-        is_native: true
-    });
-    natives.insert("slice".to_owned(), RelationInfo{
-        arg_types: vec!["Type".to_owned(), "Type".to_owned()],
-        variable_name: "slice".to_owned(),
-        is_native: true
-    });
-    natives.insert("argument_types".to_owned(), RelationInfo{
-        arg_types: vec!["Function".to_owned(), "Type".to_owned()],
-        variable_name: "argument_types".to_owned(),
-        is_native: true
-    });
-    natives.insert("is_struct_type".to_owned(), RelationInfo{
-        arg_types: vec!["Type".to_owned(), "Struct".to_owned()],
-        variable_name: "is_struct_type".to_owned(),
-        is_native: true
-    });
-    natives.insert("field_types".to_owned(), RelationInfo{
-        arg_types: vec!["Struct".to_owned(), "Type".to_owned()],
-        variable_name: "field_types".to_owned(),
-        is_native: true
-    });
-    natives.insert("return_type".to_owned(), RelationInfo{
-        arg_types: vec!["Function".to_owned(), "Type".to_owned()],
-        variable_name: "return_type".to_owned(),
-        is_native: true
-    });
+    natives.insert(
+        "calls".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Function".to_owned(), "Function".to_owned()],
+            variable_name: "function_calls".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "function".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Function".to_owned()],
+            variable_name: "functions".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "in_module".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Function".to_owned(), "Mod".to_owned()],
+            variable_name: "functions_in_modules".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "modules_in_crates".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Mod".to_owned(), "Crate".to_owned()],
+            variable_name: "modules_in_crates".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "is_unsafe".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Function".to_owned()],
+            variable_name: "is_unsafe".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "is_struct".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Struct".to_owned()],
+            variable_name: "structs".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "is_type".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Type".to_owned()],
+            variable_name: "is_type".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "is_reference_to".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Type".to_owned(), "Type".to_owned()],
+            variable_name: "is_reference_to".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "is_mutable_reference".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Type".to_owned()],
+            variable_name: "is_mutable_reference".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "tuple".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Type".to_owned(), "Type".to_owned()],
+            variable_name: "tuple".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "slice".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Type".to_owned(), "Type".to_owned()],
+            variable_name: "slice".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "argument_types".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Function".to_owned(), "Type".to_owned()],
+            variable_name: "argument_types".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "is_struct_type".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Type".to_owned(), "Struct".to_owned()],
+            variable_name: "is_struct_type".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "field_types".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Struct".to_owned(), "Type".to_owned()],
+            variable_name: "field_types".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "return_type".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Function".to_owned(), "Type".to_owned()],
+            variable_name: "return_type".to_owned(),
+            is_native: true,
+        },
+    );
     //natives.insert("function".to_owned(), (vec!["Function"], "functions"));
     //natives.insert("in_module".to_owned(), (vec!["Function", "Mod"], "functions_in_modules"));
     //natives.insert("is_unsafe".to_owned(), (vec!["Function"], "is_unsafe"));
@@ -103,7 +147,7 @@ pub fn compile_query(query: Vec<Rule>, decls: Vec<Decl>, actions: &Vec<Action>) 
     let mut code: String = String::new();
 
     // add preamble
-    
+
     // TODO add some nice templating mechanism
     code += r#"#![feature(rustc_private)]
 extern crate csv;
@@ -115,12 +159,18 @@ use rustql_common::tuples::*;
 
 "#;
 
-
     let mut existing_rules = generate_native_facts();
 
     for decl in &decls {
         //println!("inserting decl for {:?}", decl);
-        existing_rules.insert(decl.name.clone(), RelationInfo { arg_types: decl.arg_types.clone(), variable_name: decl.name.clone(), is_native: false });
+        existing_rules.insert(
+            decl.name.clone(),
+            RelationInfo {
+                arg_types: decl.arg_types.clone(),
+                variable_name: decl.name.clone(),
+                is_native: false,
+            },
+        );
     }
 
     // group rules by name
@@ -130,7 +180,11 @@ use rustql_common::tuples::*;
     }
 
     for (&name, rules) in &rule_map {
-        let decl = decls.iter().filter(|&d| d.name == name).next().expect("found rule without declaration");
+        let decl = decls
+            .iter()
+            .filter(|&d| d.name == name)
+            .next()
+            .expect("found rule without declaration");
         code += &generate_print_code(decl);
         let rule_code = compile_rules(name, &rules, decl, &existing_rules);
         code += &rule_code;
@@ -138,27 +192,31 @@ use rustql_common::tuples::*;
 
     for action in actions {
         if action.name == "for_each" {
-            code += &format!(r#"#[no_mangle] pub extern "C" fn {}_{}(db: &RawDatabase, orig_db: &Database) {{
+            code += &format!(
+                r#"#[no_mangle] pub extern "C" fn {}_{}(db: &RawDatabase, orig_db: &Database) {{
     rules_{}(db).iter().for_each({});
 }}
 "#,
-            action.name, action.target, action.target, action.rust_code);
-        }
-        else {
+                action.name, action.target, action.target, action.rust_code
+            );
+        } else {
             panic!("unknown action: {}", action.name);
         }
     }
 
     //println!("{}", code);
-    code 
+    code
 }
 
 fn generate_print_code(decl: &Decl) -> String {
-    let code = format!(r#"#[no_mangle]
+    let code = format!(
+        r#"#[no_mangle]
 pub extern "C" fn print_{}(db: &RawDatabase) {{
     rules_{}(db).iter().for_each(|element| println!("tuple: {{:?}}", element));
 }}
-"#, decl.name, decl.name);
+"#,
+        decl.name, decl.name
+    );
     code
 }
 
@@ -169,18 +227,29 @@ enum QueryNode<'a> {
     RecursiveJoin(Box<QueryNode<'a>>, Box<QueryNode<'a>>),
 }
 
-fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &BTreeMap<String, RelationInfo>) -> String {
-
+fn compile_rules(
+    name: &str,
+    rules: &Vec<&Rule>,
+    decl: &Decl,
+    existing_rules: &BTreeMap<String, RelationInfo>,
+) -> String {
     let mut code: String = String::new();
 
     for (id, rule) in rules.iter().enumerate() {
         code += &compile_rule(rule, decl, id, existing_rules);
     }
 
-    let return_type: String = decl.arg_types.iter().fold("Relation<(".to_owned(), |s, t| s + t + ", ") + ")>";
+    let return_type: String = decl
+        .arg_types
+        .iter()
+        .fold("Relation<(".to_owned(), |s, t| s + t + ", ")
+        + ")>";
 
-    let mut fn_code: String = "#[no_mangle]\npub extern \"C\" fn rules_".to_owned() + name + "(db: &RawDatabase) -> "
-        + &return_type + " {\n";
+    let mut fn_code: String = "#[no_mangle]\npub extern \"C\" fn rules_".to_owned()
+        + name
+        + "(db: &RawDatabase) -> "
+        + &return_type
+        + " {\n";
 
     assert!(rules.len() > 0);
 
@@ -188,19 +257,28 @@ fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &B
 
     let mut variable_map: BTreeMap<String, String> = BTreeMap::new();
     for (rel_name, rel_info) in existing_rules {
-        let mut typelist = rel_info.arg_types.iter().fold("".to_owned(), |s, t| s + t + ", ");
+        let mut typelist = rel_info
+            .arg_types
+            .iter()
+            .fold("".to_owned(), |s, t| s + t + ", ");
         //if types.len() <= 1 { typelist += "()"; }
         if rel_info.is_native {
-            fn_code += &format!("    let {}: &Relation<({})> = &db.{};\n",
-                rel_info.variable_name, typelist, rel_info.variable_name);
-            //variable_map.insert(rel_name.to_owned(), format!("    let {}: &Relation<({})> = &db.{};\n",
-            //    rel_info.variable_name, typelist, rel_info.variable_name));
-        }
-        else {
+            fn_code += &format!(
+                "    let {}: &Relation<({})> = &db.{};\n",
+                rel_info.variable_name, typelist, rel_info.variable_name
+            );
+        //variable_map.insert(rel_name.to_owned(), format!("    let {}: &Relation<({})> = &db.{};\n",
+        //    rel_info.variable_name, typelist, rel_info.variable_name));
+        } else {
             //fn_code += &format!("    let {}: &Relation<({})> = &rules_{}(&db);\n",
             //    rel_info.variable_name, typelist, rel_info.variable_name);
-            variable_map.insert(rel_name.to_owned(), format!("    let {}: &Relation<({})> = &rules_{}(&db);\n",
-                rel_info.variable_name, typelist, rel_info.variable_name));
+            variable_map.insert(
+                rel_name.to_owned(),
+                format!(
+                    "    let {}: &Relation<({})> = &rules_{}(&db);\n",
+                    rel_info.variable_name, typelist, rel_info.variable_name
+                ),
+            );
         }
     }
 
@@ -213,11 +291,10 @@ fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &B
         }
     }
 
-
     let args = arg_datanames
         .iter()
         .fold("".to_owned(), |s, a| s + a + ", ");
-    fn_code += &format!("    let rel = rule_{}{}({});\n", name, id, args); 
+    fn_code += &format!("    let rel = rule_{}{}({});\n", name, id, args);
 
     for (id, rule) in rules.iter().enumerate().skip(1) {
         /*if rule.is_recursive() {
@@ -233,18 +310,19 @@ fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &B
             fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, args);
         }
         else {*/
-            let arg_names = rule_argument_datanames(&rule, &existing_rules);
-            let temp_var_decl = if arg_names.contains(&name.to_string() /* why */) {
-                format!("    let {}: Relation<_> = rel.iter().map(|x| x.clone()).collect::<Vec<_>>().into();", name)
-            }
-            else { "".to_owned() };
-            let args = arg_names
-                .into_iter()
-                .map(|n| if n == name { "&".to_owned() + &n } else { n })
-                .fold("".to_owned(), |s, a| s + &a + ", ");
-            //fn_code += &format!("    let temp = rel.merge(rule_{}{}({}));\n", name, id, args);
-            fn_code += &temp_var_decl;
-            fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, args);
+        let arg_names = rule_argument_datanames(&rule, &existing_rules);
+        let temp_var_decl = if arg_names.contains(&name.to_string() /* why */) {
+            format!("    let {}: Relation<_> = rel.iter().map(|x| x.clone()).collect::<Vec<_>>().into();", name)
+        } else {
+            "".to_owned()
+        };
+        let args = arg_names
+            .into_iter()
+            .map(|n| if n == name { "&".to_owned() + &n } else { n })
+            .fold("".to_owned(), |s, a| s + &a + ", ");
+        //fn_code += &format!("    let temp = rel.merge(rule_{}{}({}));\n", name, id, args);
+        fn_code += &temp_var_decl;
+        fn_code += &format!("    let rel = rel.merge(rule_{}{}({}));\n", name, id, args);
         /*}*/
     }
     fn_code += "    rel\n}\n";
@@ -255,17 +333,21 @@ fn compile_rules(name: &str, rules: &Vec<&Rule>, decl: &Decl, existing_rules: &B
 fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<String, RelationInfo>) -> Vec<String> {
     let mut datanames: Vec<String> = Vec::new();
     let mut dedup_facts = rule.facts.clone();
-    dedup_facts.sort_unstable_by(|(l, _negated_l), (r, _negated_r)|
-        if l.name < r.name { Ordering::Less }
-        else if l.name == r.name { Ordering::Equal }
-        else { Ordering::Greater });
+    dedup_facts.sort_unstable_by(|(l, _negated_l), (r, _negated_r)| {
+        if l.name < r.name {
+            Ordering::Less
+        } else if l.name == r.name {
+            Ordering::Equal
+        } else {
+            Ordering::Greater
+        }
+    });
     dedup_facts.dedup_by(|(l, _), (r, _)| l.name == r.name);
     for fact in dedup_facts {
         let types = natives.get(&*fact.0.name);
         if let Some(rel_info) = types {
             datanames.push(rel_info.variable_name.to_string());
-        }
-        else {
+        } else {
             //println!("{:?}", natives);
             panic!("unknown relation: {}", fact.0.name);
             //datanames.push("rule_".to_owned() + &fact.name);
@@ -277,10 +359,15 @@ fn rule_argument_datanames(rule: &Rule, natives: &BTreeMap<String, RelationInfo>
 fn rule_arguments(rule: &Rule, _decl: &Decl, natives: &BTreeMap<String, RelationInfo>) -> String {
     let mut args = String::new();
     let mut dedup_facts = rule.facts.clone();
-    dedup_facts.sort_unstable_by(|(l, _), (r, _)|
-        if l.name < r.name { Ordering::Less }
-        else if l.name == r.name { Ordering::Equal }
-        else { Ordering::Greater });
+    dedup_facts.sort_unstable_by(|(l, _), (r, _)| {
+        if l.name < r.name {
+            Ordering::Less
+        } else if l.name == r.name {
+            Ordering::Equal
+        } else {
+            Ordering::Greater
+        }
+    });
     dedup_facts.dedup_by(|(l, _), (r, _)| l.name == r.name);
     for (fact, _negated) in dedup_facts {
         args += &fact.name;
@@ -291,8 +378,7 @@ fn rule_arguments(rule: &Rule, _decl: &Decl, natives: &BTreeMap<String, Relation
                 args += &t;
                 args += ", ";
             }
-        }
-        else {
+        } else {
             //println!("{:?}", natives);
             panic!("unknown relation: {}", fact.name);
         }
@@ -312,7 +398,12 @@ fn rule_arguments(rule: &Rule, _decl: &Decl, natives: &BTreeMap<String, Relation
     args
 }
 
-fn compile_rule(rule: &Rule, decl: &Decl, index: usize, existing_rules: &BTreeMap<String, RelationInfo>) -> String {
+fn compile_rule(
+    rule: &Rule,
+    decl: &Decl,
+    index: usize,
+    existing_rules: &BTreeMap<String, RelationInfo>,
+) -> String {
     /*
     let mut args: String = String::new();
     let mut dedup_facts = rule.facts.clone();
@@ -337,34 +428,47 @@ fn compile_rule(rule: &Rule, decl: &Decl, index: usize, existing_rules: &BTreeMa
         args += ")>, ";
     }
     */
-    let args = rule_arguments(rule, decl, &existing_rules);//.into_iter().fold("".to_owned(), |s, n| s + n + ", ");
-    let return_type = decl.arg_types.iter().fold("Relation<(".to_owned(), |s, t| s + t + ", ") + ")>";
+    let args = rule_arguments(rule, decl, &existing_rules); //.into_iter().fold("".to_owned(), |s, n| s + n + ", ");
+    let return_type = decl
+        .arg_types
+        .iter()
+        .fold("Relation<(".to_owned(), |s, t| s + t + ", ")
+        + ")>";
 
     let node = build_join_tree(rule);
     let (rule_code, fact) = compile_join_tree(&node, rule);
 
     let final_map = if let QueryNode::RecursiveJoin(_, _) = &node {
-        format!("|({})| {}",
+        format!(
+            "|({})| {}",
             fact.args.iter().fold("".to_owned(), |s, t| s + t + ", "),
-            rule.args.iter().fold("".to_owned(), |s, t| s + "*" + t + ", "),
+            rule.args
+                .iter()
+                .fold("".to_owned(), |s, t| s + "*" + t + ", "),
         )
     } else {
-        format!("|({})| ({})",
+        format!(
+            "|({})| ({})",
             fact.args.iter().fold("".to_owned(), |s, t| s + t + ", "),
-            rule.args.iter().fold("".to_owned(), |s, t| s + "*" + t + ", "),
+            rule.args
+                .iter()
+                .fold("".to_owned(), |s, t| s + "*" + t + ", "),
         )
     };
 
     //println!("new fact: {:?}", fact);
 
-    format!(r#"fn rule_{}{}({}) -> {} {{
+    format!(
+        r#"fn rule_{}{}({}) -> {} {{
     let mut iteration = Iteration::new();
 {}
     {}.into_iter().map({}).into()
 }}
 "#,
-// {}.into_iter().map(|((x,), ())| (*x,)).into()
-        rule.name, index, args,
+        // {}.into_iter().map(|((x,), ())| (*x,)).into()
+        rule.name,
+        index,
+        args,
         return_type,
         rule_code,
         fact.name,
@@ -384,8 +488,7 @@ fn build_join_tree(rule: &Rule) -> QueryNode {
     for (fact, negated) in rule.facts.iter().skip(1) {
         if fact.name == rule.name {
             node = QueryNode::RecursiveJoin(box node, box QueryNode::Input(&fact));
-        }
-        else {
+        } else {
             node = QueryNode::Join(box node, box QueryNode::Input(&fact), *negated);
         }
     }
@@ -394,15 +497,20 @@ fn build_join_tree(rule: &Rule) -> QueryNode {
 
 fn compile_join_tree(node: &QueryNode, rule: &Rule) -> (String, Fact) {
     match node {
-        QueryNode::Input(ref name) => { ("".to_owned(), Fact{name: name.name.clone(), args: name.args.clone()}) },
+        QueryNode::Input(ref name) => (
+            "".to_owned(),
+            Fact {
+                name: name.name.clone(),
+                args: name.args.clone(),
+            },
+        ),
         QueryNode::Join(box left, box right, is_antijoin) => {
             let (left_code, lfact) = compile_join_tree(left, rule);
             let (right_code, rfact) = compile_join_tree(right, rule);
 
             let (join, joinfact) = if *is_antijoin {
                 compile_antijoin(&lfact, &rfact)
-            }
-            else {
+            } else {
                 compile_join(&lfact, &rfact)
             };
 
@@ -412,23 +520,26 @@ fn compile_join_tree(node: &QueryNode, rule: &Rule) -> (String, Fact) {
             let (left_code, lfact) = compile_join_tree(left, rule);
             let (right_code, rfact) = compile_join_tree(right, rule);
 
-            let target_fact = Fact { name: rule.name.clone(), args: rule.args.clone() };
+            let target_fact = Fact {
+                name: rule.name.clone(),
+                args: rule.args.clone(),
+            };
 
             let (join, mut joinfact) = compile_recursive_join(&lfact, &rfact, &target_fact);
             //joinfact.name = "var.complete()".to_owned();
             (left_code + &right_code + &join, joinfact)
 
             /*(format!(r#"
-    let var = iteration.variable("var");
-    var.insert({}.iter().into());
-    while iteration.changed() {{
-        {}{}{}
-        var.insert(temp_fact);
-        println!("one loop iteration");
-    }}
-    "#, rfact.name, left_code, &right_code, &join),
+            let var = iteration.variable("var");
+            var.insert({}.iter().into());
+            while iteration.changed() {{
+                {}{}{}
+                var.insert(temp_fact);
+                println!("one loop iteration");
+            }}
+            "#, rfact.name, left_code, &right_code, &join),
 
-             joinfact)*/
+                     joinfact)*/
         }
     }
 }
@@ -436,19 +547,37 @@ fn compile_join_tree(node: &QueryNode, rule: &Rule) -> (String, Fact) {
 fn compile_recursive_join(fact1: &Fact, fact2: &Fact, target: &Fact) -> (String, Fact) {
     let overlap = fact1.get_overlapping(fact2);
 
-    let vals1 = fact1.args.iter().filter(|s| !overlap.contains(&s)).collect::<Vec<&String>>(); 
-    let vals2 = fact2.args.iter().filter(|s| !overlap.contains(s)).collect::<Vec<&String>>(); 
-    
-    let map1 = format!("|({})| (({}), ({}))",
+    let vals1 = fact1
+        .args
+        .iter()
+        .filter(|s| !overlap.contains(&s))
+        .collect::<Vec<&String>>();
+    let vals2 = fact2
+        .args
+        .iter()
+        .filter(|s| !overlap.contains(s))
+        .collect::<Vec<&String>>();
+
+    let map1 = format!(
+        "|({})| (({}), ({}))",
         fact1.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        overlap
+            .iter()
+            .fold("".to_owned(), |s, x| s + "*" + x + ", "),
         vals1.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
-    let map2 = format!("|({})| (({}), ({}{}))",
+    let map2 = format!(
+        "|({})| (({}), ({}{}))",
         fact2.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
-        fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        overlap
+            .iter()
+            .fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        fact2
+            .args
+            .iter()
+            .filter(|s| !overlap.contains(s))
+            .fold("".to_owned(), |s, x| s + "*" + x + ", "),
         vals2.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
@@ -462,7 +591,8 @@ fn compile_recursive_join(fact1: &Fact, fact2: &Fact, target: &Fact) -> (String,
     };*/
     let mut new_fact = target.clone();
 
-    let code = format!(r#"
+    let code = format!(
+        r#"
     let var1 = iteration.variable("left");
     var1.insert({}.iter().map({}).into());
     let recursive = iteration.variable("rec");
@@ -472,17 +602,18 @@ fn compile_recursive_join(fact1: &Fact, fact2: &Fact, target: &Fact) -> (String,
     }}
     let {} = recursive.complete();
     "#,
-        fact1.name, map1,
-        fact2.name, map2,
-        overlap.iter().fold("".to_owned(), |s, t| s + &t + ", "), 
+        fact1.name,
+        map1,
+        fact2.name,
+        map2,
+        overlap.iter().fold("".to_owned(), |s, t| s + &t + ", "),
         vals1.iter().fold("".to_owned(), |s, x| s + x + ", "),
         vals2.iter().fold("".to_owned(), |s, x| s + x + ", "),
         //new_fact.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
         //target.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        
         target.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        "", "",
-
+        "",
+        "",
         //overlap.iter().fold("".to_owned(), |s, x| s + x + ", "),
         //fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + x + ", "),
         //target.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
@@ -500,32 +631,48 @@ fn compile_recursive_join(fact1: &Fact, fact2: &Fact, target: &Fact) -> (String,
 fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
     let overlap = fact1.get_overlapping(fact2);
 
-    let vals1 = fact1.args.iter().filter(|s| !overlap.contains(&s)).collect::<Vec<&String>>(); 
-    let vals2 = fact2.args.iter().filter(|s| !overlap.contains(s)).collect::<Vec<&String>>(); 
-    
-    let map1 = format!("|({})| (({}), ({}))",
+    let vals1 = fact1
+        .args
+        .iter()
+        .filter(|s| !overlap.contains(&s))
+        .collect::<Vec<&String>>();
+    let vals2 = fact2
+        .args
+        .iter()
+        .filter(|s| !overlap.contains(s))
+        .collect::<Vec<&String>>();
+
+    let map1 = format!(
+        "|({})| (({}), ({}))",
         fact1.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        overlap
+            .iter()
+            .fold("".to_owned(), |s, x| s + "*" + x + ", "),
         vals1.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
-    let map2 = format!("|({})| (({}), ({}))",
+    let map2 = format!(
+        "|({})| (({}), ({}))",
         fact2.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        overlap
+            .iter()
+            .fold("".to_owned(), |s, x| s + "*" + x + ", "),
         // fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + "*" + x + ", ")
         vals2.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
     let new_fact = Fact {
         name: "temp_fact".to_owned(),
-        args: overlap.iter()
+        args: overlap
+            .iter()
             .chain(fact1.args.iter().filter(|s| !overlap.contains(s)))
             .chain(fact2.args.iter().filter(|s| !overlap.contains(s)))
             .map(|s| s.clone())
-            .collect()
+            .collect(),
     };
 
-    let code = format!(r#"
+    let code = format!(
+        r#"
     let {} = {{
         let var1 = iteration.variable("left");
         let var2 = iteration.variable("right");
@@ -540,44 +687,70 @@ fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
     }};
     "#,
         new_fact.name,
-        fact1.name, map1,
-        fact2.name, map2,
-
-        (0..overlap.len()).map(|i| "key.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", "),
-        if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
-        if vals2.len() > 0 { (0..vals2.len()).map(|i| "val2.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
+        fact1.name,
+        map1,
+        fact2.name,
+        map2,
+        (0..overlap.len())
+            .map(|i| "key.".to_owned() + &i.to_string())
+            .fold("".to_owned(), |s, t| s + &t + ", "),
+        if vals1.len() > 0 {
+            (0..vals1.len())
+                .map(|i| "val1.".to_owned() + &i.to_string())
+                .fold("".to_owned(), |s, t| s + &t + ", ")
+        } else {
+            "".to_owned()
+        },
+        if vals2.len() > 0 {
+            (0..vals2.len())
+                .map(|i| "val2.".to_owned() + &i.to_string())
+                .fold("".to_owned(), |s, t| s + &t + ", ")
+        } else {
+            "".to_owned()
+        },
     );
 
     (code, new_fact)
 }
 
-
 fn compile_antijoin(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
     let overlap = fact1.get_overlapping(fact2);
 
-    let vals1 = fact1.args.iter().filter(|s| !overlap.contains(&s)).collect::<Vec<&String>>(); 
-    
-    let map1 = format!("|({})| (({}), ({}))",
+    let vals1 = fact1
+        .args
+        .iter()
+        .filter(|s| !overlap.contains(&s))
+        .collect::<Vec<&String>>();
+
+    let map1 = format!(
+        "|({})| (({}), ({}))",
         fact1.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        overlap
+            .iter()
+            .fold("".to_owned(), |s, x| s + "*" + x + ", "),
         vals1.iter().fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
-    let map2 = format!("|({})| ({})",
+    let map2 = format!(
+        "|({})| ({})",
         fact2.args.iter().fold("".to_owned(), |s, x| s + x + ", "),
-        overlap.iter().fold("".to_owned(), |s, x| s + "*" + x + ", "),
+        overlap
+            .iter()
+            .fold("".to_owned(), |s, x| s + "*" + x + ", "),
         // fact2.args.iter().filter(|s| !overlap.contains(s)).fold("".to_owned(), |s, x| s + "*" + x + ", ")
     );
 
-    let new_fact = Fact{
+    let new_fact = Fact {
         name: "temp_fact".to_owned(),
-        args: overlap.iter()
+        args: overlap
+            .iter()
             .chain(fact1.args.iter().filter(|s| !overlap.contains(s)))
             .map(|s| s.clone())
-            .collect()
+            .collect(),
     };
 
-    let code = format!(r#"
+    let code = format!(
+        r#"
     let {} = {{
         let var1 = iteration.variable("left");
         var1.insert({}.iter().map({}).into());
@@ -591,16 +764,21 @@ fn compile_antijoin(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
     }};
     "#,
         new_fact.name,
-        fact1.name, map1,
-        fact2.name, map2,
-
-        (0..overlap.len()).map(|i| "key.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", "),
-        if vals1.len() > 0 { (0..vals1.len()).map(|i| "val1.".to_owned() + &i.to_string()).fold("".to_owned(), |s, t| s + &t + ", ") } else { "".to_owned() },
+        fact1.name,
+        map1,
+        fact2.name,
+        map2,
+        (0..overlap.len())
+            .map(|i| "key.".to_owned() + &i.to_string())
+            .fold("".to_owned(), |s, t| s + &t + ", "),
+        if vals1.len() > 0 {
+            (0..vals1.len())
+                .map(|i| "val1.".to_owned() + &i.to_string())
+                .fold("".to_owned(), |s, t| s + &t + ", ")
+        } else {
+            "".to_owned()
+        },
     );
 
     (code, new_fact)
 }
-
-
-
-

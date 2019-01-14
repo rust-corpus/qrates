@@ -20,7 +20,7 @@ pub struct Rule {
 }
 
 #[derive(Debug, Clone)]
-pub struct Fact { 
+pub struct Fact {
     pub name: String,
     pub args: Vec<String>,
 }
@@ -30,8 +30,12 @@ pub enum Expr {
     Number(i32),
     Ident(String),
     Str(String),
-    MethodCall{ target: Box<Expr>, name: String, args: Vec<Box<Expr>> },
-    Op(Box<Expr>, Op, Box<Expr>)
+    MethodCall {
+        target: Box<Expr>,
+        name: String,
+        args: Vec<Box<Expr>>,
+    },
+    Op(Box<Expr>, Op, Box<Expr>),
 }
 
 #[derive(Debug, Clone)]
@@ -39,28 +43,32 @@ pub enum Op {
     Add,
     Sub,
     Mul,
-    Div
+    Div,
 }
 
 #[derive(Debug, Clone)]
 pub struct Action {
     pub name: String,
     pub target: String,
-    pub rust_code: String
+    pub rust_code: String,
 }
-
 
 impl Rule {
     pub fn is_recursive(&self) -> bool {
-        self.facts.iter().filter(|(f, _negated)| f.name == self.name).next().is_some()
+        self.facts
+            .iter()
+            .filter(|(f, _negated)| f.name == self.name)
+            .next()
+            .is_some()
     }
 }
 
 impl Fact {
     pub fn get_overlapping(&self, other: &Fact) -> Vec<String> {
-        self.args.iter().filter(|s| other.args.contains(s)).map(|s| { s.clone() }).collect()
+        self.args
+            .iter()
+            .filter(|s| other.args.contains(s))
+            .map(|s| s.clone())
+            .collect()
     }
 }
-
-
-
