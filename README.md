@@ -1,4 +1,11 @@
-# RustQL: tool for semantic querying of Rust code.
+# RustQL: a Tool for Semantic Querying of Rust Code.
+
+RustQL is a prototype of Niko Matsakis'
+[idea](http://smallcultfollowing.com/babysteps/blog/2017/02/17/project-idea-datalog-output-from-rustc/)
+to use Datalog for understanding how Rust programmers write code. The
+initial version was developed by Nicolas Winkler. The project is
+currently maintained by the [Programming
+Methodology](http://www.pm.inf.ethz.ch/) group at ETH Zurich.
 
 The tool consists of three parts:
 
@@ -7,7 +14,8 @@ The tool consists of three parts:
 2.  Linker – a program that merges the information about different
     crates into a single database.
 3.  Query Engine – a program that takes a Datalog like query and
-    evaluates it on the database.
+    evaluates it on the database. The engine is based on the
+    [Datafrog](https://crates.io/crates/datafrog).
 
 ## Extractor
 
