@@ -81,6 +81,9 @@ git submodule update --init
 
 ### Set Up Vagrant
 
+Note: If you are running on a server, you probably want to allocate a
+larger VM by editing `Vagrantfile`.
+
 Install [Vagrant](https://www.vagrantup.com/) and start the VM:
 
 ```bash
