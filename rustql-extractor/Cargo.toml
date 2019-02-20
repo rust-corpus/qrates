@@ -7,6 +7,10 @@ authors = ["Nicolas Winkler <niwinkle@student.ethz.ch>"]
 license = "MIT/Apache-2.0"
 edition = "2018"
 
+[[bin]]
+name = "rustc"
+path = "src/main.rs"
+
 [dependencies]
 serde = "*"
 serde_json = "*"
