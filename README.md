@@ -66,3 +66,46 @@ samples/same_type.rql
 samples/thief.rql
 samples/unsafe.rql
 ```
+
+## Getting Started
+
+This tutorial will show how to download most popular 500 crates and run
+a simple query over them.
+
+### Check Out Submodules
+
+
+```bash
+git submodule update --init
+```
+
+### Set Up Vagrant
+
+Install [Vagrant](https://www.vagrantup.com/) and start the VM:
+
+```bash
+vagrant up
+vagrant ssh
+```
+
+All remaining steps should be done inside the VM from the directory
+`/vagrant` that is mapped to the directory on the host in which the
+repository was cloned.
+
+### Download Top 500 Crate Metadata
+
+```bash
+cd top-crates/
+cargo run
+cd ..
+```
+
+### Run Extractor
+
+```
+cd rustql-extractor/
+cargo build --release
+cd ..
+mkdir -p data/cache
+python3 bin/run_extractor.py
+```
