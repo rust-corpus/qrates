@@ -73,7 +73,6 @@ def main():
                 log('ERROR', str(e))
                 raise
             log('END_COMPILE', crate['id'])
-            break
 
 
 if __name__ == '__main__':
