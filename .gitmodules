@@ -1,0 +1,3 @@
+[submodule "top-crates"]
+	path = top-crates
+	url = https://github.com/rust-corpus/top-crates.git
