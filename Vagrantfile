@@ -79,6 +79,6 @@ Vagrant.configure("2") do |config|
     curl https://sh.rustup.rs -sSf | sudo -u vagrant --set-home sh -s -- -y
     echo 'export PATH=$PATH:$HOME/.cargo/bin' >> /home/vagrant/.bashrc
     sudo -u vagrant --set-home -- /home/vagrant/.cargo/bin/rustup default nightly-2018-12-26
-    sudo -u vagrant --set-home -- cargo install sccache
+    sudo -u vagrant --set-home -- /home/vagrant/.cargo/bin/cargo install sccache
   SHELL
 end
