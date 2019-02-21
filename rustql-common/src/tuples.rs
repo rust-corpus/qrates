@@ -49,9 +49,11 @@ pub struct RawDatabase {
     pub modules_in_crates: Relation<(Mod, Crate)>,
     pub is_unsafe: Relation<(Function,)>,
     pub is_type: Relation<(Type,)>,
+    pub is_native: Relation<(Type,)>,
     pub is_reference_to: Relation<(Type, Type)>,
     pub tuple: Relation<(Type, Type)>,
     pub slice: Relation<(Type, Type)>,
+    pub is_shared_reference: Relation<(Type,)>,
     pub is_mutable_reference: Relation<(Type,)>,
     pub argument_types: Relation<(Function, Type)>,
     pub is_struct_type: Relation<(Type, Struct)>,
@@ -264,6 +266,20 @@ impl Database {
             functions: self.functions.iter().map(|(c, _cd)| (*c,)).into(),
             structs: self.structs.iter().map(|(c, _cd)| (*c,)).into(),
             is_type: self.types.iter().map(|(c, _cd)| (*c,)).into(),
+            is_native: self
+                .types
+                .iter()
+                .filter(|(_i, typ)| {
+                    match typ {
+                        data::Type::Native(_) => {
+                            // FIXME: This is never triggered.
+                            true
+                        },
+                        _ => false,
+                    }
+                })
+                .map(|(i, _typ)| (*i,))
+                .into(),
             function_calls: self.function_calls.iter().cloned().into(),
             functions_in_modules: self.functions_in_modules.iter().cloned().into(),
             modules_in_crates: self.modules_in_crates.iter().cloned().into(),
@@ -284,6 +300,22 @@ impl Database {
                     } = typ
                     {
                         *m
+                    } else {
+                        false
+                    }
+                })
+                .map(|(i, _t)| (*i,))
+                .into(),
+            is_shared_reference: self
+                .types
+                .iter()
+                .filter(|(_i, typ)| {
+                    if let data::Type::Reference {
+                        to: _,
+                        is_mutable: m,
+                    } = typ
+                    {
+                        !(*m)
                     } else {
                         false
                     }

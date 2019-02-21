@@ -73,6 +73,14 @@ fn generate_native_facts() -> BTreeMap<String, RelationInfo> {
         },
     );
     natives.insert(
+        "is_native".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Type".to_owned()],
+            variable_name: "is_native".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
         "is_reference_to".to_owned(),
         RelationInfo {
             arg_types: vec!["Type".to_owned(), "Type".to_owned()],
@@ -85,6 +93,14 @@ fn generate_native_facts() -> BTreeMap<String, RelationInfo> {
         RelationInfo {
             arg_types: vec!["Type".to_owned()],
             variable_name: "is_mutable_reference".to_owned(),
+            is_native: true,
+        },
+    );
+    natives.insert(
+        "is_shared_reference".to_owned(),
+        RelationInfo {
+            arg_types: vec!["Type".to_owned()],
+            variable_name: "is_shared_reference".to_owned(),
             is_native: true,
         },
     );
