@@ -215,6 +215,14 @@ use rustql_common::tuples::*;
 "#,
                 action.name, action.target, action.target, action.rust_code
             );
+        } else if action.name == "csv" {
+            code += &format!(
+                r#"#[no_mangle] pub extern "C" fn {}_{}(writer: &mut csv::Writer<std::fs::File>, db: &RawDatabase, orig_db: &Database) {{
+    rules_{}(db).iter().for_each({});
+}}
+"#,
+                action.name, action.target, action.target, action.rust_code
+            );
         } else {
             panic!("unknown action: {}", action.name);
         }

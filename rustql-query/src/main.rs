@@ -6,6 +6,7 @@
 #![feature(box_syntax)]
 #![feature(duration_float)]
 
+extern crate csv;
 extern crate glob;
 extern crate lalrpop_util;
 extern crate libloading;
@@ -21,6 +22,7 @@ pub mod ast;
 pub mod engine;
 pub mod querylang;
 
+use csv::{Writer, WriterBuilder};
 use glob::glob;
 use libloading::{Library, Symbol};
 use rustql_common::tuples;
@@ -163,7 +165,27 @@ fn compile(
                             println!("Error: {:?}", error);
                         }
                     }
-                } else {
+                } else if action.name == "csv" {
+                    let res: io::Result<
+                        Symbol<
+                            unsafe fn(
+                                &mut Writer<File>,
+                                &rustql_common::tuples::RawDatabase,
+                                &rustql_common::tuples::Database,
+                            ) -> (),
+                        >,
+                    > = unsafe { lib.get((action.name.clone() + "_" + &action.target).as_bytes()) };
+                    match res {
+                        Ok(func) => {
+                            let path = action.target.clone() + ".csv";
+                            let mut wtr = WriterBuilder::new().from_path(&path).unwrap();
+                            unsafe { func(&mut wtr, raw, database) };
+                        }
+                        Err(error) => {
+                            println!("Error: {:?}", error);
+                        }
+                    }
+                } else{
                     println!("unknown action: {}", action.name);
                 }
             }
