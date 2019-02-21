@@ -111,4 +111,22 @@ cargo build --release
 cd ..
 mkdir -p data/cache
 python3 bin/run_extractor.py
+rm -f /vagrant/data/crates/rustql_dummy_*
+```
+
+### Link
+
+```bash
+cd rustql-linker
+export EXTRACTOR_TARGET_DIR=/vagrant/data/crates/
+cargo run --release
+cd ..
+```
+
+### Start Query Engine
+
+```bash
+cd rustql-query/
+RUST_BACKTRACE=1 cargo run --release
+cd ..
 ```
