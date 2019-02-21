@@ -1,0 +1,42 @@
+decl contains_mut(Type);
+decl returns_mut(Function);
+decl mutable_arg(Function);
+decl not_mutable_arg(Function);
+decl safe_function(Function);
+decl thief(Function);
+decl fn_crate(Function, Crate);
+decl thief_with_crate(Function, Crate);
+decl call_to_thief(Function, Function);
+
+contains_mut(t) :- is_mutable_reference(t).
+contains_mut(t) :- is_struct_type(t, s), field_types(s, f), contains_mut(f).
+contains_mut(t) :- tuple(t, f), contains_mut(f).
+contains_mut(t) :- slice(t, f), contains_mut(f).
+
+returns_mut(f) :- return_type(f, t), contains_mut(t).
+
+mutable_arg(f) :- argument_types(f, t), contains_mut(t).
+not_mutable_arg(f) :- function(f), !mutable_arg(f).
+
+safe_function(f) :- function(f), !is_unsafe(f).
+
+thief(f) :- returns_mut(f), not_mutable_arg(f), safe_function(f).
+
+fn_crate(f, c) :- in_module(f, m), modules_in_crates(m, c).
+
+thief_with_crate(f, c) :- thief(f), fn_crate(f, c).
+
+call_to_thief(f, g) :- calls(f, g).
+
+!csv(thief_with_crate, {
+    |(f, c)| {
+        writer.write_record(
+            &[&c.0.to_string(), &orig_db.crates[c.0 as usize].1.name,
+              &f.0.to_string(), &orig_db.functions[f.0 as usize].1.def_path]
+        ).unwrap();
+        println!("function {} --> {:?}",
+            orig_db.crates[c.0 as usize].1.name,
+            orig_db.functions[f.0 as usize].1.def_path,
+        );
+    }
+});

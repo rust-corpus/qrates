@@ -1,0 +1,16 @@
+decl returns_shared(Function);
+decl fn_crate(Function, Crate);
+decl fn_shared_return(Function, Crate);
+
+returns_shared(f) :- return_type(f, t), is_shared_reference(t).
+fn_crate(f, c) :- in_module(f, m), modules_in_crates(m, c).
+fn_shared_return(f, c) :- returns_shared(f), fn_crate(f, c).
+
+!csv(fn_shared_return, {
+    |(f, c)| {
+        writer.write_record(
+            &[&c.0.to_string(), &orig_db.crates[c.0 as usize].1.name,
+              &f.0.to_string(), &orig_db.functions[f.0 as usize].1.def_path]
+        ).unwrap();
+    }
+});
