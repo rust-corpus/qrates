@@ -1,0 +1,9 @@
+stages:
+  - build
+
+rust-nightly:
+  stage: build
+  image: rustlang/rust:nightly
+  script:
+    - rustc --version && cargo --version
+    - cd new && cargo build --verbose
