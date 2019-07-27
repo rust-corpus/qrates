@@ -52,7 +52,7 @@ use std::env;
 use self::visitor::CrateVisitor;
 
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
-const USE_JSON: bool = true;
+const USE_JSON: bool = false;
 
 struct Callbacks;
 
