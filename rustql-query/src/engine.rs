@@ -281,7 +281,7 @@ fn compile_rules(
 
     let mut variable_map: BTreeMap<String, String> = BTreeMap::new();
     for (rel_name, rel_info) in existing_rules {
-        let mut typelist = rel_info
+        let typelist = rel_info
             .arg_types
             .iter()
             .fold("".to_owned(), |s, t| s + t + ", ");
@@ -549,7 +549,7 @@ fn compile_join_tree(node: &QueryNode, rule: &Rule) -> (String, Fact) {
                 args: rule.args.clone(),
             };
 
-            let (join, mut joinfact) = compile_recursive_join(&lfact, &rfact, &target_fact);
+            let (join, joinfact) = compile_recursive_join(&lfact, &rfact, &target_fact);
             //joinfact.name = "var.complete()".to_owned();
             (left_code + &right_code + &join, joinfact)
 
