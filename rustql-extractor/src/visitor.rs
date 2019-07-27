@@ -8,6 +8,7 @@ extern crate rustc;
 use std::collections::BTreeMap;
 
 use crate::rustc::hir;
+use crate::rustc::hir::HirId;
 use crate::rustc::hir::def_id::DefId;
 use crate::rustc::hir::intravisit::*;
 use crate::rustc::hir::intravisit::{NestedVisitorMap, Visitor};
@@ -15,7 +16,6 @@ use crate::rustc::hir::map::Map;
 use crate::rustc::mir;
 use crate::rustc::ty;
 use crate::rustc::ty::TyCtxt;
-use crate::syntax::ast::NodeId;
 use crate::syntax::source_map::Span;
 
 use rustql_common::data;
@@ -24,7 +24,7 @@ pub struct CrateVisitor<'tcx, 'a> {
     pub crate_data: data::Crate,
     pub current_function: Option<data::Function>,
     pub map: &'a Map<'tcx>,
-    pub tcx: TyCtxt<'a, 'tcx, 'tcx>,
+    pub tcx: TyCtxt<'a>,
 
     /// maps DefIds of local modules to their index in `crate_data`
     pub local_modules: BTreeMap<DefId, usize>,
@@ -42,10 +42,10 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
 
         match &t.node {
             hir::TyKind::Path(hir::QPath::Resolved(_ty, path)) => {
-                let def = &path.def;
-                match def {
-                    hir::def::Def::PrimTy(pt) => data::Type::Native(format!("{:?}", pt)),
-                    hir::def::Def::Struct(id) => {
+                let res = &path.res;
+                match res {
+                    hir::def::Res::PrimTy(pt) => data::Type::Native(format!("{:?}", pt)),
+                    hir::def::Res::Def(hir::def::DefKind::Struct, id) => {
                         let path = self.tcx.def_path(*id);
                         data::Type::Struct(data::GlobalDefPath::new(
                             path.to_string_no_crate(),
@@ -77,7 +77,7 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
                 ))
             }
             ty::TyKind::Tuple(types) => {
-                data::Type::Tuple(types.iter().map(|t| self.create_type2(t)).collect())
+                data::Type::Tuple(types.iter().map(|t| self.create_type2(&t.expect_ty())).collect())
             }
             ty::TyKind::Slice(ty) | ty::TyKind::Array(ty, _ /* len */) => {
                 data::Type::Slice(box self.create_type2(ty))
@@ -99,15 +99,13 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
 }
 
 impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
-    fn visit_mod(&mut self, m: &'tcx hir::Mod, _s: Span, id: NodeId) {
+    fn visit_mod(&mut self, m: &'tcx hir::Mod, _s: Span, id: HirId) {
         let maybe_node = self.map.find(id);
         if let Some(hir::Node::Item(item)) = maybe_node {
             // maybe_node is None for the root module of each crate
-            let name: &str = &item.name.as_str();
+            let name: &str = &item.ident.name.as_str();
             let def_id = self.map.local_def_id(id);
-            let parent = self
-                .map
-                .get_module_parent(self.map.as_local_node_id(def_id).unwrap());
+            let parent = self.map.get_module_parent(id);
             let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
             self.local_modules
@@ -131,7 +129,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         use rustc::hir::ItemKind::*;
         match item.node {
             Struct(_, _) | Union(_, _) | Enum(_, _) | Ty(_, _) => {
-                let def_id = self.map.local_def_id(item.id);
+                let def_id = self.map.local_def_id(item.hir_id);
                 let ty = self.tcx.type_of(def_id);
 
                 let _my_ty = self.create_type2(&ty);
@@ -147,9 +145,9 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                                 )
                             }));
                         }
-                        let path = self.tcx.def_path(self.map.local_def_id(item.id));
+                        let path = self.tcx.def_path(self.map.local_def_id(item.hir_id));
                         self.crate_data.structs.push(data::Struct {
-                            name: item.name.to_string(),
+                            name: item.ident.name.to_string(),
                             def_path: data::GlobalDefPath::new(
                                 path.to_string_no_crate(),
                                 self.crate_data.metadata.clone(),
@@ -192,16 +190,14 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         fd: &'tcx hir::FnDecl,
         b: hir::BodyId,
         s: Span,
-        id: NodeId,
+        id: HirId,
     ) {
         let def_id = self.map.local_def_id(id);
         //let def = self.tcx.absolute_item_path_str(def_id);
 
-        let def_path = self.map.def_path_from_id(id).unwrap();
+        let def_path = self.map.def_path_from_hir_id(id).unwrap();
 
-        let parent = self
-            .map
-            .get_module_parent(self.map.as_local_node_id(def_id).unwrap());
+        let parent = self.map.get_module_parent(id);
         let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
         let maybe_node = self.map.find(id);
@@ -231,11 +227,11 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         };
 
         if let Some(hir::Node::Item(item)) = maybe_node {
-            println!("NAME: {}: {:?}", item.name.to_string(), argument_types);
+            println!("NAME: {}: {:?}", item.ident.name.to_string(), argument_types);
             add_function(match fk {
                 FnKind::Method(_name, method_sig, _vis, _attr) => {
                     Option::Some(data::Function {
-                        name: item.name.to_string(),
+                        name: item.ident.name.to_string(),
                         is_unsafe: method_sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
                         is_const: method_sig.header.constness == rustc::hir::Constness::Const,
                         is_async: method_sig.header.asyncness == rustc::hir::IsAsync::Async,
@@ -258,7 +254,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                 }
                 FnKind::ItemFn(_name, _generics, header, _vis, _block) => {
                     Option::Some(data::Function {
-                        name: item.name.to_string(),
+                        name: item.ident.name.to_string(),
                         is_unsafe: header.unsafety == rustc::hir::Unsafety::Unsafe,
                         is_const: header.constness == rustc::hir::Constness::Const,
                         is_async: header.asyncness == rustc::hir::IsAsync::Async,
@@ -282,11 +278,9 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
     fn visit_impl_item(&mut self, ii: &'tcx hir::ImplItem) {
         //println!("visited impl item: {:?}", ii);
 
-        let def_id = self.map.local_def_id(ii.id);
-        let def_path = self.map.def_path_from_id(ii.id).unwrap();
-        let parent = self
-            .map
-            .get_module_parent(self.map.as_local_node_id(def_id).unwrap());
+        let def_id = self.map.local_def_id(ii.hir_id);
+        let def_path = self.map.def_path_from_hir_id(ii.hir_id).unwrap();
+        let parent = self.map.get_module_parent(ii.hir_id);
         println!("parent: {:?}", parent);
         let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
