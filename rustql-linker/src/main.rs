@@ -192,7 +192,6 @@ fn create_database() -> tuples::Database {
 fn read_crates() -> Vec<data::Crate> {
     use std::env;
     use std::fs;
-    use std::fs::File;
 
     let dirname = env::var(TARGET_DIR_VARNAME)
         .unwrap_or(env::var("HOME").unwrap_or("/".to_owned()) + "/.rustql/crates");
