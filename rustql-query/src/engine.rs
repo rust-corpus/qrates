@@ -486,7 +486,7 @@ fn compile_rule(
         r#"fn rule_{}{}({}) -> {} {{
     let mut iteration = Iteration::new();
 {}
-    {}.into_iter().map({}).into()
+    {}.into_iter().map({}).collect::<Vec<_>>().into()
 }}
 "#,
         // {}.into_iter().map(|((x,), ())| (*x,)).into()
@@ -618,9 +618,9 @@ fn compile_recursive_join(fact1: &Fact, fact2: &Fact, target: &Fact) -> (String,
     let code = format!(
         r#"
     let var1 = iteration.variable("left");
-    var1.insert({}.iter().map({}).into());
+    var1.insert({}.iter().map({}).collect::<Vec<_>>().into());
     let recursive = iteration.variable("rec");
-    recursive.insert({}.iter().map({}).into());
+    recursive.insert({}.iter().map({}).collect::<Vec<_>>().into());
     while iteration.changed() {{
         recursive.from_join(&var1, &recursive, |&({}), &({}), &({})| (({}), ({}{})));
     }}
@@ -700,8 +700,8 @@ fn compile_join(fact1: &Fact, fact2: &Fact) -> (String, Fact) {
     let {} = {{
         let var1 = iteration.variable("left");
         let var2 = iteration.variable("right");
-        var1.insert({}.iter().map({}).into());
-        var2.insert({}.iter().map({}).into());
+        var1.insert({}.iter().map({}).collect::<Vec<_>>().into());
+        var2.insert({}.iter().map({}).collect::<Vec<_>>().into());
         iteration.changed();
 
         let variable = iteration.variable("join");
