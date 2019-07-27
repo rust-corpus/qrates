@@ -135,7 +135,7 @@ fn compile(
 
             println!(
                 "compiled in {}",
-                after_compilation.duration_since(beginning).as_float_secs()
+                after_compilation.duration_since(beginning).as_secs_f64()
             );
 
             let lib = Library::new(lib_path).unwrap();
@@ -194,7 +194,7 @@ fn compile(
                 "ran all actions in {}",
                 after_running
                     .duration_since(after_loading_database)
-                    .as_float_secs()
+                    .as_secs_f64()
             );
         //println!("database loading took {}", after_loading_database.duration_since(before_loading_database).as_float_secs());
         //println!("#crates {}, #functions {}", database.crates.len(), database.functions.len());
