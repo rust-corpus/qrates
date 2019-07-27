@@ -15,6 +15,7 @@ path = "src/main.rs"
 serde = "*"
 serde_json = "*"
 bincode = "*"
+rustc_tools_util = "*"
 
 [dependencies.rustql-common]
 path = "../rustql-common"
