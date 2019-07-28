@@ -38,7 +38,7 @@ use crate::rustc::hir;
 use crate::rustc::hir::intravisit::walk_crate;
 use rustc_driver::Compilation;
 use rustc_interface::interface;
-use rustc_tools_util::*;
+use rustc_tools_util::VersionInfo;
 use std::path::{Path, PathBuf};
 use std::process::{exit, Command};
 
