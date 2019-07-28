@@ -144,7 +144,7 @@ impl rustc_driver::Callbacks for Callbacks {
                     );
                 }
             });
-        Compilation::Stop
+        Compilation::Continue
     }
 }
 
