@@ -16,6 +16,8 @@ serde = "*"
 serde_json = "*"
 bincode = "*"
 rustc_tools_util = "*"
+log = "*"
+env_logger = "*"
 
 [dependencies.rustql-common]
 path = "../rustql-common"

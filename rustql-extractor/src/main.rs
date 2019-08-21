@@ -14,6 +14,9 @@ extern crate serde_json;
 
 extern crate rustql_common;
 
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 #[allow(unused_extern_crates)]
 extern crate rustc;
 
@@ -149,7 +152,9 @@ impl rustc_driver::Callbacks for Callbacks {
 }
 
 fn main() {
+    env_logger::init();
     rustc_driver::init_rustc_env_logger();
+
     if std::env::args().any(|a| a == "--version" || a == "-V") {
         let version_info = rustc_tools_util::get_version_info!();
         println!("{}", version_info);

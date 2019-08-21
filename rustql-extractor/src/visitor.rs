@@ -227,7 +227,9 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         };
 
         if let Some(hir::Node::Item(item)) = maybe_node {
-            println!("NAME: {}: {:?}", item.ident.name.to_string(), argument_types);
+            info!("Function: {}", def_path.to_string_no_crate());
+            info!("--Function argument types: {:?}", argument_types);
+
             add_function(match fk {
                 FnKind::Method(_name, method_sig, _vis, _attr) => {
                     Option::Some(data::Function {
@@ -270,7 +272,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                 }
             });
         } else {
-            println!("found fn that is not a node: {:?}", fd);
+            info!("Function {} is not of kind Node::Item", def_path.to_string_no_crate());
         }
         walk_fn(self, fk, fd, b, s, id);
     }
@@ -281,7 +283,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         let def_id = self.map.local_def_id(ii.hir_id);
         let def_path = self.map.def_path_from_hir_id(ii.hir_id).unwrap();
         let parent = self.map.get_module_parent(ii.hir_id);
-        println!("parent: {:?}", parent);
+        //info!("parent: {:?}", parent);
         let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
         match &ii.node {
