@@ -7,24 +7,38 @@ extern crate datafrog;
 extern crate rustql_common;
 extern crate serde_json;
 
+#[macro_use]
+extern crate log;
+extern crate env_logger;
+
 use rustql_common::data;
 use rustql_common::tuples;
 use std::fs::File;
+use std::error::Error;
 
 const USE_JSON: bool = false;
-
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
+const RUSTQL_DIR_VARNAME: &str = "/.rustql/crates";
+const DATABASE_FILE_VARNAME: &str = "database.db";
 
 fn main() {
-    let database = create_database();
+    env_logger::init();
 
-    save_database(&database, "database.db");
+    let database = create_database();
+    save_database(&database, DATABASE_FILE_VARNAME);
 }
 
 fn save_database(database: &tuples::Database, name: &str) {
-    let file = File::create(name).expect("could not create database file");
+    let file = match File::create(name) {
+        Err(e) => panic!("Could not create database {}: {}", name, e.description()),
+        Ok(file) => file,
+    };
+
     //serde_json::to_writer_pretty(file, database).expect("could not serialize to json");
-    bincode::serialize_into(file, database).expect("could not serialize to json");
+    match bincode::serialize_into(file, database) {
+        Err(e) => panic!("Could not write to database {}: {}", name, e.description()),
+        Ok(_) => {},
+    };
 }
 
 fn create_database() -> tuples::Database {
@@ -99,12 +113,11 @@ fn create_database() -> tuples::Database {
             database.functions_in_modules.push(tuple);
         }
     }
-    println!(
-        "created all entries for static tables: {} functions, {} structs",
-        database.functions.len(),
-        database.structs.len()
-    );
-    println!("starting linking function calls");
+
+    info!("Created all tables' entries");
+    info!("  #functions: {}", database.functions.len());
+    info!("  #structs: {}", database.structs.len());
+    info!("Starting function calls linking...");
 
     // create function call links
     let mut fails: usize = 0;
@@ -118,9 +131,9 @@ fn create_database() -> tuples::Database {
             if let Some(called_id) = called_id {
                 database.function_calls.push((*f_id, *called_id));
             } else {
-                // TODO find out why it didn't work
-                //println!("unresolved function call to {:?}", call.def_path);
-                //println!("fns: {:?}", database.functions);
+                // TODO: Find out why the call was not resolved.
+                warn!("Unresolved function call to {:?}", call.def_path);
+                debug!("Functions: {:?}", database.functions);
                 fails += 1;
             }
         }
@@ -137,24 +150,16 @@ fn create_database() -> tuples::Database {
         }
 
         if f_id.0 % 1000 == 0 {
-            println!("processed function no {}", f_id.0);
+            info!("Processed function number {}", f_id.0);
         }
     }
-    println!(
-        "linked all calls in #functions: {}",
-        database.functions.len()
-    );
-    println!("#calls: {}", database.function_calls.len());
-    println!(
-        "ratio fails / calls: {}",
-        fails as f64 / (database.function_calls.len() + fails) as f64
-    );
+
+    info!("Linked all calls in #functions: {}", database.functions.len());
+    info!("#calls: {}", database.function_calls.len());
+    info!("#fails/#calls ratio: {}", fails as f64 / (database.function_calls.len() + fails) as f64);
 
     database.link_types();
-    println!(
-        "linked structs and types, created {} links.",
-        database.is_struct_type.len()
-    );
+    info!("Linking structs and types. Created {} links", database.is_struct_type.len());
 
     // adding field types
     for (s_id, st) in &database.structs {
@@ -190,13 +195,9 @@ fn create_database() -> tuples::Database {
 /// @warning the more crates there are, the more RAM it needs (a lot)
 ///
 fn read_crates() -> Vec<data::Crate> {
-    use std::env;
-    use std::fs;
-
-    let dirname = env::var(TARGET_DIR_VARNAME)
-        .unwrap_or(env::var("HOME").unwrap_or("/".to_owned()) + "/.rustql/crates");
-
-    let files = fs::read_dir(dirname).unwrap();
+    let dirname = std::env::var(TARGET_DIR_VARNAME).unwrap_or(
+        std::env::var("HOME").unwrap_or("/".to_owned()) + RUSTQL_DIR_VARNAME);
+    let files = std::fs::read_dir(dirname).unwrap();
     let mut crates: Vec<data::Crate> = vec![];
 
     for file in files {
@@ -211,7 +212,7 @@ fn read_crates() -> Vec<data::Crate> {
             if let Ok(cr) = c {
                 crates.push(cr);
             } else {
-                println!("ERROR deserializing crate {:?}: {:?}", path.path(), c);
+                error!("Deserializing crate data {:?} failed: {:?}", path.path(), c);
             }
         }
     }
