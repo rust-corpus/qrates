@@ -21,16 +21,12 @@ fn main() {
 }
 
 fn save_database(database: &tuples::Database, name: &str) {
-    let file = match File::create(name) {
-        Err(e) => panic!("Could not create database {}: {}", name, e.description()),
-        Ok(file) => file,
-    };
+    let file = File::create(name)
+        .unwrap_or_else(|e| panic!("Could not create database {}: {}", name, e.description()));
 
     //serde_json::to_writer_pretty(file, database).expect("could not serialize to json");
-    match bincode::serialize_into(file, database) {
-        Err(e) => panic!("Could not write to database {}: {}", name, e.description()),
-        Ok(_) => {},
-    };
+    bincode::serialize_into(file, database)
+        .unwrap_or_else(|e| panic!("Could not write to database {}: {}", name, e.description()));
 }
 
 fn create_database() -> tuples::Database {
