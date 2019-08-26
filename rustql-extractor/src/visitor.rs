@@ -2,7 +2,7 @@
 // http://opensource.org/licenses/MIT>. This file may not be copied,
 // modified, or distributed except according to those terms.
 
-use log::info;
+use log::{info, debug};
 use rustc::hir;
 use rustc::hir::HirId;
 use rustc::hir::def_id::DefId;
@@ -280,7 +280,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         let def_id = self.map.local_def_id(ii.hir_id);
         let def_path = self.map.def_path_from_hir_id(ii.hir_id).unwrap();
         let parent = self.map.get_module_parent(ii.hir_id);
-        //info!("parent: {:?}", parent);
+        debug!("Impl item's {:?} parent: {:?}", ii, parent);
         let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
         match &ii.node {
@@ -322,12 +322,9 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
     fn visit_body(&mut self, body: &'tcx hir::Body) {
         let id = body.id();
         let owner = self.map.body_owner_def_id(id);
-        /*if let Some(function) = self.crate_data.get_function(owner) {
 
-            //println!("found body of {:?}: {:?}", function, owner);
-        }*/
-        //println!("found body of {:?}: {:?}", function, owner);
-
+        debug!("Found body of {:?}", owner);
+        debug!("{:?}", self.tcx.def_path(owner).to_string_no_crate());
         self.tcx
             .optimized_mir(owner)
             .basic_blocks()
@@ -351,8 +348,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                         ..
                     }) = func
                     {
-                        //print!("{:?}", self.tcx.original_crate_name(def_id.krate));
-                        //println!("{:?}", self.tcx.def_path(def_id).to_string_no_crate());
+                        debug!("{:?}", self.tcx.original_crate_name(def_id.krate));
+                        debug!("{:?}", self.tcx.def_path(def_id).to_string_no_crate());
                         let name = self.tcx.original_crate_name(def_id.krate).to_string();
                         let config_hash = self.tcx.crate_hash(def_id.krate).to_string();
                         let def_path = self.tcx.def_path(def_id).to_string_no_crate();
