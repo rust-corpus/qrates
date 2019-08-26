@@ -4,6 +4,7 @@
 
 use super::data;
 use datafrog::Relation;
+use serde_derive::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize)]

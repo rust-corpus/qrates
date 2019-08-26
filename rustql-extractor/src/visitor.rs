@@ -2,23 +2,20 @@
 // http://opensource.org/licenses/MIT>. This file may not be copied,
 // modified, or distributed except according to those terms.
 
-#[allow(unused_extern_crates)]
-extern crate rustc;
+use log::info;
+use rustc::hir;
+use rustc::hir::HirId;
+use rustc::hir::def_id::DefId;
+use rustc::hir::intravisit::*;
+use rustc::hir::intravisit::{NestedVisitorMap, Visitor};
+use rustc::hir::map::Map;
+use rustc::mir;
+use rustc::ty;
+use rustc::ty::TyCtxt;
+use rustql_common::data;
+use syntax::source_map::Span;
 
 use std::collections::BTreeMap;
-
-use crate::rustc::hir;
-use crate::rustc::hir::HirId;
-use crate::rustc::hir::def_id::DefId;
-use crate::rustc::hir::intravisit::*;
-use crate::rustc::hir::intravisit::{NestedVisitorMap, Visitor};
-use crate::rustc::hir::map::Map;
-use crate::rustc::mir;
-use crate::rustc::ty;
-use crate::rustc::ty::TyCtxt;
-use crate::syntax::source_map::Span;
-
-use rustql_common::data;
 
 pub struct CrateVisitor<'tcx, 'a> {
     pub crate_data: data::Crate,

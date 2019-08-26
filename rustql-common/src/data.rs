@@ -7,6 +7,8 @@
 // 'linked' together.
 //
 
+use serde_derive::{Serialize, Deserialize};
+
 /// Structure that identifies a crate uniquely.
 /// Two crates with the same CrateIdentifier are guaranteed to have the same ast.
 #[derive(Serialize, Deserialize, PartialEq, Hash, Eq, Clone, Debug)]

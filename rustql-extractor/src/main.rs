@@ -4,55 +4,23 @@
 //
 // The driver code is based on the Clippy driver code
 // https://github.com/rust-lang/rust-clippy/blob/master/src/driver.rs.
-
-#![feature(box_syntax, box_patterns, const_string_new)]
 #![feature(rustc_private)]
 
-extern crate bincode;
-extern crate serde;
-extern crate serde_json;
-
-extern crate rustql_common;
-
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-#[allow(unused_extern_crates)]
 extern crate rustc;
-
-#[allow(unused_extern_crates)]
 extern crate rustc_driver;
-
-#[allow(unused_extern_crates)]
 extern crate rustc_interface;
 
-#[allow(unused_extern_crates)]
-extern crate rustc_plugin;
-
-#[allow(unused_extern_crates)]
-extern crate syntax;
-
-pub mod visitor;
-
-use rustql_common::data;
-
-//use rustc_driver::driver::{CompileController, PhaseController, CompileState};
-use crate::rustc::hir;
-use crate::rustc::hir::intravisit::walk_crate;
+use rustc::hir;
+use rustc::hir::intravisit::walk_crate;
 use rustc_driver::Compilation;
 use rustc_interface::interface;
 use rustc_tools_util::VersionInfo;
-use std::path::{Path, PathBuf};
-use std::process::{exit, Command};
+use rustql_common::data;
+use rustql_extractor::visitor::CrateVisitor;
 
 use std::collections::BTreeMap;
-
-use std::fs::File;
-
-use std::u64;
-use std::env;
-
-use self::visitor::CrateVisitor;
+use std::path::{Path, PathBuf};
+use std::process::{exit, Command};
 
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
 const USE_JSON: bool = false;
@@ -89,17 +57,17 @@ impl rustc_driver::Callbacks for Callbacks {
             .unwrap()
             .peek_mut()
             .enter(|tcx| {
-                let crate_name_env = env::var("CARGO_PKG_NAME").unwrap_or(String::from("main"));
+                let crate_name_env = std::env::var("CARGO_PKG_NAME").unwrap_or(String::from("main"));
                 let crate_version = (
-                    env::var("CARGO_PKG_VERSION_MAJOR")
+                    std::env::var("CARGO_PKG_VERSION_MAJOR")
                         .unwrap_or(String::from("0"))
                         .parse::<u64>()
                         .unwrap(),
-                    env::var("CARGO_PKG_VERSION_MINOR")
+                    std::env::var("CARGO_PKG_VERSION_MINOR")
                         .unwrap_or(String::from("0"))
                         .parse::<u64>()
                         .unwrap(),
-                    env::var("CARGO_PKG_VERSION_PATCH")
+                    std::env::var("CARGO_PKG_VERSION_PATCH")
                         .unwrap_or(String::from("0"))
                         .parse::<u64>()
                         .unwrap(),
@@ -161,7 +129,7 @@ fn main() {
         exit(0);
     }
 
-    let mut orig_args: Vec<String> = env::args().collect();
+    let mut orig_args: Vec<String> = std::env::args().collect();
 
     // Get the sysroot, looking from most specific to this invocation to the least:
     // - command line
@@ -232,12 +200,12 @@ fn main() {
 
 fn export_crate(krate: &data::Crate) -> Option<()> {
     let filename = krate.metadata.get_filename();
-    let dirname = env::var(TARGET_DIR_VARNAME)
-        .unwrap_or(env::var("HOME").unwrap_or("/".to_owned()) + "/.rustql/crates");
+    let dirname = std::env::var(TARGET_DIR_VARNAME)
+        .unwrap_or(std::env::var("HOME").unwrap_or("/".to_owned()) + "/.rustql/crates");
     std::fs::create_dir_all(&dirname).ok();     // Discard the result.
 
     if USE_JSON {
-        File::create(dirname.clone() + "/" + &filename + ".json")
+        std::fs::File::create(dirname.clone() + "/" + &filename + ".json")
             .ok()
             .and_then(|file| -> Option<()> {
                 serde_json::to_writer_pretty(file, krate).unwrap();
@@ -245,7 +213,7 @@ fn export_crate(krate: &data::Crate) -> Option<()> {
             })
             .or(None)
     } else {
-        File::create(dirname + "/" + &filename + ".bin")
+        std::fs::File::create(dirname + "/" + &filename + ".bin")
             .ok()
             .and_then(|file| -> Option<()> {
                 bincode::serialize_into(file, krate).unwrap();

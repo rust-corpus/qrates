@@ -2,19 +2,11 @@
 // http://opensource.org/licenses/MIT>. This file may not be copied,
 // modified, or distributed except according to those terms.
 
-extern crate bincode;
-extern crate datafrog;
-extern crate rustql_common;
-extern crate serde_json;
-
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-
+use log::{debug, error, info, warn};
 use rustql_common::data;
 use rustql_common::tuples;
-use std::fs::File;
 use std::error::Error;
+use std::fs::File;
 
 const USE_JSON: bool = false;
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
