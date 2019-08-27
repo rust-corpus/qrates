@@ -32,11 +32,6 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
     /// read out type information and store it in a `data::Type`
     ///
     pub fn create_type(&self, t: &hir::Ty) -> data::Type {
-        // LocalDecl
-        // use mir::args_iter()
-        //
-        // rustc::ty::TyS
-
         match &t.node {
             hir::TyKind::Path(hir::QPath::Resolved(_ty, path)) => {
                 let res = &path.res;
@@ -190,8 +185,6 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         id: HirId,
     ) {
         let def_id = self.map.local_def_id(id);
-        //let def = self.tcx.absolute_item_path_str(def_id);
-
         let def_path = self.map.def_path_from_hir_id(id).unwrap();
 
         let parent = self.map.get_module_parent(id);
@@ -200,21 +193,12 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         let maybe_node = self.map.find(id);
         let mir = self.tcx.optimized_mir(def_id);
 
-        //let argument_types = fd.inputs.iter().map(|t| self.create_type(t)).collect::<Vec<_>>();
         let argument_types = mir
             .args_iter()
             .map(|local| self.create_type2(&mir.local_decls[local].ty))
             .collect::<Vec<_>>();
 
-        //println!("{:?}", mir.args_iter().collect::<Vec<_>>());
-
-        //println!("{:?}", argument_types2);
-
         let return_type = self.create_type2(&mir.return_ty());
-        /*let return_type = match &fd.output {
-            hir::FunctionRetTy::DefaultReturn(_) => { println!("default return type not supported"); data::Type::Other },
-            hir::FunctionRetTy::Return(pty) => { self.create_type(&pty) }
-        };*/
 
         let mut add_function = |mut func| {
             std::mem::swap(&mut self.current_function, &mut func);
@@ -275,8 +259,6 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
     }
 
     fn visit_impl_item(&mut self, ii: &'tcx hir::ImplItem) {
-        //println!("visited impl item: {:?}", ii);
-
         let def_id = self.map.local_def_id(ii.hir_id);
         let def_path = self.map.def_path_from_hir_id(ii.hir_id).unwrap();
         let parent = self.map.get_module_parent(ii.hir_id);
@@ -291,10 +273,6 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     .map(|local| self.create_type2(&mir.local_decls[local].ty))
                     .collect::<Vec<_>>();
                 let return_type = self.create_type2(&mir.return_ty());
-                /*let return_type = match &sig.decl.output {
-                    hir::FunctionRetTy::DefaultReturn(_) => { println!("default return type not supported"); data::Type::Other },
-                    hir::FunctionRetTy::Return(pty) => { self.create_type(&pty) }
-                };*/
                 let mut func = Option::Some(data::Function {
                     name: ii.ident.to_string(),
                     is_unsafe: sig.header.unsafety == rustc::hir::Unsafety::Unsafe,

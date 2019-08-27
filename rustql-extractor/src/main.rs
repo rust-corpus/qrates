@@ -91,7 +91,6 @@ impl rustc_driver::Callbacks for Callbacks {
                 let mut cv = CrateVisitor {
                     crate_data: data::Crate::new(&crate_name, crate_version, &config_hash),
                     current_function: None,
-                    // crate_name: crate_name,
                     map: hir_map,
                     tcx: tcx,
                     local_modules: BTreeMap::new(),
