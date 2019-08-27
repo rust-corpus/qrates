@@ -95,7 +95,6 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         let maybe_node = self.map.find(id);
         if let Some(hir::Node::Item(item)) = maybe_node {
             // maybe_node is None for the root module of each crate
-            let name: &str = &item.ident.name.as_str();
             let def_id = self.map.local_def_id(id);
             let parent = self.map.get_module_parent(id);
             let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
@@ -103,7 +102,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             self.local_modules
                 .insert(def_id, self.crate_data.mods.len());
             self.crate_data.mods.push(data::Mod {
-                name: String::from(name),
+                name: item.ident.name.to_string(),
                 parent_mod: Some(local_parent_index),
             });
         }
@@ -124,8 +123,6 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                 let def_id = self.map.local_def_id(item.hir_id);
                 let ty = self.tcx.type_of(def_id);
 
-                let _my_ty = self.create_type2(&ty);
-
                 match ty.sty {
                     ty::TyKind::Adt(def, subs) => {
                         let mut fields: Vec<_> = vec![];
@@ -137,11 +134,10 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                                 )
                             }));
                         }
-                        let path = self.tcx.def_path(self.map.local_def_id(item.hir_id));
                         self.crate_data.structs.push(data::Struct {
                             name: item.ident.name.to_string(),
                             def_path: data::GlobalDefPath::new(
-                                path.to_string_no_crate(),
+                                self.tcx.def_path(def_id).to_string_no_crate(),
                                 self.crate_data.metadata.clone(),
                             ),
                             fields: fields,
@@ -307,11 +303,11 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             .optimized_mir(owner)
             .basic_blocks()
             .iter()
-            .for_each(|bbdata| {
+            .for_each(|bblock| {
                 if let Some(mir::Terminator {
                     source_info: _,
                     kind: mir::TerminatorKind::Call { func, .. },
-                }) = &bbdata.terminator
+                }) = &bblock.terminator
                 {
                     if let mir::Operand::Constant(box mir::Constant {
                         literal:
@@ -326,15 +322,21 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                         ..
                     }) = func
                     {
-                        debug!("{:?}", self.tcx.original_crate_name(def_id.krate));
-                        debug!("{:?}", self.tcx.def_path(def_id).to_string_no_crate());
-                        let name = self.tcx.original_crate_name(def_id.krate).to_string();
-                        let config_hash = self.tcx.crate_hash(def_id.krate).to_string();
+                        let krate = def_id.krate;
+                        let krate_name= self.tcx.original_crate_name(krate).to_string();
                         let def_path = self.tcx.def_path(def_id).to_string_no_crate();
-                        //println!("pretty: {}", self.tcx.def_path_debug_str(def_id));
+
+                        debug!("{:?}", krate_name);
+                        debug!("{:?}", def_path);
+
                         if let Some(ref mut f) = self.current_function {
+                            // Add the calls found in the mir code to the data of the currently
+                            // visited function, i.e., the caller.
                             f.calls.push(data::GlobalDefPath {
-                                crate_ident: data::CrateIdentifier { name, config_hash },
+                                crate_ident: data::CrateIdentifier {
+                                    name: krate_name,
+                                    config_hash: self.tcx.crate_hash(krate).to_string()
+                                },
                                 def_path,
                             });
                         } else {
@@ -343,7 +345,6 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     } else {
                         //println!("ignored function call");
                     }
-                } else {
                 }
             });
         walk_body(self, body);
