@@ -89,6 +89,11 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
         }
     }
 
+    pub fn get_parent_index(&self, id: HirId) -> usize {
+        let parent = self.map.get_module_parent(id);
+        self.local_modules.get(&parent).map(|x| *x).unwrap_or(0)
+    }
+
     pub fn get_argument_types(&self, mir: &mir::Body) -> Vec<data::Type> {
         mir.args_iter().map(|l| self.create_type2(&mir.local_decls[l].ty))
             .collect::<Vec<data::Type>>()
@@ -104,16 +109,50 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
             self.crate_data.functions.push(f);
         }
     }
+
+    fn create_function(
+        &self,
+        id: HirId,
+        header: hir::FnHeader,
+        fn_name: String,
+        is_method: bool,
+    ) -> data::Function {
+        let def_id = self.map.local_def_id(id);
+        let parent_index = self.get_parent_index(id);
+
+        let def_path = self.map.def_path_from_hir_id(id).unwrap();
+        let def_path_as_string = def_path.to_string_no_crate();
+        let mir = self.tcx.optimized_mir(def_id);
+        let argument_types = self.get_argument_types(mir);
+        let return_type = self.get_return_type(mir);
+
+        let is_method_str = if is_method { "Method" } else { "Function" };
+        info!("{}: {}", is_method_str.to_string(), def_path_as_string);
+        debug!("--Argument types: {:?}", argument_types);
+        debug!("--Return type: {:?}", return_type);
+
+        data::Function {
+            name: fn_name,
+            is_unsafe: header.unsafety == rustc::hir::Unsafety::Unsafe,
+            is_const: header.constness == rustc::hir::Constness::Const,
+            is_async: header.asyncness == rustc::hir::IsAsync::Async,
+            abi: header.abi.name().to_owned(),
+            is_closure: false,
+            calls: vec![],
+            containing_mod: parent_index,
+            def_path: def_path_as_string,
+            argument_types,
+            return_type,
+        }
+    }
 }
 
 impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
     fn visit_mod(&mut self, m: &'tcx hir::Mod, _s: Span, id: HirId) {
-        let maybe_node = self.map.find(id);
-        if let Some(hir::Node::Item(item)) = maybe_node {
+        if let Some(hir::Node::Item(item)) = self.map.find(id) {
             // maybe_node is None for the root module of each crate
             let def_id = self.map.local_def_id(id);
-            let parent = self.map.get_module_parent(id);
-            let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
+            let local_parent_index = self.get_parent_index(id);
 
             self.local_modules
                 .insert(def_id, self.crate_data.mods.len());
@@ -192,83 +231,38 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         s: Span,
         id: HirId,
     ) {
-        let def_path = self.map.def_path_from_hir_id(id).unwrap();
-
-
         if let Some(hir::Node::Item(item)) = self.map.find(id) {
-            let def_id = self.map.local_def_id(id);
-            let parent = self.map.get_module_parent(id);
-            let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
-
-            let mir = self.tcx.optimized_mir(def_id);
-            let argument_types = self.get_argument_types(mir);
-            let return_type = self.get_return_type(mir);
-
-
             self.record_current_function(match fk {
-                FnKind::Method(_, sig, _, _) => Option::Some(data::Function {
-                    name: item.ident.name.to_string(),
-                    is_unsafe: sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
-                    is_const: sig.header.constness == rustc::hir::Constness::Const,
-                    is_async: sig.header.asyncness == rustc::hir::IsAsync::Async,
-                    abi: sig.header.abi.name().to_owned(),
-                    is_closure: false,
-                    calls: vec![],
-                    containing_mod: local_parent_index,
-                    def_path: def_path.to_string_no_crate(),
-                    argument_types: argument_types,
-                    return_type: return_type, //def_id: //data::DefIdWrapper(def_id)
-                }),
+                FnKind::Method(_, sig, _, _) => {
+                    Some(self.create_function(id, sig.header, item.ident.name.to_string(), false))
+                }
                 FnKind::Closure(_attributes) => None,
-                FnKind::ItemFn(_, _, header, _, _) => Option::Some(data::Function {
-                    name: item.ident.name.to_string(),
-                    is_unsafe: header.unsafety == rustc::hir::Unsafety::Unsafe,
-                    is_const: header.constness == rustc::hir::Constness::Const,
-                    is_async: header.asyncness == rustc::hir::IsAsync::Async,
-                    abi: header.abi.name().to_owned(),
-                    is_closure: false,
-                    calls: vec![],
-                    containing_mod: local_parent_index, //Some(data::GlobalDefPath::new(&def_path, &self.crate_data.metadata)),
-                    def_path: def_path.to_string_no_crate(),
-                    argument_types: argument_types,
-                    return_type: return_type, //def_id: //data::DefIdWrapper(def_id)
-                })
+                FnKind::ItemFn(_, _, header, _, _) => {
+                    Some(self.create_function(id, header, item.ident.name.to_string(), false))
+                }
             });
         } else {
+            let def_path = self.map.def_path_from_hir_id(id).unwrap();
+
             debug!("Function {} is not of kind Node::Item", def_path.to_string_no_crate());
         }
         walk_fn(self, fk, fd, b, s, id);
     }
 
-    fn visit_impl_item(&mut self, ii: &'tcx hir::ImplItem) {
-        let def_id = self.map.local_def_id(ii.hir_id);
-        let def_path = self.map.def_path_from_hir_id(ii.hir_id).unwrap();
-        let parent = self.map.get_module_parent(ii.hir_id);
-        let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
-
-        match &ii.node {
-            hir::ImplItemKind::Method(sig, _body_id) => {
-                let mir = self.tcx.optimized_mir(def_id);
-                let argument_types = self.get_argument_types(mir);
-                let return_type = self.get_return_type(mir);
-
-                self.record_current_function(Option::Some(data::Function {
-                    name: ii.ident.to_string(),
-                    is_unsafe: sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
-                    is_const: sig.header.constness == rustc::hir::Constness::Const,
-                    is_async: sig.header.asyncness == rustc::hir::IsAsync::Async,
-                    abi: sig.header.abi.name().to_owned(),
-                    is_closure: false,
-                    calls: vec![],
-                    containing_mod: local_parent_index,
-                    def_path: def_path.to_string_no_crate(),
-                    argument_types: argument_types,
-                    return_type: return_type,
-                }));
+    fn visit_impl_item(&mut self, item: &'tcx hir::ImplItem) {
+        match &item.node {
+            hir::ImplItemKind::Method(sig, _) => {
+                self.record_current_function(Some(self.create_function(
+                    item.hir_id,
+                    sig.header,
+                    item.ident.name.to_string(),
+                    true,
+                )));
             }
             _ => {}
         }
-        walk_impl_item(self, ii);
+
+        walk_impl_item(self, item);
     }
 
     fn visit_body(&mut self, body: &'tcx hir::Body) {
