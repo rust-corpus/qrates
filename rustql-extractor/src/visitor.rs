@@ -88,6 +88,22 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
             config_hash: self.tcx.crate_hash(c).to_string(),
         }
     }
+
+    pub fn get_argument_types(&self, mir: &mir::Body) -> Vec<data::Type> {
+        mir.args_iter().map(|l| self.create_type2(&mir.local_decls[l].ty))
+            .collect::<Vec<data::Type>>()
+    }
+
+    pub fn get_return_type(&self, mir: &mir::Body) -> data::Type {
+        self.create_type2(&mir.return_ty())
+    }
+
+    pub fn record_current_function(&mut self, mut func: Option<data::Function>) {
+        std::mem::swap(&mut self.current_function, &mut func);
+        if let Some(f) = func {
+            self.crate_data.functions.push(f);
+        }
+    }
 }
 
 impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
@@ -109,11 +125,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 
         walk_mod(self, m, id);
 
-        let mut func: Option<data::Function> = None;
-        std::mem::swap(&mut self.current_function, &mut func);
-        if let Some(f) = func {
-            self.crate_data.functions.push(f);
-        }
+        self.record_current_function(None);
     }
 
     fn visit_item(&mut self, item: &'tcx hir::Item) {
@@ -180,73 +192,47 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         s: Span,
         id: HirId,
     ) {
-        let def_id = self.map.local_def_id(id);
         let def_path = self.map.def_path_from_hir_id(id).unwrap();
 
-        let parent = self.map.get_module_parent(id);
-        let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
-        let maybe_node = self.map.find(id);
-        let mir = self.tcx.optimized_mir(def_id);
+        if let Some(hir::Node::Item(item)) = self.map.find(id) {
+            let def_id = self.map.local_def_id(id);
+            let parent = self.map.get_module_parent(id);
+            let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
-        let argument_types = mir
-            .args_iter()
-            .map(|local| self.create_type2(&mir.local_decls[local].ty))
-            .collect::<Vec<_>>();
+            let mir = self.tcx.optimized_mir(def_id);
+            let argument_types = self.get_argument_types(mir);
+            let return_type = self.get_return_type(mir);
 
-        let return_type = self.create_type2(&mir.return_ty());
 
-        let mut add_function = |mut func| {
-            std::mem::swap(&mut self.current_function, &mut func);
-            if let Some(f) = func {
-                self.crate_data.functions.push(f);
-            }
-        };
-
-        if let Some(hir::Node::Item(item)) = maybe_node {
-            info!("Function: {}", def_path.to_string_no_crate());
-            info!("--Function argument types: {:?}", argument_types);
-
-            add_function(match fk {
-                FnKind::Method(_name, method_sig, _vis, _attr) => {
-                    Option::Some(data::Function {
-                        name: item.ident.name.to_string(),
-                        is_unsafe: method_sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
-                        is_const: method_sig.header.constness == rustc::hir::Constness::Const,
-                        is_async: method_sig.header.asyncness == rustc::hir::IsAsync::Async,
-                        abi: method_sig.header.abi.name().to_owned(),
-                        is_closure: false,
-                        calls: vec![],
-                        containing_mod: local_parent_index,
-                        def_path: def_path.to_string_no_crate(),
-                        argument_types: argument_types,
-                        return_type: return_type, //def_id: //data::DefIdWrapper(def_id)
-                    })
-                }
-                FnKind::Closure(_attributes) => {
-                    None
-                    //Option::Some(
-                    //    data::Function {
-
-                    //    }
-                    //)
-                }
-                FnKind::ItemFn(_name, _generics, header, _vis, _block) => {
-                    Option::Some(data::Function {
-                        name: item.ident.name.to_string(),
-                        is_unsafe: header.unsafety == rustc::hir::Unsafety::Unsafe,
-                        is_const: header.constness == rustc::hir::Constness::Const,
-                        is_async: header.asyncness == rustc::hir::IsAsync::Async,
-                        abi: header.abi.name().to_owned(),
-                        is_closure: false,
-                        calls: vec![],
-                        //containing_mod: Some(def_path),
-                        containing_mod: local_parent_index, //Some(data::GlobalDefPath::new(&def_path, &self.crate_data.metadata)),
-                        def_path: def_path.to_string_no_crate(),
-                        argument_types: argument_types,
-                        return_type: return_type, //def_id: //data::DefIdWrapper(def_id)
-                    })
-                }
+            self.record_current_function(match fk {
+                FnKind::Method(_, sig, _, _) => Option::Some(data::Function {
+                    name: item.ident.name.to_string(),
+                    is_unsafe: sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
+                    is_const: sig.header.constness == rustc::hir::Constness::Const,
+                    is_async: sig.header.asyncness == rustc::hir::IsAsync::Async,
+                    abi: sig.header.abi.name().to_owned(),
+                    is_closure: false,
+                    calls: vec![],
+                    containing_mod: local_parent_index,
+                    def_path: def_path.to_string_no_crate(),
+                    argument_types: argument_types,
+                    return_type: return_type, //def_id: //data::DefIdWrapper(def_id)
+                }),
+                FnKind::Closure(_attributes) => None,
+                FnKind::ItemFn(_, _, header, _, _) => Option::Some(data::Function {
+                    name: item.ident.name.to_string(),
+                    is_unsafe: header.unsafety == rustc::hir::Unsafety::Unsafe,
+                    is_const: header.constness == rustc::hir::Constness::Const,
+                    is_async: header.asyncness == rustc::hir::IsAsync::Async,
+                    abi: header.abi.name().to_owned(),
+                    is_closure: false,
+                    calls: vec![],
+                    containing_mod: local_parent_index, //Some(data::GlobalDefPath::new(&def_path, &self.crate_data.metadata)),
+                    def_path: def_path.to_string_no_crate(),
+                    argument_types: argument_types,
+                    return_type: return_type, //def_id: //data::DefIdWrapper(def_id)
+                })
             });
         } else {
             info!("Function {} is not of kind Node::Item", def_path.to_string_no_crate());
@@ -264,12 +250,10 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         match &ii.node {
             hir::ImplItemKind::Method(sig, _body_id) => {
                 let mir = self.tcx.optimized_mir(def_id);
-                let argument_types = mir
-                    .args_iter()
-                    .map(|local| self.create_type2(&mir.local_decls[local].ty))
-                    .collect::<Vec<_>>();
-                let return_type = self.create_type2(&mir.return_ty());
-                let mut func = Option::Some(data::Function {
+                let argument_types = self.get_argument_types(mir);
+                let return_type = self.get_return_type(mir);
+
+                self.record_current_function(Option::Some(data::Function {
                     name: ii.ident.to_string(),
                     is_unsafe: sig.header.unsafety == rustc::hir::Unsafety::Unsafe,
                     is_const: sig.header.constness == rustc::hir::Constness::Const,
@@ -281,12 +265,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     def_path: def_path.to_string_no_crate(),
                     argument_types: argument_types,
                     return_type: return_type,
-                });
-
-                std::mem::swap(&mut self.current_function, &mut func);
-                if let Some(f) = func {
-                    self.crate_data.functions.push(f);
-                }
+                }));
             }
             _ => {}
         }
