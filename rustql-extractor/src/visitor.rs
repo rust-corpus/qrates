@@ -235,7 +235,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                 })
             });
         } else {
-            info!("Function {} is not of kind Node::Item", def_path.to_string_no_crate());
+            debug!("Function {} is not of kind Node::Item", def_path.to_string_no_crate());
         }
         walk_fn(self, fk, fd, b, s, id);
     }
@@ -244,7 +244,6 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         let def_id = self.map.local_def_id(ii.hir_id);
         let def_path = self.map.def_path_from_hir_id(ii.hir_id).unwrap();
         let parent = self.map.get_module_parent(ii.hir_id);
-        debug!("Impl item's {:?} parent: {:?}", ii, parent);
         let local_parent_index = self.local_modules.get(&parent).map(|x| *x).unwrap_or(0);
 
         match &ii.node {
@@ -276,8 +275,9 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         let id = body.id();
         let owner = self.map.body_owner_def_id(id);
 
-        debug!("Found body of {:?}", owner);
+        debug!("Visiting body of {:?}", owner);
         debug!("{:?}", self.tcx.def_path(owner).to_string_no_crate());
+
         self.tcx
             .optimized_mir(owner)
             .basic_blocks()
@@ -305,8 +305,8 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                         let krate_name= self.tcx.original_crate_name(krate).to_string();
                         let def_path = self.tcx.def_path(def_id).to_string_no_crate();
 
-                        debug!("{:?}", krate_name);
-                        debug!("{:?}", def_path);
+                        debug!("Crate name: {:?}", krate_name);
+                        debug!("Definition path: {:?}", def_path);
 
                         if let Some(ref mut f) = self.current_function {
                             // Add the calls found in the mir code to the data of the currently
@@ -319,10 +319,10 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                                 def_path,
                             });
                         } else {
-                            //println!("ignored function call");
+                            warn!("Currently not in a function. Function call ignored.");
                         }
                     } else {
-                        //println!("ignored function call");
+                        warn!("Function doesn't match mir::Operand::Constant. Function call ignored.")
                     }
                 }
             });
