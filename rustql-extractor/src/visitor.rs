@@ -19,16 +19,20 @@ use std::collections::BTreeMap;
 
 pub struct CrateVisitor<'tcx, 'a> {
     pub crate_data: data::Crate,
+
+    // Currently visited function. Used to keep relevant state as we visit the hir data structure.
     pub current_function: Option<data::Function>,
+
     pub map: &'a Map<'tcx>,
     pub tcx: TyCtxt<'a>,
 
-    /// maps DefIds of local modules to their index in `crate_data`
+    /// Maps DefIds of local modules to their index in the `crate_data` vector they are stored.
     pub local_modules: BTreeMap<DefId, usize>,
 }
 
 impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
     ///
+    /// TODO: Is this method still relevant or can it be removed?
     /// read out type information and store it in a `data::Type`
     ///
     pub fn create_type(&self, t: &hir::Ty) -> data::Type {
@@ -57,7 +61,7 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
     }
 
     ///
-    /// read out type information and store it in a `data::Type`
+    /// Reads out type information and returns it in a `data::Type`.
     ///
     pub fn create_type2(&self, t: &ty::Ty) -> data::Type {
         match &t.sty {
@@ -103,13 +107,24 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
         self.create_type2(&mir.return_ty())
     }
 
+    ///
+    /// Updates `current_function` with the provided function `func` after first storing the
+    /// current_function in the `crate_data` functions.
+    ///
     pub fn record_current_function(&mut self, mut func: Option<data::Function>) {
+        // Update self.current_function with the provided function, and store the previous
+        // current function to func.
         std::mem::swap(&mut self.current_function, &mut func);
+
         if let Some(f) = func {
+            // If the previous current function (now func) is not None.
             self.crate_data.functions.push(f);
         }
     }
 
+    ///
+    /// Reads out a function or method definition and returns a `data::Function` capturing it.
+    ///
     fn create_function(
         &self,
         id: HirId,
@@ -164,6 +179,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 
         walk_mod(self, m, id);
 
+        // Record the last visited function of the module.
         self.record_current_function(None);
     }
 
