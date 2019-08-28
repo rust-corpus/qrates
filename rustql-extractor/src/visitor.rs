@@ -51,7 +51,6 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
                     _ => data::Type::Other,
                 }
             }
-            /*hir::TyKind::Ptr(ty) |*/
             hir::TyKind::Rptr(_, ty) => data::Type::Reference {
                 to: box self.create_type(&ty.ty),
                 is_mutable: ty.mutbl == hir::Mutability::MutMutable,
@@ -216,21 +215,6 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
             _ => {}
         }
 
-        /*
-        if let hir::ItemKind::Struct(var_data, generics) = &item.node {
-            let fields: Vec<_> = match var_data {
-                hir::VariantData::Struct(fields, node_id) |
-                    hir::VariantData::Tuple(fields, node_id) => {fields.iter().map(|sf| (sf.ident.name.as_str().get().to_owned(), self.create_type(&sf.ty))).collect()},
-                _ => {vec![]}
-            };
-            println!("struct found: {:?}", item.name);
-            let path = self.tcx.def_path(self.map.local_def_id(item.id));
-            self.crate_data.structs.push(data::Struct {
-                name: item.name.to_string(),
-                def_path: data::GlobalDefPath::new(path.to_string_no_crate(), self.crate_data.metadata.clone()),
-                fields: fields
-            });
-        }*/
         walk_item(self, item);
     }
 
@@ -394,6 +378,5 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
 
     fn nested_visit_map<'this>(&'this mut self) -> NestedVisitorMap<'this, 'tcx> {
         NestedVisitorMap::All(self.map)
-        //NestedVisitorMap::None
     }
 }
