@@ -8,3 +8,4 @@ data/compile.log
 data/crate-information.json
 data/crates
 *.swp
+.idea
