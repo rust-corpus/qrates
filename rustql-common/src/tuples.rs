@@ -202,56 +202,36 @@ impl Database {
     }
 
     pub fn link_types(&mut self) {
-        for i in 0..self.types.len() {
-            let (_t_id, typ) = &self.types[i];
-            match typ {
+        for (ty_id, ty) in self.types.clone() {
+            match ty {
                 data::Type::Reference { .. } => {
-                    //let mut type_id = self.get_type(&typ);
-                    //if let None = type_id {
-                    //    let len = self::Type(self.types.len() as u64);
-                    //    type_id = Some(len);
-                    //    self.types.push((len, typ.clone()));
-                    //    println!("unknown type found during linking types");
-                    //}
-                    //let (t_id, typ) = &self.types[i];
-                    let typ = typ.clone();
-                    let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
-                    let (t_id, _typ) = &self.types[i];
-                    self.is_reference_to.push((*t_id, added));
+                    let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &ty);
+                    self.is_reference_to.push((ty_id, added));
                 }
                 data::Type::Tuple(types) => {
-                    for typ in types.clone() {
-                        let typ = typ.clone();
+                    for t in types.clone() {
                         let added =
-                            Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
-                        let (t_id, _typ) = &self.types[i];
-                        self.tuple.push((*t_id, added));
+                            Self::add_type_or_get(&mut self.type_finder, &mut self.types, &t);
+                        self.tuple.push((ty_id, added));
                     }
                 }
-                data::Type::Slice(typ) => {
-                    let typ = typ.clone();
-                    let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &typ);
-                    let (t_id, _typ) = &self.types[i];
-                    self.slice.push((*t_id, added));
+                data::Type::Slice(slice_ty) => {
+                    let t = slice_ty.clone();
+                    let added = Self::add_type_or_get(&mut self.type_finder, &mut self.types, &t);
+                    self.slice.push((ty_id, added));
+                }
+                data::Type::Struct(ref s) => {
+                    let s = self
+                        .structs
+                        .iter()
+                        .find(|(_, s_info)| s_info.def_path == *s);
+                    if let Some((s_id, _)) = s {
+                        self.is_struct_type.push((ty_id, *s_id));
+                    } else {
+                        println!("Struct not found: {:?}", s);
+                    }
                 }
                 _ => {}
-            }
-        }
-
-        for (t_id, typ) in &self.types {
-            if let data::Type::Struct(ref s) = typ {
-                let mut found = false;
-                for (s_id, struc) in &self.structs {
-                    if struc.def_path == *s {
-                        self.is_struct_type.push((*t_id, *s_id));
-                        //println!("{:?}, {:?}", struc.def_path, *s);
-                        found = true;
-                        break;
-                    }
-                }
-                if !found {
-                    println!("not found: {:?}", s);
-                }
             }
         }
     }
