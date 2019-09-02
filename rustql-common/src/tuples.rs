@@ -105,24 +105,21 @@ impl Database {
     pub fn get_module_in_crate(&self, c_id: Crate, _mod_name: &str) -> Option<Mod> {
         self.modules_in_crates
             .iter()
-            .filter(|(_m, c)| *c == c_id)
-            .next()
-            .map(|x| x.0)
+            .find(|(_m, c)| *c == c_id)
+            .map(|(m, _c)| *m)
     }
 
     pub fn get_crate_of_function(&self, f_id: Function) -> Option<Crate> {
         let parent = self
             .functions_in_modules
             .iter()
-            .filter(|(f, _m)| *f == f_id)
-            .map(|x| x.1)
-            .next()
+            .find(|(f, _m)| *f == f_id)
+            .map(|(_f, m)| *m)
             .unwrap();
         self.modules_in_crates
             .iter()
-            .filter(|(m, _c)| *m == parent)
-            .map(|x| x.1)
-            .next()
+            .find(|(m, _c)| *m == parent)
+            .map(|(_m, c)| *c)
         /*while let Some(p) = parent {
             parent = self.modules_in_modules.iter().filter(|(m1, m2)| m1 == parent).map(|x| x.1).next();
         }*/
@@ -132,20 +129,18 @@ impl Database {
     pub fn get_function_in_crate(&self, c_id: Crate, f_def: &str) -> Option<Function> {
         self.functions
             .iter()
-            .filter(|(f_id, f)| {
+            .find(|(f_id, f)| {
                 self.get_crate_of_function(*f_id) == Some(c_id) && f.def_path == f_def
             })
-            .next()
-            .map(|x| x.0)
+            .map(|(f_id, _f)| *f_id)
     }
 
     // maybe rewrite in SQL or Datafrog
     pub fn get_module_in_module(&self, m_id: Mod, _mod_name: &str) -> Option<Mod> {
         self.modules_in_modules
             .iter()
-            .filter(|(_m, m2)| *m2 == m_id)
-            .next()
-            .map(|x| x.0)
+            .find(|(_m1, m2)| *m2 == m_id)
+            .map(|(m1, _m2)| *m1)
     }
 
     //  pub fn find_function(&self, path: &data::GlobalDefPath) -> Option<Function> {
@@ -182,9 +177,8 @@ impl Database {
     pub fn search_module(&self, name: &str) -> Option<Mod> {
         self.modules
             .iter()
-            .filter(|m| m.1.name == name)
-            .next()
-            .map(|(m, _)| *m)
+            .find(|(_id, m)| m.name == name)
+            .map(|(id, _m)| *id)
     }
 
     pub fn get_module(&self, m: Mod) -> &data::Mod {
