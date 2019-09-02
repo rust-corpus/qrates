@@ -52,68 +52,64 @@ fn arg_value<'a>(
 
 impl rustc_driver::Callbacks for Callbacks {
     fn after_analysis(&mut self, compiler: &interface::Compiler) -> Compilation {
-        compiler
-            .global_ctxt()
-            .unwrap()
-            .peek_mut()
-            .enter(|tcx| {
-                let crate_name_env = std::env::var("CARGO_PKG_NAME").unwrap_or(String::from("main"));
-                let crate_version = (
-                    std::env::var("CARGO_PKG_VERSION_MAJOR")
-                        .unwrap_or(String::from("0"))
-                        .parse::<u64>()
-                        .unwrap(),
-                    std::env::var("CARGO_PKG_VERSION_MINOR")
-                        .unwrap_or(String::from("0"))
-                        .parse::<u64>()
-                        .unwrap(),
-                    std::env::var("CARGO_PKG_VERSION_PATCH")
-                        .unwrap_or(String::from("0"))
-                        .parse::<u64>()
-                        .unwrap(),
-                );
+        compiler.global_ctxt().unwrap().peek_mut().enter(|tcx| {
+            let crate_name_env = std::env::var("CARGO_PKG_NAME").unwrap_or(String::from("main"));
+            let crate_version = (
+                std::env::var("CARGO_PKG_VERSION_MAJOR")
+                    .unwrap_or(String::from("0"))
+                    .parse::<u64>()
+                    .unwrap(),
+                std::env::var("CARGO_PKG_VERSION_MINOR")
+                    .unwrap_or(String::from("0"))
+                    .parse::<u64>()
+                    .unwrap(),
+                std::env::var("CARGO_PKG_VERSION_PATCH")
+                    .unwrap_or(String::from("0"))
+                    .parse::<u64>()
+                    .unwrap(),
+            );
 
-                let crate_name = compiler.crate_name().unwrap().take();
-                if crate_name_env != crate_name {
-                    // happens when the crate name contains a '-', this will then get
-                    // renamed to a '_' to become a rust identifier.
+            let crate_name = compiler.crate_name().unwrap().take();
+            if crate_name_env != crate_name {
+                // happens when the crate name contains a '-', this will then get
+                // renamed to a '_' to become a rust identifier.
 
-                    //println!("\x1b[31mdifferent names!: {}, {}\x1b[0m", crate_name_env, crate_name);
-                }
+                //println!("\x1b[31mdifferent names!: {}, {}\x1b[0m", crate_name_env, crate_name);
+            }
 
-                let hir_map = &tcx.hir();
-                let ref krate = hir_map.krate();
+            let hir_map = &tcx.hir();
+            let ref krate = hir_map.krate();
 
-                //
-                // assume, crate num of 0 means current crate
-                //
-                let config_hash: String = tcx.crate_hash(hir::def_id::CrateNum::new(0)).to_string();
-                let mut cv = CrateVisitor {
-                    crate_data: data::Crate::new(&crate_name, crate_version, &config_hash),
-                    current_function: None,
-                    map: hir_map,
-                    tcx: tcx,
-                    local_modules: BTreeMap::new(),
-                };
+            //
+            // assume, crate num of 0 means current crate
+            //
+            let config_hash: String = tcx.crate_hash(hir::def_id::CrateNum::new(0)).to_string();
+            let mut cv = CrateVisitor {
+                crate_data: data::Crate::new(&crate_name, crate_version, &config_hash),
+                current_function: None,
+                map: hir_map,
+                tcx: tcx,
+                local_modules: BTreeMap::new(),
+            };
 
-                // add root module
-                // cv.visit_mod(&krate.module, krate.span, CRATE_NODE_ID);
-                cv.crate_data.mods.push(data::Mod {
-                    name: crate_name.to_owned(),
-                    parent_mod: None,
-                });
-
-                walk_crate(&mut cv, krate);
-
-                //println!("{:?}", cv.crate_data);
-                let result = export_crate(&cv.crate_data);
-                if let None = result {
-                    println!(
-                        "ERROR exporting crate: {}",
-                        cv.crate_data.metadata.get_filename()
-                    );
-                }
+            // add root module
+            // cv.visit_mod(&krate.module, krate.span, CRATE_NODE_ID);
+            cv.crate_data.mods.push(data::Mod {
+                name: crate_name.to_owned(),
+                parent_mod: None,
             });
+
+            walk_crate(&mut cv, krate);
+
+            //println!("{:?}", cv.crate_data);
+            let result = export_crate(&cv.crate_data);
+            if let None = result {
+                println!(
+                    "ERROR exporting crate: {}",
+                    cv.crate_data.metadata.get_filename()
+                );
+            }
+        });
         Compilation::Continue
     }
 }
@@ -164,13 +160,13 @@ fn main() {
         })
         .or_else(|| option_env!("SYSROOT").map(PathBuf::from))
         .map(|pb| pb.to_string_lossy().to_string())
-        .expect("need to specify SYSROOT env var during clippy compilation, or use rustup or multirust");
+        .expect(
+            "need to specify SYSROOT env var during clippy compilation, or use rustup or multirust",
+        );
 
     // Setting RUSTC_WRAPPER causes Cargo to pass 'rustc' as the first argument.
     // We're invoking the compiler programmatically, so we ignore this
-    if orig_args.len() > 1
-        && Path::new(&orig_args[1]).file_stem() == Some("rustc".as_ref())
-    {
+    if orig_args.len() > 1 && Path::new(&orig_args[1]).file_stem() == Some("rustc".as_ref()) {
         // we still want to be able to invoke it normally though
         orig_args.remove(1);
     }
@@ -201,7 +197,7 @@ fn export_crate(krate: &data::Crate) -> Option<()> {
     let filename = krate.metadata.get_filename();
     let dirname = std::env::var(TARGET_DIR_VARNAME)
         .unwrap_or(std::env::var("HOME").unwrap_or("/".to_owned()) + "/.rustql/crates");
-    std::fs::create_dir_all(&dirname).ok();     // Discard the result.
+    std::fs::create_dir_all(&dirname).ok(); // Discard the result.
 
     if USE_JSON {
         std::fs::File::create(dirname.clone() + "/" + &filename + ".json")

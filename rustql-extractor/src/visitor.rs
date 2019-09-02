@@ -2,13 +2,13 @@
 // http://opensource.org/licenses/MIT>. This file may not be copied,
 // modified, or distributed except according to those terms.
 
-use log::{info, debug};
+use log::{debug, info};
 use rustc::hir;
-use rustc::hir::HirId;
 use rustc::hir::def_id::DefId;
 use rustc::hir::intravisit::*;
 use rustc::hir::intravisit::{NestedVisitorMap, Visitor};
 use rustc::hir::map::Map;
+use rustc::hir::HirId;
 use rustc::mir;
 use rustc::ty;
 use rustc::ty::TyCtxt;
@@ -71,9 +71,12 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
                     self.create_identifier(path.krate),
                 ))
             }
-            ty::TyKind::Tuple(types) => {
-                data::Type::Tuple(types.iter().map(|t| self.create_type2(&t.expect_ty())).collect())
-            }
+            ty::TyKind::Tuple(types) => data::Type::Tuple(
+                types
+                    .iter()
+                    .map(|t| self.create_type2(&t.expect_ty()))
+                    .collect(),
+            ),
             ty::TyKind::Slice(ty) | ty::TyKind::Array(ty, _ /* len */) => {
                 data::Type::Slice(box self.create_type2(ty))
             }
@@ -98,7 +101,8 @@ impl<'tcx, 'a> CrateVisitor<'tcx, 'a> {
     }
 
     pub fn get_argument_types(&self, mir: &mir::Body) -> Vec<data::Type> {
-        mir.args_iter().map(|l| self.create_type2(&mir.local_decls[l].ty))
+        mir.args_iter()
+            .map(|l| self.create_type2(&mir.local_decls[l].ty))
             .collect::<Vec<data::Type>>()
     }
 
@@ -244,7 +248,10 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
         } else {
             let def_path = self.map.def_path_from_hir_id(id).unwrap();
 
-            debug!("Function {} is not of kind Node::Item", def_path.to_string_no_crate());
+            debug!(
+                "Function {} is not of kind Node::Item",
+                def_path.to_string_no_crate()
+            );
         }
         walk_fn(self, fk, fd, b, s, id);
     }
@@ -296,7 +303,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                     }) = func
                     {
                         let krate = def_id.krate;
-                        let krate_name= self.tcx.original_crate_name(krate).to_string();
+                        let krate_name = self.tcx.original_crate_name(krate).to_string();
                         let def_path = self.tcx.def_path(def_id).to_string_no_crate();
 
                         debug!("Crate name: {:?}", krate_name);
@@ -308,7 +315,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                             f.calls.push(data::GlobalDefPath {
                                 crate_ident: data::CrateIdentifier {
                                     name: krate_name,
-                                    config_hash: self.tcx.crate_hash(krate).to_string()
+                                    config_hash: self.tcx.crate_hash(krate).to_string(),
                                 },
                                 def_path,
                             });
@@ -316,7 +323,9 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                             warn!("Currently not in a function. Function call ignored.");
                         }
                     } else {
-                        warn!("Function doesn't match mir::Operand::Constant. Function call ignored.")
+                        warn!(
+                            "Function doesn't match mir::Operand::Constant. Function call ignored."
+                        )
                     }
                 }
             });

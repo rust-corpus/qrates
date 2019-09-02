@@ -4,7 +4,7 @@
 
 use super::data;
 use datafrog::Relation;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize)]
@@ -230,12 +230,24 @@ impl Database {
 
     pub fn get_raw_database(&self) -> RawDatabase {
         RawDatabase {
-            functions: self.functions.iter().map(|(c, _cd)| (*c,))
-                .collect::<Vec<_>>().into(),
-            structs: self.structs.iter().map(|(c, _cd)| (*c,))
-                .collect::<Vec<_>>().into(),
-            is_type: self.types.iter().map(|(c, _cd)| (*c,))
-                .collect::<Vec<_>>().into(),
+            functions: self
+                .functions
+                .iter()
+                .map(|(c, _cd)| (*c,))
+                .collect::<Vec<_>>()
+                .into(),
+            structs: self
+                .structs
+                .iter()
+                .map(|(c, _cd)| (*c,))
+                .collect::<Vec<_>>()
+                .into(),
+            is_type: self
+                .types
+                .iter()
+                .map(|(c, _cd)| (*c,))
+                .collect::<Vec<_>>()
+                .into(),
             is_native: self
                 .types
                 .iter()
@@ -244,19 +256,31 @@ impl Database {
                         data::Type::Native(_) => {
                             // FIXME: This is never triggered.
                             true
-                        },
+                        }
                         _ => false,
                     }
                 })
                 .map(|(i, _typ)| (*i,))
                 .collect::<Vec<_>>()
                 .into(),
-            function_calls: self.function_calls.iter().cloned()
-                .collect::<Vec<_>>().into(),
-            functions_in_modules: self.functions_in_modules.iter().cloned()
-                .collect::<Vec<_>>().into(),
-            modules_in_crates: self.modules_in_crates.iter().cloned()
-                .collect::<Vec<_>>().into(),
+            function_calls: self
+                .function_calls
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>()
+                .into(),
+            functions_in_modules: self
+                .functions_in_modules
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>()
+                .into(),
+            modules_in_crates: self
+                .modules_in_crates
+                .iter()
+                .cloned()
+                .collect::<Vec<_>>()
+                .into(),
             is_unsafe: self
                 .functions
                 .iter()
@@ -264,8 +288,12 @@ impl Database {
                 .map(|(c, _cd)| (*c,))
                 .collect::<Vec<_>>()
                 .into(),
-            is_reference_to: self.is_reference_to.iter().map(|x| *x)
-                .collect::<Vec<_>>().into(),
+            is_reference_to: self
+                .is_reference_to
+                .iter()
+                .map(|x| *x)
+                .collect::<Vec<_>>()
+                .into(),
             is_mutable_reference: {
                 let mutable_filter = |(_i, t): &&(Type, data::Type)| -> bool {
                     if let data::Type::Reference {
@@ -304,18 +332,32 @@ impl Database {
                     .collect::<Vec<_>>()
                     .into()
             },
-            tuple: self.tuple.iter().cloned()
-                .collect::<Vec<_>>().into(),
-            slice: self.slice.iter().cloned()
-                .collect::<Vec<_>>().into(),
-            argument_types: self.argument_types.iter().map(|x| *x)
-                .collect::<Vec<_>>().into(),
-            is_struct_type: self.is_struct_type.iter().map(|x| *x)
-                .collect::<Vec<_>>().into(),
-            field_types: self.field_types.iter().map(|x| *x)
-                .collect::<Vec<_>>().into(),
-            return_type: self.return_type.iter().map(|x| *x)
-                .collect::<Vec<_>>().into(),
+            tuple: self.tuple.iter().cloned().collect::<Vec<_>>().into(),
+            slice: self.slice.iter().cloned().collect::<Vec<_>>().into(),
+            argument_types: self
+                .argument_types
+                .iter()
+                .map(|x| *x)
+                .collect::<Vec<_>>()
+                .into(),
+            is_struct_type: self
+                .is_struct_type
+                .iter()
+                .map(|x| *x)
+                .collect::<Vec<_>>()
+                .into(),
+            field_types: self
+                .field_types
+                .iter()
+                .map(|x| *x)
+                .collect::<Vec<_>>()
+                .into(),
+            return_type: self
+                .return_type
+                .iter()
+                .map(|x| *x)
+                .collect::<Vec<_>>()
+                .into(),
         }
     }
 }

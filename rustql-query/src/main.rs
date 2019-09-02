@@ -185,7 +185,7 @@ fn compile(
                             println!("Error: {:?}", error);
                         }
                     }
-                } else{
+                } else {
                     println!("unknown action: {}", action.name);
                 }
             }

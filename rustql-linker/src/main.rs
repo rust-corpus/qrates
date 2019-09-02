@@ -137,12 +137,21 @@ fn create_database() -> tuples::Database {
         }
     }
 
-    info!("Linked all calls in #functions: {}", database.functions.len());
+    info!(
+        "Linked all calls in #functions: {}",
+        database.functions.len()
+    );
     info!("#calls: {}", database.function_calls.len());
-    info!("#fails/#calls ratio: {}", fails as f64 / (database.function_calls.len() + fails) as f64);
+    info!(
+        "#fails/#calls ratio: {}",
+        fails as f64 / (database.function_calls.len() + fails) as f64
+    );
 
     database.link_types();
-    info!("Linking structs and types. Created {} links", database.is_struct_type.len());
+    info!(
+        "Linking structs and types. Created {} links",
+        database.is_struct_type.len()
+    );
 
     // adding field types
     for (s_id, st) in &database.structs {
@@ -178,8 +187,8 @@ fn create_database() -> tuples::Database {
 /// @warning the more crates there are, the more RAM it needs (a lot)
 ///
 fn read_crates() -> Vec<data::Crate> {
-    let dirname = std::env::var(TARGET_DIR_VARNAME).unwrap_or(
-        std::env::var("HOME").unwrap_or("/".to_owned()) + RUSTQL_DIR_VARNAME);
+    let dirname = std::env::var(TARGET_DIR_VARNAME)
+        .unwrap_or(std::env::var("HOME").unwrap_or("/".to_owned()) + RUSTQL_DIR_VARNAME);
     let files = std::fs::read_dir(dirname).unwrap();
     let mut crates: Vec<data::Crate> = vec![];
 
@@ -199,5 +208,6 @@ fn read_crates() -> Vec<data::Crate> {
             }
         }
     }
+
     crates
 }
