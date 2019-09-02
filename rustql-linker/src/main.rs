@@ -6,7 +6,6 @@ use log::{debug, error, info, warn};
 use rustql_common::data;
 use rustql_common::tuples;
 use std::error::Error;
-use std::fs::File;
 
 const USE_JSON: bool = false;
 const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
@@ -21,7 +20,7 @@ fn main() {
 }
 
 fn save_database(database: &tuples::Database, name: &str) {
-    let file = File::create(name)
+    let file = std::fs::File::create(name)
         .unwrap_or_else(|e| panic!("Could not create database {}: {}", name, e.description()));
 
     //serde_json::to_writer_pretty(file, database).expect("could not serialize to json");
@@ -190,7 +189,7 @@ fn read_crates() -> Vec<data::Crate> {
 
     for file in files {
         if let Ok(path) = file {
-            let f = File::open(path.path()).unwrap();
+            let f = std::fs::File::open(path.path()).unwrap();
             let c = if USE_JSON {
                 serde_json::from_reader(f).map_err(|_| ())
             } else {
