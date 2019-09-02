@@ -22,8 +22,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::{exit, Command};
 
-const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
-const USE_JSON: bool = false;
+use rustql_common::TARGET_DIR_VARNAME;
+use rustql_common::USE_JSON;
 
 struct Callbacks;
 

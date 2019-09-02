@@ -7,10 +7,10 @@ use rustql_common::data;
 use rustql_common::tuples;
 use std::error::Error;
 
-const USE_JSON: bool = false;
-const TARGET_DIR_VARNAME: &str = "EXTRACTOR_TARGET_DIR";
-const RUSTQL_DIR_VARNAME: &str = "/.rustql/crates";
-const DATABASE_FILE_VARNAME: &str = "database.db";
+use rustql_common::DATABASE_FILE_VARNAME;
+use rustql_common::RUSTQL_DIR_VARNAME;
+use rustql_common::TARGET_DIR_VARNAME;
+use rustql_common::USE_JSON;
 
 fn main() {
     env_logger::init();
