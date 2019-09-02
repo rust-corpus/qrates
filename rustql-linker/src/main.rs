@@ -79,8 +79,6 @@ fn create_database() -> tuples::Database {
                 .zip(database.structs.len()..)
                 .map(|(a, b)| (tuples::Struct(b as u64), a.clone())),
         );
-        /*database.types.extend(krate.types.iter().zip(
-        ty_offset..).map(|(a, b)| (tuples::Type(b as u64), a.clone())));*/
 
         for (m, mod_id) in krate.mods.iter().zip((0..).map(module_map_to_global)) {
             let tuple = (tuples::Mod(mod_id as u64), tuples::Crate(krate_id));
@@ -110,8 +108,6 @@ fn create_database() -> tuples::Database {
     let mut fails: usize = 0;
     for (f_id, func) in &database.functions {
         for call in &func.calls {
-            //let crate_id = database.get_crate(&call.crate_ident).unwrap();
-            //let called_id = database.get_function_in_crate(crate_id, &call.def_path);
             let called_id = database
                 .function_finder
                 .get(&(call.crate_ident.clone(), call.def_path.clone()));
