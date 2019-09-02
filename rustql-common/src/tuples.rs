@@ -156,22 +156,12 @@ impl Database {
     //      None
     //  }
 
-    pub fn get_type(&self, typ: &data::Type) -> Option<Type> {
-        let t = self.type_finder.get(typ);
-        if let Some(t) = t {
-            return Some(*t);
-        } else {
-            return None;
-        }
+    pub fn get_type(&self, ty: &data::Type) -> Option<Type> {
+        self.type_finder.get(ty).map(|t| *t)
     }
 
-    pub fn get_type_from_list(types: &Vec<(Type, data::Type)>, typ: &data::Type) -> Option<Type> {
-        for (id, t) in types {
-            if t == typ {
-                return Some(*id);
-            }
-        }
-        None
+    pub fn get_type_from_list(types: &Vec<(Type, data::Type)>, ty: &data::Type) -> Option<Type> {
+        types.iter().find(|(_id, t)| t == ty).map(|(id, _t)| (*id))
     }
 
     pub fn search_module(&self, name: &str) -> Option<Mod> {
@@ -188,16 +178,18 @@ impl Database {
     pub fn add_type_or_get(
         links: &mut HashMap<data::Type, Type>,
         types: &mut Vec<(Type, data::Type)>,
-        typ: &data::Type,
+        ty: &data::Type,
     ) -> Type {
-        let mut type_id = links.get(&typ).map(|x| *x); //Self::get_type_from_list(types, &typ);
+        let mut type_id = links.get(&ty).map(|x| *x);
+
         if let None = type_id {
             let len = self::Type(types.len() as u64);
             type_id = Some(len);
-            types.push((len, typ.clone()));
-            links.insert(typ.clone(), len);
-            println!("unknown type found");
+            types.push((len, ty.clone()));
+            links.insert(ty.clone(), len);
+            println!("Found unknown type {:?}", ty);
         }
+
         type_id.unwrap()
     }
 
@@ -239,11 +231,11 @@ impl Database {
     pub fn get_raw_database(&self) -> RawDatabase {
         RawDatabase {
             functions: self.functions.iter().map(|(c, _cd)| (*c,))
-                .collect::<Vec<(Function,)>>().into(),
+                .collect::<Vec<_>>().into(),
             structs: self.structs.iter().map(|(c, _cd)| (*c,))
-                .collect::<Vec<(Struct,)>>().into(),
+                .collect::<Vec<_>>().into(),
             is_type: self.types.iter().map(|(c, _cd)| (*c,))
-                .collect::<Vec<(Type,)>>().into(),
+                .collect::<Vec<_>>().into(),
             is_native: self
                 .types
                 .iter()
@@ -257,69 +249,73 @@ impl Database {
                     }
                 })
                 .map(|(i, _typ)| (*i,))
-                .collect::<Vec<(Type,)>>()
+                .collect::<Vec<_>>()
                 .into(),
             function_calls: self.function_calls.iter().cloned()
-                .collect::<Vec<(Function, Function)>>().into(),
+                .collect::<Vec<_>>().into(),
             functions_in_modules: self.functions_in_modules.iter().cloned()
-                .collect::<Vec<(Function, Mod)>>().into(),
+                .collect::<Vec<_>>().into(),
             modules_in_crates: self.modules_in_crates.iter().cloned()
-                .collect::<Vec<(Mod, Crate)>>().into(),
+                .collect::<Vec<_>>().into(),
             is_unsafe: self
                 .functions
                 .iter()
                 .filter(|(_f, info)| info.is_unsafe)
                 .map(|(c, _cd)| (*c,))
-                .collect::<Vec<(Function,)>>()
+                .collect::<Vec<_>>()
                 .into(),
             is_reference_to: self.is_reference_to.iter().map(|x| *x)
-                .collect::<Vec<(Type, Type)>>().into(),
-            is_mutable_reference: self
-                .types
-                .iter()
-                .filter(|(_i, typ)| {
+                .collect::<Vec<_>>().into(),
+            is_mutable_reference: {
+                let mutable_filter = |(_i, t): &&(Type, data::Type)| -> bool {
                     if let data::Type::Reference {
                         to: _,
                         is_mutable: m,
-                    } = typ
+                    } = t
                     {
                         *m
                     } else {
                         false
                     }
-                })
-                .map(|(i, _t)| (*i,))
-                .collect::<Vec<(Type,)>>()
-                .into(),
-            is_shared_reference: self
-                .types
-                .iter()
-                .filter(|(_i, typ)| {
+                };
+                self.types
+                    .iter()
+                    .filter(mutable_filter)
+                    .map(|(i, _t)| (*i,))
+                    .collect::<Vec<_>>()
+                    .into()
+            },
+            is_shared_reference: {
+                let shared_filter = |(_i, t): &&(Type, data::Type)| -> bool {
                     if let data::Type::Reference {
                         to: _,
                         is_mutable: m,
-                    } = typ
+                    } = t
                     {
                         !(*m)
                     } else {
                         false
                     }
-                })
-                .map(|(i, _t)| (*i,))
-                .collect::<Vec<(Type,)>>()
-                .into(),
+                };
+                self.types
+                    .iter()
+                    .filter(shared_filter)
+                    .map(|(i, _t)| (*i,))
+                    .collect::<Vec<_>>()
+                    .into()
+            },
             tuple: self.tuple.iter().cloned()
-                .collect::<Vec<(Type, Type)>>().into(),
+                .collect::<Vec<_>>().into(),
             slice: self.slice.iter().cloned()
-                .collect::<Vec<(Type, Type)>>().into(),
+                .collect::<Vec<_>>().into(),
             argument_types: self.argument_types.iter().map(|x| *x)
-                .collect::<Vec<(Function, Type)>>().into(),
+                .collect::<Vec<_>>().into(),
             is_struct_type: self.is_struct_type.iter().map(|x| *x)
-                .collect::<Vec<(Type, Struct)>>().into(),
+                .collect::<Vec<_>>().into(),
             field_types: self.field_types.iter().map(|x| *x)
-                .collect::<Vec<(Struct, Type)>>().into(),
+                .collect::<Vec<_>>().into(),
             return_type: self.return_type.iter().map(|x| *x)
-                .collect::<Vec<(Function, Type)>>().into(),
+                .collect::<Vec<_>>().into(),
         }
     }
 }
