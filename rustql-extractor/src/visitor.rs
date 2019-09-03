@@ -2,7 +2,7 @@
 // http://opensource.org/licenses/MIT>. This file may not be copied,
 // modified, or distributed except according to those terms.
 
-use log::{debug, info};
+use log::{debug, info, warn};
 use rustc::hir;
 use rustc::hir::def_id::DefId;
 use rustc::hir::intravisit::*;
