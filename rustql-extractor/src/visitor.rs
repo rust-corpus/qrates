@@ -204,13 +204,14 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                                 )
                             }));
                         }
+
                         self.crate_data.structs.push(data::Struct {
                             name: item.ident.name.to_string(),
                             def_path: data::GlobalDefPath::new(
                                 self.tcx.def_path(def_id).to_string_no_crate(),
                                 self.crate_data.metadata.clone(),
                             ),
-                            fields: fields,
+                            fields,
                         });
                     }
                     _ => {}
@@ -253,6 +254,7 @@ impl<'tcx, 'a> Visitor<'tcx> for CrateVisitor<'tcx, 'a> {
                 def_path.to_string_no_crate()
             );
         }
+
         walk_fn(self, fk, fd, b, s, id);
     }
 
