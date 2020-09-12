@@ -21,10 +21,21 @@ jobs:
         with:
           mdbook-version: '0.4.1'
 
-      - run: cd ./docs && mdbook build
+      - name: Build book
+        run: cd ./docs && mdbook build
 
-      - name: Deploy
+      - name: Deploy book
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          publish_dir: ./docs/book
+
+      - name: Build documentation
+        run: cargo doc
+
+      - name: Deploy docs
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./target/doc
+          destination_dir: doc
