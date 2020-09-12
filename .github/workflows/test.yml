@@ -17,7 +17,11 @@ jobs:
     - name: Check out the repo
       uses: actions/checkout@v2
       with:
-          submodules: recursive
+        submodules: recursive
+    - name: Setup Rust components
+      run:
+        rustup component add rustfmt
+        rustup component add rustc-dev
     - name: Build with cargo
       run: cargo build --all --verbose
     - name: Run cargo tests

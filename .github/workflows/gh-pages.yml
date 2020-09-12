@@ -11,6 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Setup Rust components
+        run:
+          rustup component add rustfmt
+          rustup component add rustc-dev
+
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@v1
         with:
