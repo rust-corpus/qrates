@@ -1,0 +1,17 @@
+[workspace]
+members = [
+    "database",
+    "database-dsl",
+    "extractor",
+    "manager",
+    "datapond",
+    "datapond/datapond-macro",
+    "datapond/datapond-derive",
+    "queries-impl",
+    "queries-derive",
+]
+exclude = [
+    "extractor-test",
+]
+
+[profile.release]

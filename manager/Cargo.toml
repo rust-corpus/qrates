@@ -1,0 +1,45 @@
+[package]
+name = "corpus-manager"
+version = "0.1.0"
+authors = ["Vytautas Astrauskas <vytautas.astrauskas@inf.ethz.ch>"]
+edition = "2018"
+default-run = "corpus-manager-driver"
+build = "build.rs"
+license = "MIT"
+
+[lib]
+
+[[bin]]
+name = "corpus-manager-driver"
+test = false
+path = "src/main.rs"
+
+[dependencies]
+corpus-extractor = { path = "../extractor" }
+corpus-database = { path = "../database" }
+corpus-queries-derive = { path = "../queries-derive" }
+datapond-derive = { path = "../datapond/datapond-derive" }
+structopt = "0.3"
+color-backtrace = "0.3"
+log = "0.4"
+simplelog = "0.7"
+chrono = "0.4"
+reqwest = { version = "0.10.0", features = ["blocking"] }
+serde = "1.0.1"
+serde_derive = "1.0.1"
+serde_json = "1.0.0"
+toml = "0.5"
+log-derive = "0.4"
+semver = "0.9.0"
+cargo = "0.41.0"
+tokio-process = "0.2"
+tokio = "0.2"
+nix = "0.14.1"
+failure = "0.1.5"
+walkdir = "2"
+rustwide = "0.5.0"
+crates-index = "0.13"
+datafrog = "2"
+csv = "1.1"
+itertools = "0.8"
+tempdir = "0.3"

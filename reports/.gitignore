@@ -1,0 +1,4 @@
+*.csv
+.ipynb_checkpoints
+__pycache__
+successful_crates

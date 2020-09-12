@@ -1,0 +1,483 @@
+// Types.
+
+/// A Rust module.
+inc_id Module: u32 {}
+/// An item such a function or a constant.
+inc_id Item: u32 {}
+/// A scope.
+inc_id Scope: u32 {}
+/// A function call.
+inc_id FunctionCall: u32 {}
+/// A span (an interned location in the program with additional information
+/// such as macro expansion).
+inc_id Span: u64 {
+    /// A dummy span that is used as a call site span for a span that is a root span.
+    ROOT_PARENT_SPAN = 0u64,
+}
+/// A type.
+inc_id Type: u64 {}
+/// An ADT field.
+inc_id Field: u64 {}
+/// An operand.
+inc_id Operand: u64 {}
+/// A basic block.
+inc_id BasicBlock: u64 {
+    /// A value to encode `None` of `Option<BasicBlock>`.
+    NO_BLOCK = 0u64,
+}
+/// A statement.
+inc_id Statement: u64 {}
+/// The hash of the crate as reported by the compiler.
+custom_id CrateHash: u64 {
+    impl std::fmt::LowerHex for CrateHash {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "{:x}", self.0)
+        }
+    }
+}
+
+custom_id DefPathHash: (u64, u64) {
+    impl From<(u64, u64)> for DefPathHash {
+        fn from(value: (u64, u64)) -> Self {
+            Self(value)
+        }
+    }
+    impl std::fmt::LowerHex for DefPathHash {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "{:x}{:x}", (self.0).0, (self.0).1)
+        }
+    }
+}
+
+custom_id AdtVariantIndex: u16 {}
+custom_id TupleFieldIndex: u16 {}
+custom_id FnParamIndex: u16 {}
+custom_id OperandIndex: u16 {}
+custom_id StatementIndex: u16 {}
+custom_id CallArgIndex: u16 {}
+
+/// Mutability of an item. Having a const variant allows merging statics with constants.
+enum Mutability {
+    Mutable,
+    Immutable,
+    Const,
+    #[default]
+    Unknown,
+}
+
+/// Constness of an implementation.
+enum Constness {
+    Const,
+    NotConst,
+    #[default]
+    Unknown,
+}
+
+/// The visibility of an item.
+enum Visibility {
+    /// The item is declared as public (`pub`).
+    Public,
+    /// The item is declared as public within the crate (`pub(crate)`).
+    Crate,
+    /// The item is declared as public for some modules (`pub(in foo:bar)`).
+    Restricted,
+    /// The item is declared as private (default visibility).
+    Private,
+    /// Failed to obtain visibility information from the compiler.
+    #[default]
+    Unknown,
+}
+
+/// The visibility of an item used in `ty`.
+enum TyVisibility {
+    /// Visible everywhere (including in other crates).
+    Public,
+    /// Visible only in the given crate-local module.
+    Restricted,
+    /// Not visible anywhere in the local crate. This is the visibility
+    /// of private external items.
+    Invisible,
+    /// Failed to obtain visibility information from the compiler.
+    #[default]
+    Unknown,
+}
+
+/// The unsafety of an item.
+enum Unsafety {
+    Unsafe,
+    Normal,
+    /// Failed to obtain unsafety information from the compiler.
+    ///
+    /// TODO: For closures we could check if that closure is declared inside an unsafe block.
+    #[default]
+    Unknown,
+}
+
+/// The polarity of an implementation.
+enum ImplPolarity {
+    /// `impl Trait for Type`
+    Positive,
+    /// `impl !Trait for Type`
+    Negative,
+    /// Failed to obtain polarity information from the compiler.
+    #[default]
+    Unknown,
+}
+
+/// The safety of a scope.
+enum ScopeSafety {
+    /// The scope is safe.
+    Safe,
+    /// The scope is unsafe because of a PushUnsafeBlock.
+    BuiltinUnsafe,
+    /// The scope is unsafe because it is inside an unsafe function.
+    FnUnsafe,
+    /// The scope is unsafe because it is inside an unsafe block.
+    ExplicitUnsafe,
+    /// Failed to obtain the safety information from the compiler.
+    #[default]
+    Unknown,
+}
+
+/// The kind of a user defined type.
+enum AdtKind {
+    Struct,
+    Union,
+    Enum,
+    /// Failed to obtain the kind from the compiler.
+    #[default]
+    Unknown,
+}
+
+/// A primitive type kind.
+enum TyPrimitive {
+    /// Failed to obtain the kind from the compiler.
+    #[default]
+    Unknown,
+    Bool,
+    Char,
+    Isize,
+    I8,
+    I16,
+    I32,
+    I64,
+    I128,
+    Usize,
+    U8,
+    U16,
+    U32,
+    U64,
+    U128,
+    F32,
+    F64,
+    Str,
+    Never,
+}
+
+/// Kind of the type definiton.
+enum TyDefKind {
+    /// Failed to obtain the kind from the compiler.
+    #[default]
+    Unknown,
+    TyAlias,
+    OpaqueTy,
+    Enum,
+    Struct,
+    Union,
+}
+
+/// Defaultness of the item associated with a trait.
+enum Defaultness {
+    /// Failed to obtain the kind from the compiler.
+    #[default]
+    Unknown,
+    DefaultWithValue,
+    DefaultNoValue,
+    Final,
+}
+
+/// The kind of a mir operand.
+enum OperandKind {
+    /// Failed to obtain the kind from the compiler.
+    #[default]
+    Unknown,
+    Copy,
+    Move,
+    Constant,
+}
+
+/// The kind of a mir aggregate statement.
+enum AggregateKind {
+    /// Failed to obtain the kind from the compiler.
+    #[default]
+    Unknown,
+    Array,
+    Tuple,
+    Adt,
+    Closure,
+    Generator,
+}
+
+/// The kind of a cast operation.
+enum CastKind {
+    /// Failed to obtain the kind from the compiler.
+    #[default]
+    Unknown,
+    Misc,
+    ReifyFnPointer,
+    UnsafeFnPointer,
+    UnsafeClosureFnPointer,
+    NormalClosureFnPointer,
+    MutToConstPointer,
+    ArrayToPointer,
+    UnsizePointer,
+}
+
+/// The kind of a MIR borrow statement.
+enum BorrowKind {
+    /// Failed to obtain the kind from the compiler.
+    #[default]
+    Unknown,
+    Shared,
+    Shallow,
+    Unique,
+    Mut,
+    MutTwoPhase,
+}
+
+/// The kind of a MIR basic block.
+enum BasicBlockKind {
+    /// A regular basic block.
+    #[default]
+    Regular,
+    /// The basic block is the CFG entry point.
+    Entry,
+    /// The basic block is on the unwind path.
+    CleanUp,
+}
+
+/// rustc_span::hygiene::ExpnKind
+enum SpanExpansionKind {
+    /// Failed to obtain the kind from the compiler.
+    #[default]
+    Unknown,
+    /// No expansion.
+    Root,
+    /// A bang macro `foo!()`.
+    MacroBang,
+    /// An attribute macro `#[foo]`.
+    MacroAttr,
+    /// A derive macro `#[derive(Foo)]`.
+    MacroDerive,
+    /// Transform done by the compiler on the AST.
+    AstPassStdImports,
+    /// Transform done by the compiler on the AST.
+    AstPassTestHarness,
+    /// Transform done by the compiler on the AST.
+    AstPassProcMacroHarness,
+    /// Desugaring done by the compiler during HIR lowering.
+    DesugaringCondTemporary,
+    /// Desugaring done by the compiler during HIR lowering.
+    DesugaringQuestionMark,
+    /// Desugaring done by the compiler during HIR lowering.
+    DesugaringTryBlock,
+    /// Desugaring done by the compiler during HIR lowering.
+    /// Desugaring of an `impl Trait` in return type position to an
+    /// `type Foo = impl Trait;` and replacing the `impl Trait` with
+    /// `Foo`.
+    DesugaringOpaqueTy,
+    /// Desugaring done by the compiler during HIR lowering.
+    DesugaringAsync,
+    /// Desugaring done by the compiler during HIR lowering.
+    DesugaringAwait,
+    /// Desugaring done by the compiler during HIR lowering.
+    DesugaringForLoop,
+}
+
+/// rustc_hir::UnsafeSource
+enum BlockCheckMode {
+    #[default]
+    DefaultBlock,
+    UnsafeBlockCompilerGenerated,
+    UnsafeBlockUserProvided,
+    PushUnsafeBlockCompilerGenerated,
+    PushUnsafeBlockUserProvided,
+    PopUnsafeBlockCompilerGenerated,
+    PopUnsafeBlockUserProvided,
+}
+
+// Interning tables.
+
+/// Interned strings.
+intern strings<String as InternedString<u64>>;
+/// Interned package names.
+intern package_names<InternedString as Package<u32>>;
+/// Interned package versions.
+intern package_versions<InternedString as PackageVersion<u32>>;
+/// Interned crate names.
+intern crate_names<InternedString as Krate<u32>>;
+/// Interned edition.
+intern editions<InternedString as Edition<u8>>;
+/// Interned names.
+intern names<InternedString as Name<u32>>;
+/// Interned relative definition paths.
+intern relative_def_paths<InternedString as RelativeDefId<u32>>;
+/// Interned MIRAI summary keys.
+intern summary_keys<InternedString as SummaryId<u32>>;
+/// Interned ABI.
+intern abis<InternedString as Abi<u8>>;
+/// Definition paths is a globablly unique identifier of the definition.
+intern def_paths<(Krate, CrateHash, RelativeDefId, DefPathHash, SummaryId) as DefPath<u64>>;
+/// A crate compiled with a specific configuration.
+intern builds<(Package, PackageVersion, Krate, CrateHash, Edition) as Build<u32>>;
+/// Interned span locations.
+intern span_file_names<InternedString as SpanFileName<u32>>;
+/// Interned configuration keys such as `feature`.
+intern crate_cfg_keys<InternedString as CrateCfgKey<u16>>;
+/// Interned configuration values such as `std`.
+intern crate_cfg_values<InternedString as CrateCfgValue<u16>>;
+/// Interned type kinds.
+intern type_kinds<InternedString as TyKind<u8>>;
+/// Interned statement kinds.
+intern statement_kinds<InternedString as StatementKind<u8>>;
+/// Interned binary operation kind.
+intern binary_op_kind<InternedString as BinOp<u8>>;
+/// Interned nullary operation kind.
+intern nullary_op_kind<InternedString as NullOp<u8>>;
+/// Interned unary operation kind.
+intern unary_op_kind<InternedString as UnOp<u8>>;
+/// Interned terminator kinds.
+intern terminator_kinds<InternedString as TerminatorKind<u8>>;
+
+// Relations.
+
+relation def_path_span(def_path: DefPath, span: Span);
+/// The crate types associated with the build.
+relation build_crate_types(build: Build, crate_type: InternedString);
+/// The module that is the root of the AST tree.
+relation root_modules(build: Build, root_module: auto Module);
+/// `(parent, child)` relation between modules.
+///
+/// If `abi` is not `NONE`, the `child` module is foreign.
+relation submodules(def_path: DefPath, parent: Module, child: auto Module, name: Name, visibility: Visibility, abi: Abi);
+/// An item that is a function definition.
+relation function_definitions(item: auto Item, def_path: DefPath, module: Module, visibility: Visibility, unsafety: Unsafety, abi: Abi, return_ty: Type);
+relation function_parameter_types(function: Item, index: FnParamIndex, typ: Type);
+/// Marks whether a function uses unsafe operations directly in its body.
+/// Only functions marked as `unsafe` can do that.
+relation function_unsafe_use(def_path: DefPath, uses_unsafe: bool);
+relation function_unsafe_reasons(def_path: DefPath, index: u32, reason: InternedString);
+/// An item that is either a constant or a static.
+relation static_definitions(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: Visibility, mutability: Mutability);
+/// An impl item.
+relation impl_definitions(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: Visibility, unsafety: Unsafety, polarity: ImplPolarity, defaultness: Defaultness, constness: Constness, typ: Type);
+/// An impl item that implements a trait for a type.
+relation trait_impls(item: Item, typ: Type, trait_def_path: DefPath);
+/// An item that is a global assembly block.
+relation global_asm_blocks(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: Visibility);
+/// A generic item that is not included in any of the categories above.
+relation items(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: Visibility);
+/// MIR cfgs inside a specific item.
+relation mir_cfgs(item: Item, body_def_path: DefPath, root_scope: auto Scope);
+/// parent_scope, scope, scope's safety.
+/// `explicit_unsafe_group` is a unique identifier of a unsafe block within
+/// a function. If `ScopeSafety` is not `ExplicitUnsafe`, then it is 0.
+relation subscopes(parent: Scope, child: auto Scope, safety: ScopeSafety, check_mode: BlockCheckMode, explicit_unsafe_group: u32, span: Span);
+/// Information about spans: (span, call_site_span, expansion kind, location).
+relation spans(
+    span: auto Span,
+    call_site_span: Span,
+    expansion_kind: SpanExpansionKind,
+    expansion_kind_descr: InternedString,
+    file_name: SpanFileName,
+    line: u16,
+    col: u16,
+);
+/// Additional information about a span that was created by a macro expansion.
+relation macro_expansions(
+    span: Span,
+    macro_symbol: InternedString,
+    macro_definition_file_name: SpanFileName,
+    line: u16,
+    col: u16,
+);
+/// Crate `cfg!` configuration.
+relation crate_cfgs(build: Build, key: CrateCfgKey, value: CrateCfgValue);
+/// Crate authors.
+relation crate_authors(build: Build, author: InternedString);
+/// Crate keywords.
+relation crate_keywords(build: Build, keyword: InternedString);
+/// Crate categories.
+relation crate_categories(build: Build, category: InternedString);
+/// A marker that `def_path` is a type.
+relation type_defs(item: auto Item, typ: Type, def_path: DefPath, name: InternedString, visibility: Visibility, kind: TyDefKind);
+/// A fact indicating that we have a monomorphized type with id `typ`.
+///
+/// **Note:** the fact that `typ` refers to a monomorphized type means that
+/// DefId in many cases is not a key (DefId + substitutions is a key).
+relation types(typ: auto Type, kind: TyKind);
+relation types_primitive(typ: Type, primitive_kind: TyPrimitive);
+relation types_adt_def(typ: Type, def_path: DefPath, kind: AdtKind, c_repr: bool, is_phantom: bool);
+relation types_adt_variant(adt: Type, index: AdtVariantIndex, def_path: DefPath, ident: InternedString);
+relation types_adt_field(field: auto Field, adt: Type, index: AdtVariantIndex, def_path: DefPath, ident: InternedString, visibility: TyVisibility, typ: Type);
+/// The given field is visible only in the given module and its children.
+relation types_adt_field_visible_in(field: Field, module: DefPath);
+relation types_foreign(typ: Type, foreign_def_path: DefPath);
+relation types_array(typ: Type, element_type: Type);
+relation types_slice(typ: Type, element_type: Type);
+relation types_raw_ptr(typ: Type, target_type: Type, mutability: Mutability);
+relation types_ref(typ: Type, target_type: Type, mutability: Mutability);
+relation types_fn_def(typ: Type, def_path: DefPath);
+relation types_fn_ptr(typ: Type);
+relation types_dynamic(typ: Type);
+relation types_dynamic_trait(typ: Type, def_path: DefPath, is_auto: bool);
+relation types_closure(typ: Type, def_path: DefPath);
+relation types_generator(typ: Type, def_path: DefPath);
+relation types_generator_witness(typ: Type);
+relation types_tuple(typ: Type);
+relation types_tuple_element(tuple_type: Type, index: TupleFieldIndex, typ: Type);
+relation types_projection(typ: Type, trait_def_path: DefPath, trait_item: DefPath);
+relation types_opaque(typ: Type, def_path: DefPath);
+relation types_param(typ: Type, index: u32, name: InternedString);
+
+/// Traits.
+relation traits(item: auto Item, def_path: DefPath, name: InternedString, visibility: Visibility, is_auto: bool, is_marker: bool, unsafety: Unsafety);
+/// Items mentioned inside the trait.
+relation trait_items(trait_id: Item, def_path: DefPath, defaultness: Defaultness);
+
+/// Basic blocks.
+/// `is_cleanup` is true if the block is on the unwind path.
+relation basic_blocks(block: auto BasicBlock, mir: DefPath, kind: BasicBlockKind);
+/// Statements.
+relation statements(stmt: Statement, block: BasicBlock, index: StatementIndex, kind: StatementKind, scope: Scope);
+relation statements_assign_use(stmt: auto Statement, target_type: Type, operand: Operand);
+relation statements_assign_repeat(stmt: auto Statement, target_type: Type, operand: Operand, count: u64);
+relation statements_assign_ref(stmt: auto Statement, target_type: Type, source_type: Type, kind: BorrowKind);
+relation statements_assign_address(stmt: auto Statement, target_type: Type, source_type: Type, mutability: Mutability);
+relation statements_assign_len(stmt: auto Statement, target_type: Type, source_type: Type);
+relation statements_assign_cast(stmt: auto Statement, target_type: Type, kind: CastKind, operand: Operand, typ: Type);
+relation statements_assign_binary_op(stmt: auto Statement, target_type: Type, kind: BinOp, first: Operand, second: Operand);
+relation statements_assign_checked_binary_op(stmt: auto Statement, target_type: Type, kind: BinOp, first: Operand, second: Operand);
+relation statements_assign_nullary_op(stmt: auto Statement, target_type: Type, kind: NullOp, source_type: Type);
+relation statements_assign_unary_op(stmt: auto Statement, target_type: Type, kind: UnOp, operand: Operand);
+relation statements_assign_discriminant(stmt: auto Statement, target_type: Type, source_type: Type);
+relation statements_assign_aggregate(stmt: auto Statement, target_type: Type, kind: AggregateKind);
+relation statements_assign_aggregate_operands(stmt: Statement, index: OperandIndex, operand: Operand);
+relation statements_inline_asm_inputs(stmt: Statement, operand: Operand);
+relation statements_inline_asm_outputs(stmt: Statement, typ: Type);
+relation operands(operand: auto Operand, kind: OperandKind, typ: Type);
+/// Block terminators. Eeach block has exactly one terminator.
+relation terminators(block: BasicBlock, kind: TerminatorKind, scope: Scope);
+relation terminators_goto(block: BasicBlock, target: BasicBlock);
+relation terminators_switch_int(block: BasicBlock, discriminant: Operand, switch_ty: Type);
+relation terminators_switch_int_targets(block: BasicBlock, condition_value: u128, target: BasicBlock);
+relation terminators_drop(block: BasicBlock, location: Type, target: BasicBlock, unwind: BasicBlock);
+relation terminators_drop_and_replace(block: BasicBlock, location: Type, value: Operand, target: BasicBlock, unwind: BasicBlock);
+relation terminators_call(block: BasicBlock, call: auto FunctionCall, func: Operand, unsafety: Unsafety, abi: Abi, return_ty: Type, destination: BasicBlock, cleanup: BasicBlock);
+relation terminators_call_arg(call: FunctionCall, index: CallArgIndex, arg: Operand);
+/// The called function.
+relation terminators_call_const_target(call: FunctionCall, def_path: DefPath);
+relation terminators_assert(block: BasicBlock, cond: Operand, expected: bool, target: BasicBlock, cleanup: BasicBlock);
+relation terminators_yield(block: BasicBlock, value: Operand, resume: BasicBlock, drop: BasicBlock);
+relation terminators_false_edges(block: BasicBlock, real_target: BasicBlock, imaginary_target: BasicBlock);
+relation terminators_false_unwind(block: BasicBlock, real_target: BasicBlock, unwind: BasicBlock);

@@ -1,0 +1,24 @@
+[package]
+name = "corpus-extractor"
+version = "0.1.0"
+authors = ["Vytautas Astrauskas <vastrauskas@gmail.com>"]
+edition = "2018"
+license = "MIT"
+
+[lib]
+test = false
+
+[[bin]]
+name = "rustc"
+path = "src/main.rs"
+
+[[bin]]
+name = "print-stats"
+path = "src/statistics.rs"
+
+[dependencies]
+corpus-database = { path = "../database" }
+log = "0.4"
+log-derive = "0.3"
+lazy_static = "1.4"
+toml = "0.5.5"
