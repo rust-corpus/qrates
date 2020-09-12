@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Forever","The infinite iterator of signals."],["Pending","The iterator of one batch of signals."],["Signals","The main structure of the module, representing interest in some signals."]]});
