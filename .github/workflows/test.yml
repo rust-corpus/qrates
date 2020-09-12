@@ -20,8 +20,7 @@ jobs:
         submodules: recursive
     - name: Setup Rust components
       run:
-        rustup component add rustfmt
-        rustup component add rustc-dev
+        rustup component add rustfmt rustc-dev
     - name: Build with cargo
       run: cargo build --all --verbose
     - name: Run cargo tests
