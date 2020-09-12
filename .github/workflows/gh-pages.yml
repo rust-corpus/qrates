@@ -37,8 +37,9 @@ jobs:
         run: cargo doc
 
       - name: Deploy docs
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v3.7.0-8
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/doc
           destination_dir: doc
+          keep_files: true
