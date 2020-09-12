@@ -9,7 +9,10 @@ jobs:
   deploy:
     runs-on: ubuntu-18.04
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out the repo
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Setup Rust components
         uses: actions-rs/toolchain@v1
