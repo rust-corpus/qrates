@@ -6,7 +6,6 @@ edition = "2018"
 license = "MIT"
 default-run = "corpus-manager-driver"
 build = "build.rs"
-license = "MIT"
 
 [lib]
 
