@@ -16,6 +16,8 @@ jobs:
     steps:
     - name: Check out the repo
       uses: actions/checkout@v2
+      with:
+          submodules: recursive
     - name: Build with cargo
       run: cargo build --all --verbose
     - name: Run cargo tests
