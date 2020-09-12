@@ -26,7 +26,7 @@ The database is inspired by Nicholas D. Matsakis [blog post](http://smallcultfol
 
 `derived.dl` can define additional relations.
 
-From `schema.dl` and `derived.dl`, a procedural macro generates the code that manages the database. Most importantly, it generates the [`Tables`](TODO) object that is used by the extractor to store the extracted data and the [`Loader`](TODO) object that is used by the queries to load the data.
+From `schema.dl` and `derived.dl`, a procedural macro generates the code that manages the database. Most importantly, it generates the [`Tables`](https://rust-corpus.github.io/qrates/doc/corpus_database/tables/struct.Tables.html) object that is used by the extractor to store the extracted data and the [`Loader`](https://rust-corpus.github.io/qrates/doc/corpus_database/tables/struct.Loader.html) object that is used by the queries to load the data.
 
 ## Fundamental Derived Queries
 
