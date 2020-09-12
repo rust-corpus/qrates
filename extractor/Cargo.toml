@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Vytautas Astrauskas <vastrauskas@gmail.com>"]
 edition = "2018"
 license = "MIT"
+license = "MIT"
 
 [lib]
 test = false
