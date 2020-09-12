@@ -39,6 +39,8 @@ cargo run --release -- init-all
 
 ## Compiling the Packages
 
+*Note:* Instead of compiling yourself, you can also download the extracted data from [here](https://doi.org/10.5281/zenodo.4026639).
+
 Qrates uses the [Rustwide](https://github.com/rust-lang/rustwide/) library for compiling packages. Please see the Rustwide documentation for the system requirements; most importantly you need to have [Docker](https://www.docker.com/) installed.
 
 You can start the compilation as follows:
