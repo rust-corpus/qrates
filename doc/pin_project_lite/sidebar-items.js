@@ -1,1 +1,0 @@
-initSidebarItems({"macro":[["pin_project","A macro that creates a projection struct covering all the fields."]]});

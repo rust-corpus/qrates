@@ -182,7 +182,7 @@
 <li>Datalog relations – that similarly to SQL tables capture the relational information between program elements.</li>
 </ol>
 <p><code>derived.dl</code> can define additional relations.</p>
-<p>From <code>schema.dl</code> and <code>derived.dl</code>, a procedural macro generates the code that manages the database. Most importantly, it generates the <a href="TODO"><code>Tables</code></a> object that is used by the extractor to store the extracted data and the <a href="TODO"><code>Loader</code></a> object that is used by the queries to load the data.</p>
+<p>From <code>schema.dl</code> and <code>derived.dl</code>, a procedural macro generates the code that manages the database. Most importantly, it generates the <a href="https://rust-corpus.github.io/qrates/doc/corpus_database/tables/struct.Tables.html"><code>Tables</code></a> object that is used by the extractor to store the extracted data and the <a href="https://rust-corpus.github.io/qrates/doc/corpus_database/tables/struct.Loader.html"><code>Loader</code></a> object that is used by the queries to load the data.</p>
 <h2><a class="header" href="#fundamental-derived-queries" id="fundamental-derived-queries">Fundamental Derived Queries</a></h2>
 <p>While, in theory, the core schema should be self-contained, the fact that changes to it require rerunning the extractor made us to put some of the fundamental relations to <code>derived.dl</code>. The most important of such relations is <code>selected_builds</code> and many other <code>selected_*</code> relations that are derived from it. To understand the purpose of the <code>selected_builds</code> relation, we need first to explain the differences between <em>packages</em>, <em>crates</em>, and <em>builds</em>:</p>
 <ul>
