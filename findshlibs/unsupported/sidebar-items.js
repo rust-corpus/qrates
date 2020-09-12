@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Segment","An unsupported segment"],["SegmentIter","An iterator over Mach-O segments."],["SharedLibrary","The fallback implementation of the SharedLibrary trait."]]});
