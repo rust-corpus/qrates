@@ -5,13 +5,13 @@
 Install dependencies:
 
 ```bash
-sudo apt install build-essential curl git
+sudo apt install build-essential curl git libssl-dev
 ```
 
 Install Rust:
 
 ```bash
-url https://sh.rustup.rs -sSf | sh
+curl https://sh.rustup.rs -sSf | sh
 source $HOME/.cargo/env
 ```
 

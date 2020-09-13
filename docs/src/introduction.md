@@ -1,6 +1,6 @@
 # Qrates: Analysing Rust Code Corpus
 
-**Qrates** is a tool for running large scale analysis of Rust code. To be scalable, the process is split into four phases:
+**Qrates** is a tool for running large scale analyses of Rust code. To be scalable, the process is split into four phases:
 
 1. *Data extraction.* `extractor` is a modified version of the Rust compiler that saves the information about the compiled crate to a file so that it can be easily accessed later.
 2. *Database creation.* To be able to run queries that span multiple crates, the information from multiple files need to be merged into a single database.

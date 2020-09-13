@@ -55,7 +55,6 @@ fn main() {
 
         args.push("--sysroot".to_owned());
         args.push(std::env::var("SYSROOT").expect("Please specify the SYSROOT env variable."));
-        args.push("-Zcrate-attr=feature(custom_inner_attributes)".to_owned());
         args.splice(
             1..1,
             [

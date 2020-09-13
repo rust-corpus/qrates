@@ -1,12 +1,12 @@
 # Analysing Query Results with Jupyter
 
-Jupyter notebook is a web application commonly used by data scientists to analyse and visualise their data. If you have Docker installed, you can start a local Jupyter instance as follows:
+[Jupyter notebook](https://jupyter.org/) is a web application commonly used by data scientists to analyse and visualise their data. If you have Docker installed (you can find the installation instructions [here](https://docs.docker.com/engine/install/)), you can start a local Jupyter instance as follows:
 
 ```bash
 make run-jupyter
 ```
 
-*Note:* Since using Docker requires root permissions, this command will ask for `sudo` password.
+*Note:* Since using Docker requires root permissions, this command will ask for the `sudo` password.
 
 The command will print to the terminal a message like this:
 
@@ -25,4 +25,4 @@ Click on one of the links to open the notebook in your default browser. The note
 
 If everything started successfully, you should see three folders listed: `data`, `reports`, and `work`. Click on `reports`. It should contain six files with `.ipynb` extensions–these are Python notebooks used to analyse the data presented in the paper.
 
-After you open a notebook (for example, by clicking on `Builds.ipynb`), you can re-execute it by choosing *Kernel* → *Restart & Run All*.
+After you open a notebook (for example, by clicking on `Builds.ipynb`), you can re-execute it by choosing *Kernel* → *Restart & Run All*. (Note that some `assert` statements in the notebooks assume the full dataset; feel free to comment them out.)

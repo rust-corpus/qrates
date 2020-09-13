@@ -8,9 +8,9 @@ This section assumes that you have already compiled Qrates. You can find the ins
 
 ## Obtaining the List of Packages
 
-The second step is to select the packages[^package] from which we want to extract the data. This list of packages should be stored in the file `CrateList.json`. For example, if you want to analyze the package `rand`, create `CrateList.json` with the following contents:
+The second step is to select the packages[^package] from which we want to extract the data. This list of packages should be stored in the file `CrateList.json`. For example, if you want to analyse the package `rand`, create `CrateList.json` with the following contents:
 
-[^package]: A package uploaded on crates.io can contain several crates. For example, it is common for executables to be split into an executable crate and the library crate.
+[^package]: A package uploaded on crates.io can contain several crates. For example, it is common for executables to be split into an executable crate and a library crate.
 
 ```json
 {
@@ -41,7 +41,7 @@ cargo run --release -- init-all
 
 *Note:* Instead of compiling yourself, you can also download the extracted data from [here](https://doi.org/10.5281/zenodo.4026639).
 
-Qrates uses the [Rustwide](https://github.com/rust-lang/rustwide/) library for compiling packages. Please see the Rustwide documentation for the system requirements; most importantly you need to have [Docker](https://www.docker.com/) installed.
+Qrates uses the [Rustwide](https://github.com/rust-lang/rustwide/) library for compiling packages. Please see the Rustwide documentation for the system requirements; most importantly you need to have [Docker](https://www.docker.com/) installed (you can find the installation instructions [here](https://docs.docker.com/engine/install/)).
 
 You can start the compilation as follows:
 

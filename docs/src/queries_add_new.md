@@ -30,13 +30,13 @@ For our query, we are interested in three relations:
 
 For your query, create a new module in `manager/src/queries/mod.rs`. For example:
 
-```rust
+```rust,no_run,noplayground
 mod non_tree_types;
 ```
 
 The module should contain the function `query`:
 
-```rust
+```rust,no_run,noplayground
 pub fn query(loader: &Loader, report_path: &Path) {
     // Query implementation.
 }
@@ -46,7 +46,7 @@ Here, `loader` is the `Loader` object mentioned in the previous section and `rep
 
 Before we write the result to a CSV file, we will obtain a vector of types that contain raw pointer fields. We can do this via a simple Datalog query (we are using [Datapond](https://github.com/lqd/datapond) library):
 
-```rust
+```rust,no_run,noplayground
 // Declare the output variable.
 let non_tree_types;
 datapond_query! {
@@ -65,7 +65,7 @@ datapond_query! {
 
 To generate the readable CSV file with the information, we need to traverse the list of all relevant adts, check for each of them whether it is one of the types from `non_tree_types` and if yes, desugar to a human readable format. To make the checking more efficient, we can convert `non_tree_types` from a vector to a hash set. The code would be:
 
-```rust
+```rust,no_run,noplayground
 let non_tree_types: HashSet<_> = non_tree_types.elements.iter().map(|&(typ,)| typ).collect();
 let non_tree_adts = selected_adts.iter().flat_map(
     |&(
@@ -107,7 +107,7 @@ let non_tree_adts = selected_adts.iter().flat_map(
 
 Finally, we can write the results to the CSV file:
 
-```rust
+```rust,no_run,noplayground
 write_csv!(report_path, non_tree_adts);
 ```
 
