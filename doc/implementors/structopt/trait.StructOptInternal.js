@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["corpus_manager_driver"] = [{"text":"impl StructOptInternal for <a class=\"struct\" href=\"corpus_manager_driver/struct.CorpusManagerArgs.html\" title=\"struct corpus_manager_driver::CorpusManagerArgs\">CorpusManagerArgs</a>","synthetic":false,"types":["corpus_manager_driver::CorpusManagerArgs"]},{"text":"impl StructOptInternal for <a class=\"enum\" href=\"corpus_manager_driver/enum.Command.html\" title=\"enum corpus_manager_driver::Command\">Command</a>","synthetic":false,"types":["corpus_manager_driver::Command"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -156,10 +156,10 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#analysing-query-results-with-jupyter" id="analysing-query-results-with-jupyter">Analysing Query Results with Jupyter</a></h1>
-<p>Jupyter notebook is a web application commonly used by data scientists to analyse and visualise their data. If you have Docker installed, you can start a local Jupyter instance as follows:</p>
+<p><a href="https://jupyter.org/">Jupyter notebook</a> is a web application commonly used by data scientists to analyse and visualise their data. If you have Docker installed (you can find the installation instructions <a href="https://docs.docker.com/engine/install/">here</a>), you can start a local Jupyter instance as follows:</p>
 <pre><code class="language-bash">make run-jupyter
 </code></pre>
-<p><em>Note:</em> Since using Docker requires root permissions, this command will ask for <code>sudo</code> password.</p>
+<p><em>Note:</em> Since using Docker requires root permissions, this command will ask for the <code>sudo</code> password.</p>
 <p>The command will print to the terminal a message like this:</p>
 <pre><code class="language-plain">[C 10:33:17.685 NotebookApp]
 
@@ -172,7 +172,7 @@
 </code></pre>
 <p>Click on one of the links to open the notebook in your default browser. The notebook uses a self-signed certificate and, as a result, your browser will show an SSL error. Just ignore it.</p>
 <p>If everything started successfully, you should see three folders listed: <code>data</code>, <code>reports</code>, and <code>work</code>. Click on <code>reports</code>. It should contain six files with <code>.ipynb</code> extensions–these are Python notebooks used to analyse the data presented in the paper.</p>
-<p>After you open a notebook (for example, by clicking on <code>Builds.ipynb</code>), you can re-execute it by choosing <em>Kernel</em> → <em>Restart &amp; Run All</em>.</p>
+<p>After you open a notebook (for example, by clicking on <code>Builds.ipynb</code>), you can re-execute it by choosing <em>Kernel</em> → <em>Restart &amp; Run All</em>. (Note that some <code>assert</code> statements in the notebooks assume the full dataset; feel free to comment them out.)</p>
 
                     </main>
 

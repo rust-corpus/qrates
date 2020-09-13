@@ -158,7 +158,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#qrates-analysing-rust-code-corpus" id="qrates-analysing-rust-code-corpus">Qrates: Analysing Rust Code Corpus</a></h1>
-<p><strong>Qrates</strong> is a tool for running large scale analysis of Rust code. To be scalable, the process is split into four phases:</p>
+<p><strong>Qrates</strong> is a tool for running large scale analyses of Rust code. To be scalable, the process is split into four phases:</p>
 <ol>
 <li><em>Data extraction.</em> <code>extractor</code> is a modified version of the Rust compiler that saves the information about the compiled crate to a file so that it can be easily accessed later.</li>
 <li><em>Database creation.</em> To be able to run queries that span multiple crates, the information from multiple files need to be merged into a single database.</li>
@@ -168,10 +168,10 @@
 <h1><a class="header" href="#compiling-qrates" id="compiling-qrates">Compiling Qrates</a></h1>
 <p><strong>Note:</strong> These instructions were tested on Ubuntu 18.04 and 20.04.</p>
 <p>Install dependencies:</p>
-<pre><code class="language-bash">sudo apt install build-essential curl git
+<pre><code class="language-bash">sudo apt install build-essential curl git libssl-dev
 </code></pre>
 <p>Install Rust:</p>
-<pre><code class="language-bash">url https://sh.rustup.rs -sSf | sh
+<pre><code class="language-bash">curl https://sh.rustup.rs -sSf | sh
 source $HOME/.cargo/env
 </code></pre>
 <p>Clone the repository and all its dependencies:</p>
@@ -191,9 +191,9 @@ rustup component add rust-src
 <p><strong>Warning:</strong> The extraction involves compiling the crates and, therefore, may result in running potentially malicious code on your system. Therefore, make sure to compile the code on a virtual machine or in some other throw-away environment.</p>
 <p>This section assumes that you have already compiled Qrates. You can find the instructions how to do that <a href="building.html">here</a>.</p>
 <h2><a class="header" href="#obtaining-the-list-of-packages" id="obtaining-the-list-of-packages">Obtaining the List of Packages</a></h2>
-<p>The second step is to select the packages<sup class="footnote-reference"><a href="#package">1</a></sup> from which we want to extract the data. This list of packages should be stored in the file <code>CrateList.json</code>. For example, if you want to analyze the package <code>rand</code>, create <code>CrateList.json</code> with the following contents:</p>
+<p>The second step is to select the packages<sup class="footnote-reference"><a href="#package">1</a></sup> from which we want to extract the data. This list of packages should be stored in the file <code>CrateList.json</code>. For example, if you want to analyse the package <code>rand</code>, create <code>CrateList.json</code> with the following contents:</p>
 <div class="footnote-definition" id="package"><sup class="footnote-definition-label">1</sup>
-<p>A package uploaded on crates.io can contain several crates. For example, it is common for executables to be split into an executable crate and the library crate.</p>
+<p>A package uploaded on crates.io can contain several crates. For example, it is common for executables to be split into an executable crate and a library crate.</p>
 </div>
 <pre><code class="language-json">{
   &quot;creation_date&quot;: {
@@ -216,7 +216,7 @@ rustup component add rust-src
 </code></pre>
 <h2><a class="header" href="#compiling-the-packages" id="compiling-the-packages">Compiling the Packages</a></h2>
 <p><em>Note:</em> Instead of compiling yourself, you can also download the extracted data from <a href="https://doi.org/10.5281/zenodo.4026639">here</a>.</p>
-<p>Qrates uses the <a href="https://github.com/rust-lang/rustwide/">Rustwide</a> library for compiling packages. Please see the Rustwide documentation for the system requirements; most importantly you need to have <a href="https://www.docker.com/">Docker</a> installed.</p>
+<p>Qrates uses the <a href="https://github.com/rust-lang/rustwide/">Rustwide</a> library for compiling packages. Please see the Rustwide documentation for the system requirements; most importantly you need to have <a href="https://www.docker.com/">Docker</a> installed (you can find the installation instructions <a href="https://docs.docker.com/engine/install/">here</a>).</p>
 <p>You can start the compilation as follows:</p>
 <pre><code class="language-bash">mkdir ../workspace
 cargo run --release -- compile
@@ -409,27 +409,16 @@ getrandom_9a46159fdf341523.bincode           rand_core_272caddfb637ce01.bincode
 </ol>
 <h2><a class="header" href="#computing-the-relation" id="computing-the-relation">Computing the Relation</a></h2>
 <p>For your query, create a new module in <code>manager/src/queries/mod.rs</code>. For example:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>mod non_tree_types;
-<span class="boring">}
-</span></code></pre></pre>
+<pre><code class="language-rust no_run noplayground">mod non_tree_types;
+</code></pre>
 <p>The module should contain the function <code>query</code>:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>pub fn query(loader: &amp;Loader, report_path: &amp;Path) {
+<pre><code class="language-rust no_run noplayground">pub fn query(loader: &amp;Loader, report_path: &amp;Path) {
     // Query implementation.
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>Here, <code>loader</code> is the <code>Loader</code> object mentioned in the previous section and <code>report_path</code> is the folder in which we should store the CSV files.</p>
 <p>Before we write the result to a CSV file, we will obtain a vector of types that contain raw pointer fields. We can do this via a simple Datalog query (we are using <a href="https://github.com/lqd/datapond">Datapond</a> library):</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>// Declare the output variable.
+<pre><code class="language-rust no_run noplayground">// Declare the output variable.
 let non_tree_types;
 datapond_query! {
     // Load the relations by using “loader”.
@@ -443,13 +432,9 @@ datapond_query! {
         types_adt_field(.adt=adt, .typ=typ),
         types_raw_ptr(.typ=typ).
 }
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>To generate the readable CSV file with the information, we need to traverse the list of all relevant adts, check for each of them whether it is one of the types from <code>non_tree_types</code> and if yes, desugar to a human readable format. To make the checking more efficient, we can convert <code>non_tree_types</code> from a vector to a hash set. The code would be:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>let non_tree_types: HashSet&lt;_&gt; = non_tree_types.elements.iter().map(|&amp;(typ,)| typ).collect();
+<pre><code class="language-rust no_run noplayground">let non_tree_types: HashSet&lt;_&gt; = non_tree_types.elements.iter().map(|&amp;(typ,)| typ).collect();
 let non_tree_adts = selected_adts.iter().flat_map(
     |&amp;(
         build,
@@ -486,21 +471,16 @@ let non_tree_adts = selected_adts.iter().flat_map(
         }
     },
 );
-<span class="boring">}
-</span></code></pre></pre>
+</code></pre>
 <p>Finally, we can write the results to the CSV file:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>write_csv!(report_path, non_tree_adts);
-<span class="boring">}
-</span></code></pre></pre>
+<pre><code class="language-rust no_run noplayground">write_csv!(report_path, non_tree_adts);
+</code></pre>
 <p>The results will be written to a file <code>../workspace/reports/&lt;query-name&gt;/&lt;iterator-variable&gt;.csv</code>.</p>
 <h1><a class="header" href="#analysing-query-results-with-jupyter" id="analysing-query-results-with-jupyter">Analysing Query Results with Jupyter</a></h1>
-<p>Jupyter notebook is a web application commonly used by data scientists to analyse and visualise their data. If you have Docker installed, you can start a local Jupyter instance as follows:</p>
+<p><a href="https://jupyter.org/">Jupyter notebook</a> is a web application commonly used by data scientists to analyse and visualise their data. If you have Docker installed (you can find the installation instructions <a href="https://docs.docker.com/engine/install/">here</a>), you can start a local Jupyter instance as follows:</p>
 <pre><code class="language-bash">make run-jupyter
 </code></pre>
-<p><em>Note:</em> Since using Docker requires root permissions, this command will ask for <code>sudo</code> password.</p>
+<p><em>Note:</em> Since using Docker requires root permissions, this command will ask for the <code>sudo</code> password.</p>
 <p>The command will print to the terminal a message like this:</p>
 <pre><code class="language-plain">[C 10:33:17.685 NotebookApp]
 
@@ -513,7 +493,7 @@ let non_tree_adts = selected_adts.iter().flat_map(
 </code></pre>
 <p>Click on one of the links to open the notebook in your default browser. The notebook uses a self-signed certificate and, as a result, your browser will show an SSL error. Just ignore it.</p>
 <p>If everything started successfully, you should see three folders listed: <code>data</code>, <code>reports</code>, and <code>work</code>. Click on <code>reports</code>. It should contain six files with <code>.ipynb</code> extensions–these are Python notebooks used to analyse the data presented in the paper.</p>
-<p>After you open a notebook (for example, by clicking on <code>Builds.ipynb</code>), you can re-execute it by choosing <em>Kernel</em> → <em>Restart &amp; Run All</em>.</p>
+<p>After you open a notebook (for example, by clicking on <code>Builds.ipynb</code>), you can re-execute it by choosing <em>Kernel</em> → <em>Restart &amp; Run All</em>. (Note that some <code>assert</code> statements in the notebooks assume the full dataset; feel free to comment them out.)</p>
 
                     </main>
 

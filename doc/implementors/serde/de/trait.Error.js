@@ -1,8 +1,0 @@
-(function() {var implementors = {};
-implementors["bincode"] = [{"text":"impl <a class=\"trait\" href=\"serde/de/trait.Error.html\" title=\"trait serde::de::Error\">Error</a> for <a class=\"type\" href=\"bincode/type.Error.html\" title=\"type bincode::Error\">Error</a>","synthetic":false,"types":["bincode::error::Error"]}];
-implementors["cargo"] = [{"text":"impl <a class=\"trait\" href=\"serde/de/trait.Error.html\" title=\"trait serde::de::Error\">Error</a> for <a class=\"struct\" href=\"cargo/util/config/struct.ConfigError.html\" title=\"struct cargo::util::config::ConfigError\">ConfigError</a>","synthetic":false,"types":["cargo::util::config::ConfigError"]}];
-implementors["csv"] = [{"text":"impl <a class=\"trait\" href=\"serde/de/trait.Error.html\" title=\"trait serde::de::Error\">Error</a> for <a class=\"struct\" href=\"csv/struct.DeserializeError.html\" title=\"struct csv::DeserializeError\">DeserializeError</a>","synthetic":false,"types":["csv::deserializer::DeserializeError"]}];
-implementors["serde"] = [];
-implementors["serde_json"] = [{"text":"impl <a class=\"trait\" href=\"serde/de/trait.Error.html\" title=\"trait serde::de::Error\">Error</a> for <a class=\"struct\" href=\"serde_json/error/struct.Error.html\" title=\"struct serde_json::error::Error\">Error</a>","synthetic":false,"types":["serde_json::error::Error"]}];
-implementors["toml"] = [{"text":"impl <a class=\"trait\" href=\"serde/de/trait.Error.html\" title=\"trait serde::de::Error\">Error</a> for <a class=\"struct\" href=\"toml/de/struct.Error.html\" title=\"struct toml::de::Error\">Error</a>","synthetic":false,"types":["toml::de::Error"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
