@@ -205,9 +205,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .collect();
     let function_user_unsafe_block_counts: HashMap<_, _> = functions_unsafe_blocks
         .iter()
-        .filter(|(_build, _function, _scope, expansion_kind, _check_mode)| {
-            // TODO: Compare with _check_mode == UnsafeBlockUserProvided
-            *expansion_kind == types::SpanExpansionKind::Root
+        .filter(|(_build, _function, _scope, _expansion_kind, check_mode)| {
+            *check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
         })
         .safe_group_by(|(_build, function, _scope, _expansion_kind, _check_mode)| *function)
         .into_iter()
