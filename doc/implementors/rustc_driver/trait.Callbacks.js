@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["rustc"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/rustc_driver/trait.Callbacks.html\" title=\"trait rustc_driver::Callbacks\">Callbacks</a> for <a class=\"struct\" href=\"rustc/struct.CorpusCallbacks.html\" title=\"struct rustc::CorpusCallbacks\">CorpusCallbacks</a>","synthetic":false,"types":["rustc::CorpusCallbacks"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
