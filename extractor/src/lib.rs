@@ -5,17 +5,20 @@
 #![feature(rustc_private)]
 #![feature(box_patterns)]
 #![feature(bool_to_option)]
+#![feature(or_patterns)]
 
-extern crate rustc;
+extern crate rustc_ast;
 extern crate rustc_data_structures;
 extern crate rustc_error_codes;
 extern crate rustc_errors;
 extern crate rustc_hir;
 extern crate rustc_interface;
 extern crate rustc_metadata;
+extern crate rustc_middle;
 extern crate rustc_mir;
+extern crate rustc_session;
 extern crate rustc_span;
-extern crate syntax;
+extern crate rustc_target;
 
 mod check_unsafety;
 mod converters;
@@ -25,14 +28,14 @@ mod mirai_utils;
 mod table_filler;
 
 use lazy_static::lazy_static;
-use rustc::session::Session;
-use rustc::ty::query::Providers;
-use rustc::ty::TyCtxt;
 use rustc_data_structures::fx::FxHashSet;
 use rustc_hir::def_id::DefId;
 use rustc_hir::intravisit::walk_crate;
 use rustc_interface::interface::Compiler;
 use rustc_interface::Queries;
+use rustc_middle::ty::{self, query::Providers, TyCtxt};
+use rustc_session::Session;
+use rustc_span::def_id::LocalDefId;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::fs::File;
@@ -192,20 +195,51 @@ pub fn override_queries(
     _providers_extern: &mut Providers,
 ) {
     providers.unsafety_check_result = unsafety_check_result;
+    providers.unsafety_check_result_for_const_arg = unsafety_check_result_for_const_arg;
 }
 
-fn unsafety_check_result(tcx: TyCtxt<'_>, def_id: DefId) -> rustc::mir::UnsafetyCheckResult {
+fn unsafety_check_result<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    local_def_id: LocalDefId,
+) -> &'tcx rustc_middle::mir::UnsafetyCheckResult {
     let mut providers = Providers::default();
     rustc_mir::provide(&mut providers);
     let original_unsafety_check_result = providers.unsafety_check_result;
-    let (result, reasons) = check_unsafety::unsafety_check_result(tcx, def_id);
-    {
+    if let None = ty::WithOptConstParam::try_lookup(local_def_id, tcx) {
+        let (result, reasons) = check_unsafety::unsafety_check_result(
+            tcx,
+            ty::WithOptConstParam::unknown(local_def_id),
+        );
+        let def_id = local_def_id.to_def_id();
         let mut state = SHARED_STATE.lock().unwrap();
         state.function_unsafe_use.insert(def_id, result);
         state.function_unsafe_reasons.insert(def_id, reasons);
     }
+    original_unsafety_check_result(tcx, local_def_id)
+}
 
-    original_unsafety_check_result(tcx, def_id)
+fn unsafety_check_result_for_const_arg<'tcx>(
+    tcx: TyCtxt<'tcx>,
+    (local_def_id, param_did): (LocalDefId, DefId),
+) -> &'tcx rustc_middle::mir::UnsafetyCheckResult {
+    let mut providers = Providers::default();
+    rustc_mir::provide(&mut providers);
+    let original_unsafety_check_result_for_const_arg =
+        providers.unsafety_check_result_for_const_arg;
+    {
+        let (result, reasons) = check_unsafety::unsafety_check_result(
+            tcx,
+            ty::WithOptConstParam {
+                did: local_def_id,
+                const_param_did: Some(param_did),
+            },
+        );
+        let def_id = local_def_id.to_def_id();
+        let mut state = SHARED_STATE.lock().unwrap();
+        state.function_unsafe_use.insert(def_id, result);
+        state.function_unsafe_reasons.insert(def_id, reasons);
+    }
+    original_unsafety_check_result_for_const_arg(tcx, (local_def_id, param_did))
 }
 
 /// Save `cfg!` configuration.

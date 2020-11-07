@@ -4,18 +4,17 @@
 
 use crate::converters::ConvertInto;
 use crate::mir_visitor::MirVisitor;
-use crate::rustc::mir::HasLocalDecls;
 use crate::table_filler::TableFiller;
 use corpus_database::{tables::Tables, types};
-use rustc::hir::map::Map as HirMap;
-use rustc::mir;
-use rustc::session::Session;
-use rustc::ty::TyCtxt;
 use rustc_hir::{
     self as hir,
     intravisit::{self, Visitor},
     HirId,
 };
+use rustc_middle::hir::map::Map as HirMap;
+use rustc_middle::mir::{self, HasLocalDecls};
+use rustc_middle::ty::TyCtxt;
+use rustc_session::Session;
 use rustc_span::source_map::Span;
 use std::mem;
 
@@ -86,7 +85,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         );
         self.current_module = new_module;
         self.visit_id(id);
-        syntax::walk_list!(self, visit_foreign_item, module.items);
+        rustc_ast::walk_list!(self, visit_foreign_item, module.items);
         self.current_module = parent_module;
     }
     fn visit_static(
@@ -113,7 +112,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         self.current_item = old_item;
     }
     /// Extract information from unoptmized MIR.
-    fn visit_mir(&mut self, body_id: hir::def_id::DefId, body: &mir::BodyAndCache<'tcx>) {
+    fn visit_mir(&mut self, body_id: rustc_span::def_id::LocalDefId, body: &mir::Body<'tcx>) {
         let error = format!("Mir outside of an item: {:?}", body.span);
         let item = self.current_item.expect(&error);
         let mut mir_visitor = MirVisitor::new(self.tcx, item, body_id, body, &mut self.filler);
@@ -123,7 +122,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         &mut self,
         item: &'tcx hir::Item,
         def_path: types::DefPath,
-        def_id: hir::def_id::DefId,
+        def_id: rustc_span::def_id::LocalDefId,
         name: &str,
         visibility: types::Visibility,
         kind: types::TyDefKind,
@@ -143,7 +142,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
     /// Retrieves the parameter types and the return type for the function with `def_id`.
     fn get_fn_param_and_return_types(&mut self, id: HirId) -> (Vec<types::Type>, types::Type) {
         let def_id = self.hir_map.local_def_id(id);
-        let mir = self.tcx.optimized_mir(def_id).unwrap_read_only();
+        let mir = self.tcx.optimized_mir(def_id);
         let return_type = self.filler.register_type(mir.return_ty());
         let local_decls = mir.local_decls();
         let param_types = mir
@@ -212,10 +211,14 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     interned_type,
                 );
                 if let Some(trait_ref) = of_trait {
-                    let trait_def_path = self.filler.resolve_def_id(trait_ref.trait_def_id());
-                    self.filler
-                        .tables
-                        .register_trait_impls(item_id, interned_type, trait_def_path);
+                    if let Some(trait_def_id) = trait_ref.trait_def_id() {
+                        let trait_def_path = self.filler.resolve_def_id(trait_def_id);
+                        self.filler.tables.register_trait_impls(
+                            item_id,
+                            interned_type,
+                            trait_def_path,
+                        );
+                    }
                 }
                 let old_item = mem::replace(&mut self.current_item, Some(item_id));
                 intravisit::walk_item(self, item);
@@ -411,7 +414,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         let mir_body = self.tcx.optimized_mir(owner);
         self.visit_mir(owner, mir_body);
     }
-    fn nested_visit_map<'this>(&'this mut self) -> intravisit::NestedVisitorMap<'this, Self::Map> {
-        intravisit::NestedVisitorMap::All(self.hir_map)
+    fn nested_visit_map<'this>(&'this mut self) -> intravisit::NestedVisitorMap<Self::Map> {
+        intravisit::NestedVisitorMap::All(self.tcx.hir())
     }
 }

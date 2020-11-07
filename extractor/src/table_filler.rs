@@ -5,14 +5,14 @@
 use crate::converters::ConvertInto;
 use crate::mirai_utils;
 use corpus_database::{tables::Tables, types};
-use rustc::hir::map::Map as HirMap;
-use rustc::ty::{self, TyCtxt};
 use rustc_hir::{self as hir, HirId};
+use rustc_middle::hir::map::Map as HirMap;
+use rustc_middle::ty::{self, TyCtxt};
+use rustc_session::Session;
 use rustc_span::hygiene::ExpnKind;
 use rustc_span::{Pos, Span};
 use std::collections::HashMap;
 
-use rustc::session::Session;
 /// A wrapper around `Tables` that keeps some local state.
 pub(crate) struct TableFiller<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
@@ -41,7 +41,13 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
     }
     pub fn resolve_hir_id(&mut self, id: HirId) -> types::DefPath {
         let def_id = self.hir_map.local_def_id(id);
-        self.resolve_def_id(def_id)
+        self.resolve_local_def_id(def_id)
+    }
+    pub fn resolve_local_def_id(
+        &mut self,
+        local_def_id: rustc_span::def_id::LocalDefId,
+    ) -> types::DefPath {
+        self.resolve_def_id(local_def_id.to_def_id())
     }
     pub fn resolve_def_id(&mut self, def_id: hir::def_id::DefId) -> types::DefPath {
         let crate_num = def_id.krate;
@@ -111,7 +117,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
             *interned_type
         } else {
             assert!(!self.type_registry.contains_key(&typ));
-            match typ.kind {
+            match typ.kind() {
                 ty::TyKind::Bool
                 | ty::TyKind::Char
                 | ty::TyKind::Int(_)
@@ -119,7 +125,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 | ty::TyKind::Float(_)
                 | ty::TyKind::Str
                 | ty::TyKind::Never => {
-                    let primitive_kind = typ.kind.convert_into();
+                    let primitive_kind = typ.kind().convert_into();
                     let interned_type =
                         self.insert_new_type_into_table(&primitive_kind.to_string(), typ);
                     self.tables
@@ -167,7 +173,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 }
                 ty::TyKind::Foreign(def_id) => {
                     let interned_type = self.insert_new_type_into_table("Foreign", typ);
-                    let foreign_def_path = self.resolve_def_id(def_id);
+                    let foreign_def_path = self.resolve_def_id(*def_id);
                     self.tables
                         .register_types_foreign(interned_type, foreign_def_path);
                     interned_type
@@ -208,7 +214,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 }
                 ty::TyKind::FnDef(def_id, _substs) => {
                     let interned_type = self.insert_new_type_into_table("FnDef", typ);
-                    let fn_def_path = self.resolve_def_id(def_id);
+                    let fn_def_path = self.resolve_def_id(*def_id);
                     self.tables
                         .register_types_fn_def(interned_type, fn_def_path);
                     interned_type
@@ -235,7 +241,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                                 // TODO
                             }
                             ty::ExistentialPredicate::AutoTrait(def_id) => {
-                                let def_path = self.resolve_def_id(*def_id);
+                                let def_path = self.resolve_def_id(def_id);
                                 self.tables.register_types_dynamic_trait(
                                     interned_type,
                                     def_path,
@@ -248,14 +254,14 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 }
                 ty::TyKind::Closure(def_id, _substs) => {
                     let interned_type = self.insert_new_type_into_table("Closure", typ);
-                    let closure_def_path = self.resolve_def_id(def_id);
+                    let closure_def_path = self.resolve_def_id(*def_id);
                     self.tables
                         .register_types_closure(interned_type, closure_def_path);
                     interned_type
                 }
                 ty::TyKind::Generator(def_id, _substs, _movability) => {
                     let interned_type = self.insert_new_type_into_table("Generator", typ);
-                    let generator_def_path = self.resolve_def_id(def_id);
+                    let generator_def_path = self.resolve_def_id(*def_id);
                     self.tables
                         .register_types_generator(interned_type, generator_def_path);
                     interned_type
@@ -292,7 +298,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 }
                 ty::TyKind::Opaque(def_id, _substs) => {
                     let interned_type = self.insert_new_type_into_table("Opaque", typ);
-                    let def_path = self.resolve_def_id(def_id);
+                    let def_path = self.resolve_def_id(*def_id);
                     self.tables.register_types_opaque(interned_type, def_path);
                     interned_type
                 }
@@ -305,11 +311,10 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                     );
                     interned_type
                 }
-                ty::TyKind::UnnormalizedProjection(_)
-                | ty::TyKind::Bound(..)
+                ty::TyKind::Bound(..)
                 | ty::TyKind::Placeholder(_)
                 | ty::TyKind::Infer(_)
-                | ty::TyKind::Error => {
+                | ty::TyKind::Error(_) => {
                     unreachable!();
                 }
             }

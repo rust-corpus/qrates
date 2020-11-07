@@ -3,10 +3,9 @@
 // modified, or distributed except according to those terms.
 
 use corpus_database::types;
-use rustc::mir;
-use rustc::ty;
+use rustc_ast::ast;
 use rustc_hir as hir;
-use syntax::ast;
+use rustc_middle::{mir, ty};
 
 pub trait ConvertInto<T> {
     fn convert_into(&self) -> T;
@@ -75,7 +74,8 @@ impl ConvertInto<types::SpanExpansionKind> for rustc_span::hygiene::ExpnKind {
             Desugaring(DesugaringKind::OpaqueTy) => types::SpanExpansionKind::DesugaringOpaqueTy,
             Desugaring(DesugaringKind::Async) => types::SpanExpansionKind::DesugaringAsync,
             Desugaring(DesugaringKind::Await) => types::SpanExpansionKind::DesugaringAwait,
-            Desugaring(DesugaringKind::ForLoop) => types::SpanExpansionKind::DesugaringForLoop,
+            Desugaring(DesugaringKind::ForLoop(_)) => types::SpanExpansionKind::DesugaringForLoop,
+            Inlined => types::SpanExpansionKind::Inlined,
         }
     }
 }
@@ -186,7 +186,7 @@ impl ConvertInto<types::ImplPolarity> for hir::ImplPolarity {
     fn convert_into(&self) -> types::ImplPolarity {
         match self {
             hir::ImplPolarity::Positive => types::ImplPolarity::Positive,
-            hir::ImplPolarity::Negative => types::ImplPolarity::Negative,
+            hir::ImplPolarity::Negative(_) => types::ImplPolarity::Negative,
         }
     }
 }
@@ -258,7 +258,7 @@ impl ConvertInto<types::AdtKind> for ty::AdtKind {
     }
 }
 
-impl ConvertInto<types::AdtVariantIndex> for ty::layout::VariantIdx {
+impl ConvertInto<types::AdtVariantIndex> for rustc_target::abi::VariantIdx {
     fn convert_into(&self) -> types::AdtVariantIndex {
         self.index().into()
     }

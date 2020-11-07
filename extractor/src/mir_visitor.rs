@@ -5,9 +5,9 @@
 use crate::converters::ConvertInto;
 use crate::table_filler::TableFiller;
 use corpus_database::types;
-use rustc::mir;
-use rustc::ty::{self, TyCtxt};
 use rustc_hir as hir;
+use rustc_middle::mir;
+use rustc_middle::ty::{self, TyCtxt};
 use std::collections::HashMap;
 
 pub(crate) struct MirVisitor<'a, 'b, 'tcx> {
@@ -23,11 +23,11 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
     pub fn new(
         tcx: TyCtxt<'tcx>,
         item: types::Item,
-        body_id: hir::def_id::DefId,
+        body_id: rustc_span::def_id::LocalDefId,
         body: &'a mir::Body<'tcx>,
         filler: &'a mut TableFiller<'b, 'tcx>,
     ) -> Self {
-        let body_path = filler.resolve_def_id(body_id);
+        let body_path = filler.resolve_local_def_id(body_id);
         let (root_scope,) = filler.tables.register_mir_cfgs(item, body_path);
         Self {
             tcx,
@@ -142,12 +142,23 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                             .register_statements_assign_use(interned_target_type, interned_operand);
                         (stmt, "Assign/Use")
                     }
+                    mir::Rvalue::ThreadLocalRef(def_id) => {
+                        let def_path = self.filler.resolve_def_id(*def_id);
+                        let (stmt,) = self
+                            .filler
+                            .tables
+                            .register_statements_assign_thead_local_ref(
+                                interned_target_type,
+                                def_path,
+                            );
+                        (stmt, "Assign/ThreadLocalRef")
+                    }
                     mir::Rvalue::Repeat(operand, len) => {
                         let interned_operand = self.visit_operand(operand);
                         let (stmt,) = self.filler.tables.register_statements_assign_repeat(
                             interned_target_type,
                             interned_operand,
-                            *len,
+                            len.eval_usize(self.tcx, ty::ParamEnv::reveal_all()),
                         );
                         (stmt, "Assign/Repeat")
                     }
@@ -259,7 +270,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 };
                 (stmt, kind)
             }
-            mir::StatementKind::InlineAsm(box mir::InlineAsm {
+            mir::StatementKind::LlvmInlineAsm(box mir::LlvmInlineAsm {
                 outputs: box outputs,
                 inputs: box inputs,
                 ..
@@ -294,6 +305,9 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
             mir::StatementKind::Retag(..) => (self.filler.tables.get_fresh_statement(), "Retag"),
             mir::StatementKind::AscribeUserType(..) => {
                 (self.filler.tables.get_fresh_statement(), "AscribeUserType")
+            }
+            mir::StatementKind::Coverage(..) => {
+                (self.filler.tables.get_fresh_statement(), "Coverage")
             }
             mir::StatementKind::Nop => (self.filler.tables.get_fresh_statement(), "Nop"),
         };
@@ -335,7 +349,6 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
             mir::TerminatorKind::SwitchInt {
                 discr,
                 switch_ty,
-                values,
                 targets,
             } => {
                 let discriminant = self.visit_operand(&discr);
@@ -343,11 +356,11 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 self.filler
                     .tables
                     .register_terminators_switch_int(block, discriminant, typ);
-                for (value, target) in values.iter().zip(targets) {
+                for (value, target) in targets.iter() {
                     self.filler.tables.register_terminators_switch_int_targets(
                         block,
-                        *value,
-                        basic_blocks[target],
+                        value,
+                        basic_blocks[&target],
                     );
                 }
                 "SwitchInt"
@@ -357,36 +370,32 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
             mir::TerminatorKind::Return => "Return",
             mir::TerminatorKind::Unreachable => "Unreachable",
             mir::TerminatorKind::Drop {
-                location,
+                place,
                 target,
                 unwind,
             } => {
-                let location_type = self
-                    .filler
-                    .register_type(location.ty(self.body, self.tcx).ty);
+                let place_type = self.filler.register_type(place.ty(self.body, self.tcx).ty);
                 let unwind_block = get_maybe_block(unwind);
                 self.filler.tables.register_terminators_drop(
                     block,
-                    location_type,
+                    place_type,
                     basic_blocks[target],
                     unwind_block,
                 );
                 "Drop"
             }
             mir::TerminatorKind::DropAndReplace {
-                location,
+                place,
                 value,
                 target,
                 unwind,
             } => {
-                let location_type = self
-                    .filler
-                    .register_type(location.ty(self.body, self.tcx).ty);
+                let place_type = self.filler.register_type(place.ty(self.body, self.tcx).ty);
                 let unwind_block = get_maybe_block(unwind);
                 let interned_operand = self.visit_operand(value);
                 self.filler.tables.register_terminators_drop_and_replace(
                     block,
-                    location_type,
+                    place_type,
                     interned_operand,
                     basic_blocks[target],
                     unwind_block,
@@ -399,6 +408,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 destination,
                 cleanup,
                 from_hir_call: _,
+                fn_span,
             } => {
                 let interned_func = self.visit_operand(func);
                 let (return_ty, destination_block) =
@@ -415,6 +425,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 let sig = func_ty.fn_sig(self.tcx);
                 let unsafety = sig.unsafety().convert_into();
                 let abi = sig.abi().name().to_string();
+                let span = self.filler.register_span(*fn_span);
                 let (function_call,) = self.filler.tables.register_terminators_call(
                     block,
                     interned_func,
@@ -423,6 +434,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                     interned_return_ty,
                     destination_block,
                     get_maybe_block(cleanup),
+                    span,
                 );
                 for (i, arg) in args.iter().enumerate() {
                     let interned_arg = self.visit_operand(arg);
@@ -433,17 +445,35 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                     );
                 }
                 match func {
-                    mir::Operand::Constant(constant) => match constant.literal.ty.kind {
-                        ty::TyKind::FnDef(target_id, _) => {
-                            let def_path = self.filler.resolve_def_id(target_id);
-                            self.filler
-                                .tables
-                                .register_terminators_call_const_target(function_call, def_path);
+                    mir::Operand::Constant(constant) => {
+                        match constant.literal.ty.kind() {
+                            ty::TyKind::FnDef(target_id, substs) => {
+                                let generics = self.tcx.generics_of(*target_id);
+                                if generics.has_self {
+                                    let self_ty = substs.type_at(0);
+                                    let interned_type = self.filler.register_type(self_ty);
+                                    self.filler
+                                        .tables
+                                        .register_terminators_call_const_target_self(
+                                            function_call,
+                                            interned_type,
+                                        );
+                                }
+                                let def_path = self.filler.resolve_def_id(*target_id);
+                                self.filler.tables.register_terminators_call_const_target(
+                                    function_call,
+                                    def_path,
+                                );
+                            }
+                            ty::TyKind::FnPtr(_) => {
+                                // Calling a function pointer.
+                            }
+                            _ => unreachable!("Unexpected called constant type: {:?}", constant),
                         }
-                        ty::TyKind::FnPtr(_) => {}
-                        _ => unreachable!("Unexpected called constant type: {:?}", constant),
-                    },
-                    mir::Operand::Copy(_) | mir::Operand::Move(_) => {}
+                    }
+                    mir::Operand::Copy(_) | mir::Operand::Move(_) => {
+                        // Calling a function pointer.
+                    }
                 };
                 "Call"
             }
@@ -467,6 +497,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
             mir::TerminatorKind::Yield {
                 value,
                 resume,
+                resume_arg: _,
                 drop,
             } => {
                 let interned_value = self.visit_operand(value);
@@ -479,7 +510,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 "Yield"
             }
             mir::TerminatorKind::GeneratorDrop => "GeneratorDrop",
-            mir::TerminatorKind::FalseEdges {
+            mir::TerminatorKind::FalseEdge {
                 real_target,
                 imaginary_target,
             } => {
@@ -500,6 +531,16 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                     get_maybe_block(unwind),
                 );
                 "FalseUnwind"
+            }
+            mir::TerminatorKind::InlineAsm {
+                template: _,
+                operands: _,
+                options: _,
+                line_spans: _,
+                destination: _,
+            } => {
+                self.filler.tables.register_terminators_inline_asm(block);
+                "InlineAsm"
             }
         };
         kind.to_string()
