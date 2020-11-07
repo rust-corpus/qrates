@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["tokio"] = [{"text":"impl&lt;T&gt; Executor&lt;T&gt; for Handle <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Future&lt;Item = (), Error = ()&gt; + Send + 'static,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;T&gt; Executor&lt;T&gt; for TaskExecutor <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Future&lt;Item = (), Error = ()&gt; + Send + 'static,&nbsp;</span>","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
