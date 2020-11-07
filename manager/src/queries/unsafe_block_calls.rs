@@ -99,7 +99,7 @@ fn report_all_calls(loader: &Loader, report_path: &Path) {
 
     let all_calls = loader.load_terminators_call();
     let all_calls = all_calls.iter().map(
-        |&(_block, call, func, unsafety, abi, _return_ty, _destination, _cleanup)| {
+        |&(_block, call, func, unsafety, abi, _return_ty, _destination, _cleanup, _span)| {
             let (call_target, is_trait_item) = if let Some(target) =
                 terminators_call_const_target.get(&call)
             {

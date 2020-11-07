@@ -36,7 +36,7 @@ impl rustc_driver::Callbacks for CorpusCallbacks {
 fn main() {
     rustc_driver::init_rustc_env_logger();
     let mut callbacks = CorpusCallbacks {};
-    let exit_code = rustc_driver::catch_fatal_errors(|| {
+    let exit_code = rustc_driver::catch_with_exit_code(|| {
         use std::env;
         let mut is_color_arg = false;
         let mut args = env::args()
@@ -65,9 +65,7 @@ fn main() {
             .iter()
             .map(ToString::to_string),
         );
-        rustc_driver::run_compiler(&args, &mut callbacks, None, None)
-    })
-    .and_then(|result| result)
-    .is_err() as i32;
+        rustc_driver::RunCompiler::new(&args, &mut callbacks).run()
+    });
     process::exit(exit_code);
 }

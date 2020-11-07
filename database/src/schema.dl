@@ -292,6 +292,8 @@ enum SpanExpansionKind {
     DesugaringAwait,
     /// Desugaring done by the compiler during HIR lowering.
     DesugaringForLoop,
+    /// Inlined MIR.
+    Inlined,
 }
 
 /// rustc_hir::UnsafeSource
@@ -451,6 +453,7 @@ relation basic_blocks(block: auto BasicBlock, mir: DefPath, kind: BasicBlockKind
 /// Statements.
 relation statements(stmt: Statement, block: BasicBlock, index: StatementIndex, kind: StatementKind, scope: Scope);
 relation statements_assign_use(stmt: auto Statement, target_type: Type, operand: Operand);
+relation statements_assign_thead_local_ref(stmt: auto Statement, target_type: Type, def_path: DefPath);
 relation statements_assign_repeat(stmt: auto Statement, target_type: Type, operand: Operand, count: u64);
 relation statements_assign_ref(stmt: auto Statement, target_type: Type, source_type: Type, kind: BorrowKind);
 relation statements_assign_address(stmt: auto Statement, target_type: Type, source_type: Type, mutability: Mutability);
@@ -473,11 +476,14 @@ relation terminators_switch_int(block: BasicBlock, discriminant: Operand, switch
 relation terminators_switch_int_targets(block: BasicBlock, condition_value: u128, target: BasicBlock);
 relation terminators_drop(block: BasicBlock, location: Type, target: BasicBlock, unwind: BasicBlock);
 relation terminators_drop_and_replace(block: BasicBlock, location: Type, value: Operand, target: BasicBlock, unwind: BasicBlock);
-relation terminators_call(block: BasicBlock, call: auto FunctionCall, func: Operand, unsafety: Unsafety, abi: Abi, return_ty: Type, destination: BasicBlock, cleanup: BasicBlock);
+relation terminators_call(block: BasicBlock, call: auto FunctionCall, func: Operand, unsafety: Unsafety, abi: Abi, return_ty: Type, destination: BasicBlock, cleanup: BasicBlock, span: Span);
 relation terminators_call_arg(call: FunctionCall, index: CallArgIndex, arg: Operand);
-/// The called function.
+/// The called function or trait method.
 relation terminators_call_const_target(call: FunctionCall, def_path: DefPath);
+/// The self argument of the called method.
+relation terminators_call_const_target_self(call: FunctionCall, typ: Type);
 relation terminators_assert(block: BasicBlock, cond: Operand, expected: bool, target: BasicBlock, cleanup: BasicBlock);
 relation terminators_yield(block: BasicBlock, value: Operand, resume: BasicBlock, drop: BasicBlock);
 relation terminators_false_edges(block: BasicBlock, real_target: BasicBlock, imaginary_target: BasicBlock);
 relation terminators_false_unwind(block: BasicBlock, real_target: BasicBlock, unwind: BasicBlock);
+relation terminators_inline_asm(block: BasicBlock);
