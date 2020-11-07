@@ -21,7 +21,7 @@ jobs:
     - name: Setup Rust components
       uses: actions-rs/toolchain@v1
       with:
-        components: rustfmt, rustc-dev
+        components: rustfmt, rustc-dev, llvm-tools-preview
     - name: Build with cargo
       run: cargo build --all --verbose
     - name: Run cargo tests
