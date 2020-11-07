@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Segment","A mapped segment in an ELF file."],["SegmentIter","An iterator of mapped segments in a shared library."],["SharedLibrary","A shared library on Linux."]]});
