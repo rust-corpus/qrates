@@ -172,6 +172,7 @@ git submodule update --init
 <p>Add the missing components (we need them because the extractor uses the Rust compiler as a library):</p>
 <pre><code class="language-bash">rustup component add rustc-dev
 rustup component add rust-src
+rustup component add llvm-tools-preview
 </code></pre>
 <p>Build the project in release mode:</p>
 <pre><code class="language-bash">cargo build --all --release
