@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["generate_definition",""],["generate_query",""],["parse_schema",""]]});
