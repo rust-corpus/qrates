@@ -75,8 +75,7 @@ impl ConvertInto<types::SpanExpansionKind> for rustc_span::hygiene::ExpnKind {
             Desugaring(DesugaringKind::Async) => types::SpanExpansionKind::DesugaringAsync,
             Desugaring(DesugaringKind::Await) => types::SpanExpansionKind::DesugaringAwait,
             Desugaring(DesugaringKind::ForLoop(_)) => types::SpanExpansionKind::DesugaringForLoop,
-            // Inlined was added only in nightly 2020-11-07.
-            // Inlined => types::SpanExpansionKind::Inlined,
+            Inlined => types::SpanExpansionKind::Inlined,
         }
     }
 }
