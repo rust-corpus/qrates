@@ -50,7 +50,7 @@ mkdir ../workspace
 cargo run --release -- compile
 ```
 
-This command may fail with a permission error if the user does not have the necessary permissions to communicate with the Docker manager. In that case, use `sudo:
+This command may fail with a permission error if the user does not have the necessary permissions to communicate with the Docker manager. In that case, use `sudo`:
 
 ```bash
 sudo $(which cargo) run --release -- compile
