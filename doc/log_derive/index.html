@@ -1,0 +1,71 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `log_derive` crate."><meta name="keywords" content="rust, rustlang, rust-lang, log_derive"><title>log_derive - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../ayu.css" disabled ><script id="default-settings"></script><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="alternate icon" type="image/png" href="../favicon-16x16.png">
+<link rel="alternate icon" type="image/png" href="../favicon-32x32.png"><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../log_derive/index.html'><div class='logo-container rust-logo'><img src='../rust-logo.png' alt='logo'></div></a><p class="location">Crate log_derive</p><div class="block version"><p>Version 0.4.0</p></div><div class="sidebar-elems"><a id="all-types" href="all.html"><p>See all log_derive's items</p></a><p class="location"></p><script>window.sidebarCurrent = {name: "log_derive", ty: "mod", relpath: "../"};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices" role="menu"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><span class="help-button">?</span>
+                <a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class="fqn"><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span><a class="srclink" href="../src/log_derive/lib.rs.html#1-471" title="goto source code">[src]</a></span><span class="in-band">Crate <a class="mod" href="">log_derive</a></span></h1><div class="docblock"><h1 id="log-derive" class="section-header"><a href="#log-derive">Log Derive</a></h1>
+<p><code>log-derive</code> provides a simple attribute macro that facilitates logs as part of the <a href="https://docs.rs/log/latest/log/index.html"><code>log</code></a> facade <br>
+Right now it contains two macros <a href="./attr.logfn.html"><code>logfn</code></a>, <a href="./attr.logfn_inputs.html"><code>logfn_inputs</code></a> these macros are only for functions but still have a lot of power.</p>
+<h1 id="use" class="section-header"><a href="#use">Use</a></h1>
+<p>The basic use of these macros is by putting one or both of them on top of the function like this: <code>#[logfn(INFO)]</code> <br></p>
+<p>The <a href="./attr.logfn.html"><code>logfn</code></a> macro is used to log the <em>output</em> of the function and <a href="./attr.logfn_inputs.html"><code>logfn_inputs</code></a> is used to log the <em>inputs</em>. <br>
+Please notice, the arguments being logged <strong>must</strong> implement the <a href="https://doc.rust-lang.org/std/fmt/trait.Debug.html"><code>Debug</code></a> trait. <br>
+(i.e. <a href="./attr.logfn.html"><code>logfn</code></a> requires the output to be <a href="https://doc.rust-lang.org/std/fmt/trait.Debug.html"><code>Debug</code></a> and <a href="./attr.logfn_inputs.html"><code>logfn_inputs</code></a> require the inputs to be <a href="https://doc.rust-lang.org/std/fmt/trait.Debug.html"><code>Debug</code></a>) <br></p>
+<p>The macros will accept all log levels provided by the <a href="https://docs.rs/log/latest/log/index.html"><code>log</code></a> facade. <br>
+In <a href="./attr.logfn.html"><code>logfn</code></a> if the function returns a <a href="https://doc.rust-lang.org/std/result/enum.Result.html"><code>Result</code></a> type the macro will accept the following additional attributes: <br>
+<code>(ok = &quot;LEVEL&quot;)</code> and <code>(err = &quot;LEVEL&quot;)</code> this can provide different log levels if the function failed or not. <br></p>
+<p>By default the macro uses the following formatting to print the message: <br>
+<a href="./attr.logfn.html"><code>logfn</code></a>: <code>(&quot;FUNCTION_NAME() =&gt; {:?}&quot;, return_val)</code> <br>
+<a href="./attr.logfn_inputs.html"><code>logfn_inputs</code></a>: <code>&quot;FUNCTION_NAME(a: {:?}, b: {:?})&quot;, a, b)</code> <br>
+This can be easily changed using the <code>fmt</code> attribute: <code>#[logfn(LEVEL, fmt = &quot;Important Result: {:}&quot;)</code> <br>
+which will accept format strings similar to <a href="https://doc.rust-lang.org/stable/std/macro.println.html"><code>println!</code></a>.</p>
+<h2 id="examples" class="section-header"><a href="#examples">Examples</a></h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">use</span> <span class="ident">log_derive</span>::{<span class="ident">logfn</span>, <span class="ident">logfn_inputs</span>};
+
+<span class="kw">struct</span> <span class="ident">Error</span>;
+<span class="kw">struct</span> <span class="ident">Success</span>;
+<span class="kw">enum</span> <span class="ident">Status</span> { <span class="ident">Alive</span>, <span class="ident">Dead</span>, <span class="ident">Unknown</span> }
+
+<span class="attribute">#[<span class="ident">logfn</span>(<span class="ident">Warn</span>)]</span>
+<span class="attribute">#[<span class="ident">logfn_inputs</span>(<span class="ident">Info</span>, <span class="ident">fmt</span> <span class="op">=</span> <span class="string">&quot;Checking if {:?} is alive&quot;</span>)]</span>
+<span class="kw">fn</span> <span class="ident">is_alive</span>(<span class="ident">person</span>: <span class="kw-2">&amp;</span><span class="ident">Person</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Status</span> {
+   <span class="kw">match</span> <span class="ident">person</span>.<span class="ident">ping</span>() {
+       <span class="ident">Pong</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Status</span>::<span class="ident">Alive</span>,
+       <span class="ident">Timeout</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">if</span> <span class="ident">person</span>.<span class="ident">is_awake</span>() {
+           <span class="ident">Unknown</span>
+       } <span class="kw">else</span> {
+           <span class="ident">Dead</span>
+       }
+  }
+}
+
+<span class="attribute">#[<span class="ident">logfn_inputs</span>(<span class="ident">Info</span>)]</span>
+<span class="attribute">#[<span class="ident">logfn</span>(<span class="ident">ok</span> <span class="op">=</span> <span class="string">&quot;TRACE&quot;</span>, <span class="ident">err</span> <span class="op">=</span> <span class="string">&quot;ERROR&quot;</span>)]</span>
+<span class="kw">fn</span> <span class="ident">call_isan</span>(<span class="ident">num</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Success</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">if</span> <span class="ident">num</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="number">10</span> <span class="op">&amp;&amp;</span> <span class="ident">num</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="number">15</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">Success</span>)
+    } <span class="kw">else</span> {
+        <span class="prelude-val">Err</span>(<span class="ident">Error</span>)
+    }
+}
+
+<span class="attribute">#[<span class="ident">logfn</span>(<span class="ident">INFO</span>, <span class="ident">fmt</span> <span class="op">=</span> <span class="string">&quot;a + b = {}&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">logfn_inputs</span>(<span class="ident">Trace</span>, <span class="ident">fmt</span> <span class="op">=</span> <span class="string">&quot;adding a: {:?} and b: {:?}&quot;</span>)]</span>
+<span class="kw">fn</span> <span class="ident">addition</span>(<span class="ident">a</span>: <span class="ident">usize</span>, <span class="ident">b</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">usize</span> {
+    <span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>
+}
+
+<span class="attribute">#[<span class="ident">logfn_inputs</span>(<span class="ident">Info</span>)]</span>
+<span class="attribute">#[<span class="ident">logfn</span>(<span class="ident">ok</span> <span class="op">=</span> <span class="string">&quot;TRACE&quot;</span>, <span class="ident">log_ts</span> <span class="op">=</span> <span class="bool-val">true</span>)]</span>
+<span class="kw">fn</span> <span class="ident">time_this</span>(<span class="ident">num</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Success</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">if</span> <span class="ident">num</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="number">10</span> <span class="op">&amp;&amp;</span> <span class="ident">num</span>.<span class="ident">len</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="number">15</span> {
+       <span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>));
+        <span class="prelude-val">Ok</span>(<span class="ident">Success</span>)
+    } <span class="kw">else</span> {
+        <span class="prelude-val">Err</span>(<span class="ident">Error</span>)
+    }
+}
+</pre></div>
+</div><h2 id="attributes" class="section-header"><a href="#attributes">Attribute Macros</a></h2>
+<table><tr class="module-item"><td><a class="attr" href="attr.logfn.html" title="log_derive::logfn attr">logfn</a></td><td class="docblock-short"><p>Logs the result of the function it's above.</p>
+</td></tr><tr class="module-item"><td><a class="attr" href="attr.logfn_inputs.html" title="log_derive::logfn_inputs attr">logfn_inputs</a></td><td class="docblock-short"><p>Logs the inputs of the function</p>
+</td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../";window.currentCrate = "log_derive";</script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
