@@ -20,7 +20,7 @@ jobs:
             curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/rustc-dev
           )"
           echo "The updated version of rustc is $NIGHTLY_VERSION"
-          echo "$NIGHTLY_VERSION" > rust-toolchain
+          sed -i 's/^channel\s*=.*$/channel = "'"$NIGHTLY_VERSION"'"/' rust-toolchain
           DEVELOPER="vakaras"
           echo "NIGHTLY_VERSION=$NIGHTLY_VERSION" >> $GITHUB_ENV
           echo "DEVELOPER=$DEVELOPER" >> $GITHUB_ENV

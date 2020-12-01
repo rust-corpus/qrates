@@ -72,7 +72,8 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         def_id: types::DefPath,
         name: &str,
         visibility: types::Visibility,
-        module: &'tcx hir::ForeignMod,
+        abi: &'tcx rustc_target::spec::abi::Abi,
+        items: &'tcx [rustc_hir::ForeignItemRef],
         id: HirId,
     ) {
         let parent_module = self.current_module;
@@ -81,11 +82,11 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
             parent_module,
             name.to_string(),
             visibility,
-            module.abi.to_string(),
+            abi.to_string(),
         );
         self.current_module = new_module;
         self.visit_id(id);
-        rustc_ast::walk_list!(self, visit_foreign_item, module.items);
+        rustc_ast::walk_list!(self, visit_foreign_item_ref, items);
         self.current_module = parent_module;
     }
     fn visit_static(
@@ -165,8 +166,8 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                 // This avoids visiting the root module.
                 self.visit_submodule(def_path, name, visibility, module, item.hir_id);
             }
-            hir::ItemKind::ForeignMod(ref module) => {
-                self.visit_foreign_submodule(def_path, name, visibility, module, item.hir_id);
+            hir::ItemKind::ForeignMod{ ref abi, ref items } => {
+                self.visit_foreign_submodule(def_path, name, visibility, abi, items, item.hir_id);
             }
             hir::ItemKind::Static(ref typ, ref mutability, body_id) => {
                 self.visit_static(
