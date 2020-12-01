@@ -23,14 +23,6 @@ cd qrates
 git submodule update --init
 ```
 
-Add the missing components (we need them because the extractor uses the Rust compiler as a library):
-
-```bash
-rustup component add rustc-dev
-rustup component add rust-src
-rustup component add llvm-tools-preview
-```
-
 Build the project in release mode:
 
 ```bash
