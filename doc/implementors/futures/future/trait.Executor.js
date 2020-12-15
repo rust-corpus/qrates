@@ -1,6 +1,0 @@
-(function() {var implementors = {};
-implementors["futures_cpupool"] = [{"text":"impl&lt;F&gt; Executor&lt;F&gt; for CpuPool <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;F: Future&lt;Item = (), Error = ()&gt; + Send + 'static,&nbsp;</span>","synthetic":false,"types":[]}];
-implementors["tokio_current_thread"] = [{"text":"impl&lt;F&gt; Executor&lt;F&gt; for TaskExecutor <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;F: Future&lt;Item = (), Error = ()&gt; + 'static,&nbsp;</span>","synthetic":false,"types":[]}];
-implementors["tokio_executor"] = [{"text":"impl&lt;T&gt; Executor&lt;T&gt; for DefaultExecutor <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Future&lt;Item = (), Error = ()&gt; + Send + 'static,&nbsp;</span>","synthetic":false,"types":[]}];
-implementors["tokio_threadpool"] = [{"text":"impl&lt;T&gt; Executor&lt;T&gt; for Sender <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: Future&lt;Item = (), Error = ()&gt; + Send + 'static,&nbsp;</span>","synthetic":false,"types":[]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
