@@ -7,17 +7,18 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
         with:
           submodules: recursive
 
-      - name: Setup Rust components
+      - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
-          components: rustfmt, rustc-dev
+          toolchain: stable
+          profile: minimal
 
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@v1
