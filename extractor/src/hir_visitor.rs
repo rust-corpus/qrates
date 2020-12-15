@@ -166,7 +166,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                 // This avoids visiting the root module.
                 self.visit_submodule(def_path, name, visibility, module, item.hir_id);
             }
-            hir::ItemKind::ForeignMod{ ref abi, ref items } => {
+            hir::ItemKind::ForeignMod { ref abi, ref items } => {
                 self.visit_foreign_submodule(def_path, name, visibility, abi, items, item.hir_id);
             }
             hir::ItemKind::Static(ref typ, ref mutability, body_id) => {
