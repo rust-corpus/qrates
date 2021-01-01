@@ -1,5 +1,5 @@
 // This file was originally taken from
-// https://raw.githubusercontent.com/rust-lang/rust/94d7660d59fadf0ec7887e7a82c32bf1d8f84fb4/src/librustc_mir/transform/check_unsafety.rs
+// https://raw.githubusercontent.com/rust-lang/rust/master/compiler/rustc_mir/src/transform/check_unsafety.rs
 //
 // This source code is licensed under the MIT or Apache 2 license found in
 // https://raw.githubusercontent.com/rust-lang/rust/ae1b871cca56613b1af1a5121dd24ac810ff4b89/LICENSE-MIT and
@@ -15,11 +15,11 @@ use rustc_hir::def_id::{DefId, LocalDefId};
 use rustc_hir::hir_id::HirId;
 use rustc_hir::intravisit;
 use rustc_hir::Node;
+use rustc_middle::bug;
 use rustc_middle::mir::visit::{MutatingUseContext, PlaceContext, Visitor};
 use rustc_middle::mir::*;
 use rustc_middle::ty::cast::CastTy;
 use rustc_middle::ty::{self, TyCtxt};
-use rustc_middle::{bug, span_bug};
 use rustc_session::lint::builtin::{SAFE_PACKED_BORROWS, UNSAFE_OP_IN_UNSAFE_FN, UNUSED_UNSAFE};
 use rustc_session::lint::Level;
 use rustc_span::symbol::sym;
@@ -198,6 +198,9 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
             self.check_mut_borrowing_layout_constrained_field(*place, context.is_mutating_use());
         }
 
+        // Check for borrows to packed fields.
+        // `is_disaligned` already traverses the place to consider all projections after the last
+        // `Deref`, so this only needs to be called once at the top level.
         if context.is_borrow() {
             if util::is_disaligned(self.tcx, self.body, self.param_env, *place) {
                 self.require_unsafe(
@@ -207,84 +210,105 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
             }
         }
 
-        for (i, elem) in place.projection.iter().enumerate() {
-            let proj_base = &place.projection[..i];
-            if context.is_borrow() {
-                if util::is_disaligned(self.tcx, self.body, self.param_env, *place) {
+        // Some checks below need the extra metainfo of the local declaration.
+        let decl = &self.body.local_decls[place.local];
+
+        // Check the base local: it might be an unsafe-to-access static. We only check derefs of the
+        // temporary holding the static pointer to avoid duplicate errors
+        // <https://github.com/rust-lang/rust/pull/78068#issuecomment-731753506>.
+        if decl.internal && place.projection.first() == Some(&ProjectionElem::Deref) {
+            // If the projection root is an artifical local that we introduced when
+            // desugaring `static`, give a more specific error message
+            // (avoid the general "raw pointer" clause below, that would only be confusing).
+            if let Some(box LocalInfo::StaticRef { def_id, .. }) = decl.local_info {
+                if self.tcx.is_mutable_static(def_id) {
                     self.require_unsafe(
-                        UnsafetyViolationKind::BorrowPacked,
-                        UnsafetyViolationDetails::BorrowOfPackedField,
+                        UnsafetyViolationKind::General,
+                        UnsafetyViolationDetails::UseOfMutableStatic,
                     );
+                    return;
+                } else if self.tcx.is_foreign_item(def_id) {
+                    self.require_unsafe(
+                        UnsafetyViolationKind::General,
+                        UnsafetyViolationDetails::UseOfExternStatic,
+                    );
+                    return;
                 }
             }
-            let source_info = self.source_info;
-            if let [] = proj_base {
-                let decl = &self.body.local_decls[place.local];
-                if decl.internal {
-                    if let Some(box LocalInfo::StaticRef { def_id, .. }) = decl.local_info {
-                        if self.tcx.is_mutable_static(def_id) {
-                            self.require_unsafe(
-                                UnsafetyViolationKind::General,
-                                UnsafetyViolationDetails::UseOfMutableStatic,
-                            );
-                            return;
-                        } else if self.tcx.is_foreign_item(def_id) {
-                            self.require_unsafe(
-                                UnsafetyViolationKind::General,
-                                UnsafetyViolationDetails::UseOfExternStatic,
-                            );
-                            return;
-                        }
+        }
+
+        // Check for raw pointer `Deref`.
+        for (base, proj) in place.iter_projections() {
+            if proj == ProjectionElem::Deref {
+                let source_info = self.source_info; // Backup source_info so we can restore it later.
+                if base.projection.is_empty() && decl.internal {
+                    // Internal locals are used in the `move_val_init` desugaring.
+                    // We want to check unsafety against the source info of the
+                    // desugaring, rather than the source info of the RHS.
+                    self.source_info = self.body.local_decls[place.local].source_info;
+                }
+                let base_ty = base.ty(self.body, self.tcx).ty;
+                if base_ty.is_unsafe_ptr() {
+                    self.require_unsafe(
+                        UnsafetyViolationKind::GeneralAndConstFn,
+                        UnsafetyViolationDetails::DerefOfRawPointer,
+                    )
+                }
+                self.source_info = source_info; // Restore backed-up source_info.
+            }
+        }
+
+        // Check for union fields. For this we traverse right-to-left, as the last `Deref` changes
+        // whether we *read* the union field or potentially *write* to it (if this place is being assigned to).
+        let mut saw_deref = false;
+        for (base, proj) in place.iter_projections().rev() {
+            if proj == ProjectionElem::Deref {
+                saw_deref = true;
+                continue;
+            }
+
+            let base_ty = base.ty(self.body, self.tcx).ty;
+            if base_ty.ty_adt_def().map_or(false, |adt| adt.is_union()) {
+                // If we did not hit a `Deref` yet and the overall place use is an assignment, the
+                // rules are different.
+                let assign_to_field = !saw_deref
+                    && matches!(
+                        context,
+                        PlaceContext::MutatingUse(
+                            MutatingUseContext::Store
+                                | MutatingUseContext::Drop
+                                | MutatingUseContext::AsmOutput
+                        )
+                    );
+                // If this is just an assignment, determine if the assigned type needs dropping.
+                if assign_to_field {
+                    // We have to check the actual type of the assignment, as that determines if the
+                    // old value is being dropped.
+                    let assigned_ty = place.ty(&self.body.local_decls, self.tcx).ty;
+                    // To avoid semver hazard, we only consider `Copy` and `ManuallyDrop` non-dropping.
+                    let manually_drop = assigned_ty
+                        .ty_adt_def()
+                        .map_or(false, |adt_def| adt_def.is_manually_drop());
+                    let nodrop = manually_drop
+                        || assigned_ty.is_copy_modulo_regions(
+                            self.tcx.at(self.source_info.span),
+                            self.param_env,
+                        );
+                    if !nodrop {
+                        self.require_unsafe(
+                            UnsafetyViolationKind::GeneralAndConstFn,
+                            UnsafetyViolationDetails::AssignToDroppingUnionField,
+                        );
                     } else {
-                        // Internal locals are used in the `move_val_init` desugaring.
-                        // We want to check unsafety against the source info of the
-                        // desugaring, rather than the source info of the RHS.
-                        self.source_info = self.body.local_decls[place.local].source_info;
+                        // write to non-drop union field, safe
                     }
+                } else {
+                    self.require_unsafe(
+                        UnsafetyViolationKind::GeneralAndConstFn,
+                        UnsafetyViolationDetails::AccessToUnionField,
+                    )
                 }
             }
-            let base_ty = Place::ty_from(place.local, proj_base, self.body, self.tcx).ty;
-            match base_ty.kind() {
-                ty::RawPtr(..) => self.require_unsafe(
-                    UnsafetyViolationKind::General,
-                    UnsafetyViolationDetails::DerefOfRawPointer,
-                ),
-                ty::Adt(adt, _) => {
-                    if adt.is_union() {
-                        if context == PlaceContext::MutatingUse(MutatingUseContext::Store)
-                            || context == PlaceContext::MutatingUse(MutatingUseContext::Drop)
-                            || context == PlaceContext::MutatingUse(MutatingUseContext::AsmOutput)
-                        {
-                            let elem_ty = match elem {
-                                ProjectionElem::Field(_, ty) => ty,
-                                _ => span_bug!(
-                                    self.source_info.span,
-                                    "non-field projection {:?} from union?",
-                                    place
-                                ),
-                            };
-                            if !elem_ty.is_copy_modulo_regions(
-                                self.tcx.at(self.source_info.span),
-                                self.param_env,
-                            ) {
-                                self.require_unsafe(
-                                    UnsafetyViolationKind::GeneralAndConstFn,
-                                    UnsafetyViolationDetails::AssignToNonCopyUnionField,
-                                )
-                            } else {
-                                // write to non-move union, safe
-                            }
-                        } else {
-                            self.require_unsafe(
-                                UnsafetyViolationKind::GeneralAndConstFn,
-                                UnsafetyViolationDetails::AccessToUnionField,
-                            )
-                        }
-                    }
-                }
-                _ => {}
-            }
-            self.source_info = source_info;
         }
     }
 }
