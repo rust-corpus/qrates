@@ -227,8 +227,8 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 ty::TyKind::Dynamic(binder, _region) => {
                     let interned_type = self.insert_new_type_into_table("Dynamic", typ);
                     self.tables.register_types_dynamic(interned_type);
-                    for predicate in binder.skip_binder().iter() {
-                        match predicate {
+                    for predicate in binder.iter() {
+                        match predicate.skip_binder() {
                             ty::ExistentialPredicate::Trait(trait_ref) => {
                                 let def_path = self.resolve_def_id(trait_ref.def_id);
                                 self.tables.register_types_dynamic_trait(
