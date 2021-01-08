@@ -18,7 +18,7 @@ path = "src/main.rs"
 corpus-extractor = { path = "../extractor" }
 corpus-database = { path = "../database" }
 corpus-queries-derive = { path = "../queries-derive" }
-datapond-derive = { path = "../datapond/datapond-derive" }
+datapond-derive = { git = "https://github.com/vakaras/datapond.git", branch = "new-generator" }
 structopt = "0.3"
 color-backtrace = "0.3"
 log = "0.4"
