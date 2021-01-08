@@ -426,7 +426,7 @@ dependencies = [
  "corpus-database",
  "lazy_static",
  "log",
- "log-derive 0.3.2",
+ "log-derive",
  "toml",
 ]
 
@@ -447,7 +447,7 @@ dependencies = [
  "failure",
  "itertools",
  "log",
- "log-derive 0.4.1",
+ "log-derive",
  "nix 0.14.1",
  "reqwest 0.10.10",
  "rustwide",
@@ -1485,19 +1485,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fabed175da42fed1fa0746b0ea71f412aa9d35e76e95e59b192c64b9dc2bf8b"
 dependencies = [
  "cfg-if 0.1.10",
-]
-
-[[package]]
-name = "log-derive"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c7f436d3b5b51857b145075009f3a0d88dd37d2e93f42bb227045f4562a131e"
-dependencies = [
- "darling",
- "log",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
