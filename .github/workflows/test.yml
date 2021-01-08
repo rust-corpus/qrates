@@ -34,3 +34,7 @@ jobs:
         mkdir ../workspace
         cp CrateList-example.json CrateList.json
         cargo run -- compile
+    - name: Create a database
+      run: cargo run --release -- update-database
+    - name: Run existing queries
+      run: cargo run --release -- query all
