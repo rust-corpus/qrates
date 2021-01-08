@@ -21,8 +21,6 @@ jobs:
         profile: minimal
     - name: Check out the repo
       uses: actions/checkout@v2
-      with:
-        submodules: recursive
     - name: Build with cargo
       run: cargo build --all --verbose
     - name: Run cargo tests
@@ -31,3 +29,8 @@ jobs:
       run: cargo fmt -- --check
     - name: Check extractor
       run: python3 extractor-test/test_extractor.py
+    - name: Compile the example packages
+      run: |
+        mkdir ../workspace
+        cp CrateList-example.json CrateList.json
+        cargo run -- compile
