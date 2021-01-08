@@ -1,1 +1,0 @@
-initSidebarItems({"enum":[["Identifier",""]],"fn":[["parse",""]],"struct":[["Version",""]]});
