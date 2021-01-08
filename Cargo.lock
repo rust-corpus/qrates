@@ -419,7 +419,7 @@ dependencies = [
  "itertools",
  "log",
  "log-derive",
- "nix 0.14.1",
+ "nix 0.19.1",
  "reqwest 0.10.10",
  "rustwide",
  "semver",
@@ -1621,15 +1621,14 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.14.1"
+version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c722bee1037d430d0f8e687bbdbf222f27cc6e4e68d5caf630857bb2b6dbdce"
+checksum = "b2ccba0cfe4fdf15982d1674c69b1fd80bad427d293849982668dfe454bd61f2"
 dependencies = [
  "bitflags",
  "cc",
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "libc",
- "void",
 ]
 
 [[package]]
