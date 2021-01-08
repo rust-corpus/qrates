@@ -20,7 +20,7 @@ corpus-database = { path = "../database" }
 corpus-queries-derive = { path = "../queries-derive" }
 datapond-derive = { git = "https://github.com/vakaras/datapond.git", branch = "new-generator" }
 structopt = "0.3"
-color-backtrace = "0.3"
+color-backtrace = "0.5"
 log = "0.4"
 simplelog = "0.7"
 chrono = "0.4"

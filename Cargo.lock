@@ -301,9 +301,9 @@ dependencies = [
 
 [[package]]
 name = "color-backtrace"
-version = "0.3.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65d13f1078cc63c791d0deba0dd43db37c9ec02b311f10bed10b577016f3a957"
+checksum = "54d692cadb16939b888c8232945dec39372207dd6893d19f536e318d14dc1468"
 dependencies = [
  "atty",
  "backtrace",
