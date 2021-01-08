@@ -53,7 +53,7 @@ cargo run --release -- compile
 This command may fail with a permission error if the user does not have the necessary permissions to communicate with the Docker manager. In that case, use `sudo`:
 
 ```bash
-sudo $(which cargo) run --release -- compile
+sudo env "PATH=$PATH" $(which cargo) run --release -- compile
 ```
 
 Attempting to compile all packages from crates.io on Lenovo ThinkPad T470p takes about a week. You can check how many packages already successfully compiled by running the following command:
