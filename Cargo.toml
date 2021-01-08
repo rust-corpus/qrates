@@ -4,9 +4,6 @@ members = [
     "database-dsl",
     "extractor",
     "manager",
-    "datapond",
-    "datapond/datapond-macro",
-    "datapond/datapond-derive",
     "queries-impl",
     "queries-derive",
 ]
