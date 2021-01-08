@@ -191,7 +191,23 @@ fn main() {
                 let mut contents = String::new();
                 file.read_to_string(&mut contents)
                     .expect("Failed to read “rust-toolchain”.");
-                contents.trim().to_string()
+                let toolchain_toml = contents
+                    .parse::<toml::Value>()
+                    .expect("Failed to parse “rust-toolchain” as toml value");
+                if let toml::Value::Table(table) = toolchain_toml {
+                    if let Some(toml::Value::Table(toolchain_table)) = table.get("toolchain") {
+                        if let Some(toml::Value::String(toolchain)) = toolchain_table.get("channel")
+                        {
+                            toolchain.to_owned()
+                        } else {
+                            panic!("Missing “channel” key in the “rust-toolchain” file.")
+                        }
+                    } else {
+                        panic!("Missing “toolchain” table in the “rust-toolchain” file.")
+                    }
+                } else {
+                    panic!("“rust-toolchain” file has to be a table")
+                }
             };
             let memory_limit = if memory_limit == 0 {
                 None
