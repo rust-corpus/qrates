@@ -1,0 +1,4 @@
+(function() {var implementors = {};
+implementors["tokio_process"] = [{"text":"impl AsyncWrite for ChildStdin","synthetic":false,"types":[]}];
+implementors["tokio_reactor"] = [{"text":"impl&lt;E&gt; AsyncWrite for PollEvented&lt;E&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;E: Evented + Write,&nbsp;</span>","synthetic":false,"types":[]},{"text":"impl&lt;'a, E&gt; AsyncWrite for &amp;'a PollEvented&lt;E&gt; <span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;E: Evented,<br>&nbsp;&nbsp;&nbsp;&nbsp;&amp;'a E: Write,&nbsp;</span>","synthetic":false,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
