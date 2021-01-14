@@ -16,7 +16,7 @@ bincode = "1.1.4"
 log = "0.4"
 
 [dev-dependencies]
-rand = "0.8.1"
+rand = "0.8.2"
 
 [build-dependencies]
 corpus-database-dsl = { path = "../database-dsl" }
