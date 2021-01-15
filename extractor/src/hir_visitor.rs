@@ -13,7 +13,7 @@ use rustc_hir::{
 };
 use rustc_middle::hir::map::Map as HirMap;
 use rustc_middle::mir::{self, HasLocalDecls};
-use rustc_middle::ty::TyCtxt;
+use rustc_middle::ty::{TyCtxt, WithOptConstParam};
 use rustc_session::Session;
 use rustc_span::source_map::Span;
 use std::mem;
@@ -191,14 +191,14 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     *body_id,
                 );
             }
-            hir::ItemKind::Impl {
+            hir::ItemKind::Impl(hir::Impl {
                 unsafety,
                 polarity,
                 defaultness,
                 constness,
                 of_trait,
                 ..
-            } => {
+            }) => {
                 let interned_type = self.filler.register_type(self.tcx.type_of(def_id));
                 let (item_id,) = self.filler.tables.register_impl_definitions(
                     def_path,
@@ -412,7 +412,12 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         intravisit::walk_body(self, body);
         let id = body.id();
         let owner = self.hir_map.body_owner_def_id(id);
-        let mir_body = self.tcx.optimized_mir(owner);
+        let mir_body =
+            if let Some((did, param_did)) = WithOptConstParam::try_lookup(owner, self.tcx) {
+                self.tcx.mir_for_ctfe_of_const_arg((did, param_did))
+            } else {
+                self.tcx.optimized_mir(owner)
+            };
         self.visit_mir(owner, mir_body);
     }
     fn nested_visit_map<'this>(&'this mut self) -> intravisit::NestedVisitorMap<Self::Map> {
