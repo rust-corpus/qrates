@@ -1,1 +1,0 @@
-initSidebarItems({"constant":[["CRATES_IO_INDEX",""],["CRATES_IO_REGISTRY",""]],"enum":[["MaybeLock",""]],"struct":[["RegistryConfig",""],["RegistryPackage",""],["RegistrySource",""]],"trait":[["RegistryData",""]]});
