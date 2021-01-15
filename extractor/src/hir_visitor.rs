@@ -412,12 +412,11 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         intravisit::walk_body(self, body);
         let id = body.id();
         let owner = self.hir_map.body_owner_def_id(id);
-        let mir_body =
-            if let Some((did, param_did)) = WithOptConstParam::try_lookup(owner, self.tcx) {
-                self.tcx.mir_for_ctfe_of_const_arg((did, param_did))
-            } else {
-                self.tcx.optimized_mir(owner)
-            };
+        let mir_body = if self.tcx.is_ctfe_mir_available(owner) {
+            self.tcx.mir_for_ctfe(owner)
+        } else {
+            self.tcx.optimized_mir(owner)
+        };
         self.visit_mir(owner, mir_body);
     }
     fn nested_visit_map<'this>(&'this mut self) -> intravisit::NestedVisitorMap<Self::Map> {
