@@ -413,7 +413,9 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         let id = body.id();
         let owner = self.hir_map.body_owner_def_id(id);
         let mir_body = if self.tcx.is_ctfe_mir_available(owner) {
-            self.tcx.mir_for_ctfe(owner)
+            // TODO: Figure out how to avoid this panicking
+            // self.tcx.mir_for_ctfe(owner).
+            return;
         } else {
             self.tcx.optimized_mir(owner)
         };
