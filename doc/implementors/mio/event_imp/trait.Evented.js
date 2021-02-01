@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["mio_uds"] = [{"text":"impl Evented for UnixDatagram","synthetic":false,"types":[]},{"text":"impl Evented for UnixListener","synthetic":false,"types":[]},{"text":"impl Evented for UnixStream","synthetic":false,"types":[]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

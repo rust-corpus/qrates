@@ -1,1 +1,0 @@
-initSidebarItems({"struct":[["Counters","Counters for generating unique identifiers."],["InterningTables","Interning tables."],["Loader",""],["Relations","Relations between various entities of the Rust program."],["TableMerger",""],["Tables",""]]});
