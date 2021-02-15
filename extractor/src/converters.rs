@@ -3,7 +3,6 @@
 // modified, or distributed except according to those terms.
 
 use corpus_database::types;
-use rustc_ast::ast;
 use rustc_hir as hir;
 use rustc_middle::{mir, ty};
 
@@ -198,24 +197,24 @@ impl<'tcx> ConvertInto<types::TyPrimitive> for ty::TyKind<'tcx> {
             ty::TyKind::Bool => Bool,
             ty::TyKind::Char => Char,
             ty::TyKind::Int(int_ty) => match int_ty {
-                ast::IntTy::Isize => Isize,
-                ast::IntTy::I8 => I8,
-                ast::IntTy::I16 => I16,
-                ast::IntTy::I32 => I32,
-                ast::IntTy::I64 => I64,
-                ast::IntTy::I128 => I128,
+                ty::IntTy::Isize => Isize,
+                ty::IntTy::I8 => I8,
+                ty::IntTy::I16 => I16,
+                ty::IntTy::I32 => I32,
+                ty::IntTy::I64 => I64,
+                ty::IntTy::I128 => I128,
             },
             ty::TyKind::Uint(uint_ty) => match uint_ty {
-                ast::UintTy::Usize => Usize,
-                ast::UintTy::U8 => U8,
-                ast::UintTy::U16 => U16,
-                ast::UintTy::U32 => U32,
-                ast::UintTy::U64 => U64,
-                ast::UintTy::U128 => U128,
+                ty::UintTy::Usize => Usize,
+                ty::UintTy::U8 => U8,
+                ty::UintTy::U16 => U16,
+                ty::UintTy::U32 => U32,
+                ty::UintTy::U64 => U64,
+                ty::UintTy::U128 => U128,
             },
             ty::TyKind::Float(float_ty) => match float_ty {
-                ast::FloatTy::F32 => F32,
-                ast::FloatTy::F64 => F64,
+                ty::FloatTy::F32 => F32,
+                ty::FloatTy::F64 => F64,
             },
             ty::TyKind::Str => Str,
             ty::TyKind::Never => Never,

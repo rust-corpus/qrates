@@ -13,7 +13,7 @@ use rustc_hir::{
 };
 use rustc_middle::hir::map::Map as HirMap;
 use rustc_middle::mir::{self, HasLocalDecls};
-use rustc_middle::ty::{TyCtxt, WithOptConstParam};
+use rustc_middle::ty::TyCtxt;
 use rustc_session::Session;
 use rustc_span::source_map::Span;
 use std::mem;
