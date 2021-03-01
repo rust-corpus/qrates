@@ -159,15 +159,15 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
     fn visit_item(&mut self, item: &'tcx hir::Item) {
         let name: &str = &item.ident.name.as_str();
         let visibility: types::Visibility = item.vis.convert_into();
-        let def_path = self.filler.resolve_hir_id(item.hir_id);
-        let def_id = self.hir_map.local_def_id(item.hir_id);
+        let def_path = self.filler.resolve_hir_id(item.hir_id());
+        let def_id = self.hir_map.local_def_id(item.hir_id());
         match &item.kind {
             hir::ItemKind::Mod(ref module) => {
                 // This avoids visiting the root module.
-                self.visit_submodule(def_path, name, visibility, module, item.hir_id);
+                self.visit_submodule(def_path, name, visibility, module, item.hir_id());
             }
             hir::ItemKind::ForeignMod { ref abi, ref items } => {
-                self.visit_foreign_submodule(def_path, name, visibility, abi, items, item.hir_id);
+                self.visit_foreign_submodule(def_path, name, visibility, abi, items, item.hir_id());
             }
             hir::ItemKind::Static(ref typ, ref mutability, body_id) => {
                 self.visit_static(
@@ -176,7 +176,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     visibility,
                     mutability.convert_into(),
                     typ,
-                    item.hir_id,
+                    item.hir_id(),
                     *body_id,
                 );
             }
@@ -187,7 +187,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     visibility,
                     types::Mutability::Const,
                     typ,
-                    item.hir_id,
+                    item.hir_id(),
                     *body_id,
                 );
             }
@@ -284,7 +284,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     unsafety.convert_into(),
                 );
                 for trait_item in *trait_items {
-                    let trait_item_def_path = self.filler.resolve_hir_id(trait_item.id.hir_id);
+                    let trait_item_def_path = self.filler.resolve_hir_id(trait_item.id.hir_id());
                     self.filler.tables.register_trait_items(
                         item_id,
                         trait_item_def_path,
@@ -361,11 +361,11 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         }
     }
     fn visit_foreign_item(&mut self, item: &'tcx hir::ForeignItem) {
-        let def_path = self.filler.resolve_hir_id(item.hir_id);
+        let def_path = self.filler.resolve_hir_id(item.hir_id());
         let visibility = item.vis.convert_into();
         let item_id = match item.kind {
             hir::ForeignItemKind::Fn(..) => {
-                let def_id = self.hir_map.local_def_id(item.hir_id);
+                let def_id = self.hir_map.local_def_id(item.hir_id());
                 let fn_sig = self.tcx.fn_sig(def_id);
                 let fn_sig = fn_sig.skip_binder();
                 let return_type = self.filler.register_type(fn_sig.output());
