@@ -322,7 +322,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         let def_path = self.filler.resolve_hir_id(id);
         let (param_types, return_type) = self.get_fn_param_and_return_types(id);
         let (function,) = match fn_kind {
-            intravisit::FnKind::Method(_name, method_sig, visibility, _attributes) => {
+            intravisit::FnKind::Method(_name, method_sig, visibility) => {
                 self.filler.tables.register_function_definitions(
                     def_path,
                     self.current_module,
@@ -332,7 +332,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     return_type,
                 )
             }
-            intravisit::FnKind::ItemFn(_name, _generics, header, visibility, _block) => {
+            intravisit::FnKind::ItemFn(_name, _generics, header, visibility) => {
                 self.filler.tables.register_function_definitions(
                     def_path,
                     self.current_module,
@@ -342,7 +342,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     return_type,
                 )
             }
-            intravisit::FnKind::Closure(_) => self.filler.tables.register_function_definitions(
+            intravisit::FnKind::Closure => self.filler.tables.register_function_definitions(
                 def_path,
                 self.current_module,
                 types::Visibility::Unknown,
