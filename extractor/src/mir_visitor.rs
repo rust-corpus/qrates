@@ -199,7 +199,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         );
                         (stmt, "Assign/Cast")
                     }
-                    mir::Rvalue::BinaryOp(op, first, second) => {
+                    mir::Rvalue::BinaryOp(op, box (first, second)) => {
                         let first_interned_operand = self.visit_operand(first);
                         let second_interned_operand = self.visit_operand(second);
                         let (stmt,) = self.filler.tables.register_statements_assign_binary_op(
@@ -210,7 +210,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         );
                         (stmt, "Assign/BinaryOp")
                     }
-                    mir::Rvalue::CheckedBinaryOp(op, first, second) => {
+                    mir::Rvalue::CheckedBinaryOp(op, box (first, second)) => {
                         let first_interned_operand = self.visit_operand(first);
                         let second_interned_operand = self.visit_operand(second);
                         let (stmt,) = self
@@ -309,6 +309,10 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
             mir::StatementKind::Coverage(..) => {
                 (self.filler.tables.get_fresh_statement(), "Coverage")
             }
+            mir::StatementKind::CopyNonOverlapping(..) => (
+                self.filler.tables.get_fresh_statement(),
+                "CopyNonOverlapping",
+            ),
             mir::StatementKind::Nop => (self.filler.tables.get_fresh_statement(), "Nop"),
         };
         (stmt, kind.to_string())
