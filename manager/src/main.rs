@@ -157,8 +157,12 @@ fn main() {
                 fs::File::create(&trace_log_file).unwrap(),
             ),
         ];
-        let term_logger =
-            TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed);
+        let term_logger = TermLogger::new(
+            LevelFilter::Info,
+            Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        );
         loggers.push(term_logger as Box<dyn SharedLogger>);
         let logger = CombinedLogger::new(loggers);
         rustwide::logging::init_with(*logger);
