@@ -450,7 +450,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 }
                 match func {
                     mir::Operand::Constant(constant) => {
-                        match constant.literal.ty.kind() {
+                        match constant.literal.ty().kind() {
                             ty::TyKind::FnDef(target_id, substs) => {
                                 let generics = self.tcx.generics_of(*target_id);
                                 if generics.has_self {
