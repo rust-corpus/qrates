@@ -1,0 +1,1 @@
+initSidebarItems({"attr":[["logfn","Logs the result of the function it’s above."],["logfn_inputs","Logs the inputs of the function"]]});
