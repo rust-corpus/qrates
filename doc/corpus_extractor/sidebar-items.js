@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["analyse",""],["override_queries",""],["save_cfg_configuration","Save `cfg!` configuration."]]});
