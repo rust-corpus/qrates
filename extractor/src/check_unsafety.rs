@@ -20,7 +20,6 @@ use rustc_middle::mir::visit::{MutatingUseContext, PlaceContext, Visitor};
 use rustc_middle::mir::*;
 use rustc_middle::ty::cast::CastTy;
 use rustc_middle::ty::{self, TyCtxt};
-use rustc_mir::const_eval::is_min_const_fn;
 use rustc_session::lint::builtin::{UNSAFE_OP_IN_UNSAFE_FN, UNUSED_UNSAFE};
 use rustc_session::lint::Level;
 use rustc_span::symbol::sym;
@@ -30,7 +29,6 @@ pub struct UnsafetyChecker<'a, 'tcx> {
     body: &'a Body<'tcx>,
     body_did: LocalDefId,
     const_context: bool,
-    min_const_fn: bool,
     violations: Vec<UnsafetyViolation>,
     source_info: SourceInfo,
     tcx: TyCtxt<'tcx>,
@@ -46,21 +44,16 @@ pub struct UnsafetyChecker<'a, 'tcx> {
 impl<'a, 'tcx> UnsafetyChecker<'a, 'tcx> {
     fn new(
         const_context: bool,
-        min_const_fn: bool,
         body: &'a Body<'tcx>,
         body_did: LocalDefId,
         tcx: TyCtxt<'tcx>,
         param_env: ty::ParamEnv<'tcx>,
     ) -> Self {
         // sanity check
-        if min_const_fn {
-            assert!(const_context);
-        }
         Self {
             body,
             body_did,
             const_context,
-            min_const_fn,
             violations: vec![],
             source_info: SourceInfo::outermost(body.span),
             tcx,
@@ -98,7 +91,7 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
                 let sig = func_ty.fn_sig(self.tcx);
                 if let hir::Unsafety::Unsafe = sig.unsafety() {
                     self.require_unsafe(
-                        UnsafetyViolationKind::GeneralAndConstFn,
+                        UnsafetyViolationKind::General,
                         UnsafetyViolationDetails::CallToUnsafeFunction,
                     )
                 }
@@ -148,7 +141,7 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
                     match self.tcx.layout_scalar_valid_range(def.did) {
                         (Bound::Unbounded, Bound::Unbounded) => {}
                         _ => self.require_unsafe(
-                            UnsafetyViolationKind::GeneralAndConstFn,
+                            UnsafetyViolationKind::General,
                             UnsafetyViolationDetails::InitializingTypeWith,
                         ),
                     }
@@ -229,7 +222,7 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
                 let base_ty = base.ty(self.body, self.tcx).ty;
                 if base_ty.is_unsafe_ptr() {
                     self.require_unsafe(
-                        UnsafetyViolationKind::GeneralAndConstFn,
+                        UnsafetyViolationKind::General,
                         UnsafetyViolationDetails::DerefOfRawPointer,
                     )
                 }
@@ -274,7 +267,7 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
                         );
                     if !nodrop {
                         self.require_unsafe(
-                            UnsafetyViolationKind::GeneralAndConstFn,
+                            UnsafetyViolationKind::General,
                             UnsafetyViolationDetails::AssignToDroppingUnionField,
                         );
                     } else {
@@ -282,7 +275,7 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
                     }
                 } else {
                     self.require_unsafe(
-                        UnsafetyViolationKind::GeneralAndConstFn,
+                        UnsafetyViolationKind::General,
                         UnsafetyViolationDetails::AccessToUnionField,
                     )
                 }
@@ -325,8 +318,7 @@ impl<'a, 'tcx> UnsafetyChecker<'a, 'tcx> {
             Safety::Safe => {
                 for violation in violations {
                     match violation.kind {
-                        UnsafetyViolationKind::GeneralAndConstFn
-                        | UnsafetyViolationKind::General => {}
+                        UnsafetyViolationKind::General => {}
                         UnsafetyViolationKind::UnsafeFn => {
                             bug!("`UnsafetyViolationKind::UnsafeFn` in an `Safe` context")
                         }
@@ -355,29 +347,6 @@ impl<'a, 'tcx> UnsafetyChecker<'a, 'tcx> {
                 // mark unsafe block as used if there are any unsafe operations inside
                 if !violations.is_empty() {
                     self.used_unsafe.insert(hir_id);
-                }
-                // only some unsafety is allowed in const fn
-                if self.min_const_fn {
-                    for violation in violations {
-                        match violation.kind {
-                            // these unsafe things are stable in const fn
-                            UnsafetyViolationKind::GeneralAndConstFn => {}
-                            // these things are forbidden in const fns
-                            UnsafetyViolationKind::General => {
-                                let mut violation = *violation;
-                                // const fns don't need to be backwards compatible and can
-                                // emit these violations as a hard error instead of a backwards
-                                // compat lint
-                                violation.kind = UnsafetyViolationKind::General;
-                                if !self.violations.contains(&violation) {
-                                    self.violations.push(violation)
-                                }
-                            }
-                            UnsafetyViolationKind::UnsafeFn => bug!(
-                                "`UnsafetyViolationKind::UnsafeFn` in an `ExplicitUnsafe` context"
-                            ),
-                        }
-                    }
                 }
                 true
             }
@@ -422,7 +391,7 @@ impl<'a, 'tcx> UnsafetyChecker<'a, 'tcx> {
                             } else {
                                 continue;
                             };
-                            self.require_unsafe(UnsafetyViolationKind::GeneralAndConstFn, details);
+                            self.require_unsafe(UnsafetyViolationKind::General, details);
                         }
                     }
                 }
@@ -443,7 +412,7 @@ impl<'a, 'tcx> UnsafetyChecker<'a, 'tcx> {
             .all(|feature| self_features.contains(feature))
         {
             self.require_unsafe(
-                UnsafetyViolationKind::GeneralAndConstFn,
+                UnsafetyViolationKind::General,
                 UnsafetyViolationDetails::CallToFunctionWith,
             )
         }
@@ -515,16 +484,12 @@ pub(crate) fn unsafety_check_result<'tcx>(
     let param_env = tcx.param_env(def.did);
 
     let id = tcx.hir().local_def_id_to_hir_id(def.did);
-    let (const_context, min_const_fn) = match tcx.hir().body_owner_kind(id) {
-        hir::BodyOwnerKind::Closure => (false, false),
-        hir::BodyOwnerKind::Fn => (
-            tcx.is_const_fn_raw(def.did.to_def_id()),
-            is_min_const_fn(tcx, def.did.to_def_id()),
-        ),
-        hir::BodyOwnerKind::Const | hir::BodyOwnerKind::Static(_) => (true, false),
+    let const_context = match tcx.hir().body_owner_kind(id) {
+        hir::BodyOwnerKind::Closure => false,
+        hir::BodyOwnerKind::Fn => tcx.is_const_fn_raw(def.did.to_def_id()),
+        hir::BodyOwnerKind::Const | hir::BodyOwnerKind::Static(_) => true,
     };
-    let mut checker =
-        UnsafetyChecker::new(const_context, min_const_fn, body, def.did, tcx, param_env);
+    let mut checker = UnsafetyChecker::new(const_context, body, def.did, tcx, param_env);
     checker.visit_body(&body);
 
     check_unused_unsafe(
@@ -636,7 +601,7 @@ pub fn check_unsafety(tcx: TyCtxt<'_>, def_id: LocalDefId) {
         };
 
         match kind {
-            UnsafetyViolationKind::GeneralAndConstFn | UnsafetyViolationKind::General => {
+            UnsafetyViolationKind::General => {
                 // once
                 struct_span_err!(
                     tcx.sess,
