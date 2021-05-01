@@ -26,7 +26,10 @@ jobs:
     - name: Run cargo tests
       run: cargo test --all --verbose
     - name: Check formatting
-      run: cargo fmt -- --check
+      run: |
+        if rustfmt --help ; then
+          cargo fmt -- --check
+        fi
     - name: Check extractor
       run: python3 extractor-test/test_extractor.py
     - name: Compile the example packages
