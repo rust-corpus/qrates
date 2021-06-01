@@ -88,16 +88,16 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 call_site_span,
                 expansion_data.kind.convert_into(),
                 expansion_data.kind.descr().to_string(),
-                location.file.name.to_string(),
+                location.file.name.prefer_remapped().to_string(),
                 location.line as u16,
                 location.col.to_usize() as u16,
             );
-            if let ExpnKind::Macro(_, symbol) = expansion_data.kind {
+            if let ExpnKind::Macro { name: symbol, .. } = expansion_data.kind {
                 let def_site_location = source_map.lookup_char_pos(expansion_data.def_site.lo());
                 self.tables.register_macro_expansions(
                     interned_span,
                     symbol.to_string(),
-                    def_site_location.file.name.to_string(),
+                    def_site_location.file.name.prefer_remapped().to_string(),
                     def_site_location.line as u16,
                     def_site_location.col.to_usize() as u16,
                 );
