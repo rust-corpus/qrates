@@ -9,4 +9,4 @@ queries/corpus_queries_ddlog/
 executor/src/query.rs
 queries/corpus_queries.dl
 *.swp
-
+*.bincode
