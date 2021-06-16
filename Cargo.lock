@@ -407,7 +407,7 @@ dependencies = [
  "simplelog",
  "structopt",
  "tempdir",
- "tokio 1.6.2",
+ "tokio 1.7.0",
  "tokio-process",
  "toml",
  "walkdir",
@@ -983,7 +983,7 @@ dependencies = [
  "http",
  "indexmap",
  "slab",
- "tokio 1.6.2",
+ "tokio 1.7.0",
  "tokio-util 0.6.0",
  "tracing",
  "tracing-futures",
@@ -1128,7 +1128,7 @@ dependencies = [
  "itoa",
  "pin-project 1.0.3",
  "socket2",
- "tokio 1.6.2",
+ "tokio 1.7.0",
  "tower-service",
  "tracing",
  "want",
@@ -1156,7 +1156,7 @@ dependencies = [
  "bytes 1.0.0",
  "hyper 0.14.2",
  "native-tls",
- "tokio 1.6.2",
+ "tokio 1.7.0",
  "tokio-native-tls",
 ]
 
@@ -2043,7 +2043,7 @@ dependencies = [
  "pin-project-lite 0.2.1",
  "serde",
  "serde_urlencoded",
- "tokio 1.6.2",
+ "tokio 1.7.0",
  "tokio-native-tls",
  "url",
  "wasm-bindgen",
@@ -2513,9 +2513,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.6.2"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aea337f72e96efe29acc234d803a5981cd9a2b6ed21655cd7fc21cfe021e8ec7"
+checksum = "c79ba603c337335df6ba6dd6afc38c38a7d5e1b0c871678439ea973cd62a118e"
 dependencies = [
  "autocfg",
  "bytes 1.0.0",
@@ -2524,6 +2524,7 @@ dependencies = [
  "mio 0.7.7",
  "num_cpus",
  "pin-project-lite 0.2.1",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -2554,7 +2555,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7d995660bd2b7f8c1568414c1126076c13fbb725c40112dc0120b78eb9b717b"
 dependencies = [
  "native-tls",
- "tokio 1.6.2",
+ "tokio 1.7.0",
 ]
 
 [[package]]
@@ -2620,7 +2621,7 @@ checksum = "e4cdeb73537e63f98adcd73138af75e3f368ccaecffaa29d7eb61b9f5a440457"
 dependencies = [
  "futures-core",
  "pin-project-lite 0.2.1",
- "tokio 1.6.2",
+ "tokio 1.7.0",
 ]
 
 [[package]]
@@ -2668,7 +2669,7 @@ dependencies = [
  "futures-sink",
  "log",
  "pin-project-lite 0.2.1",
- "tokio 1.6.2",
+ "tokio 1.7.0",
  "tokio-stream",
 ]
 
