@@ -96,14 +96,6 @@ impl ConvertInto<types::BlockCheckMode> for hir::BlockCheckMode {
             DefaultBlock => types::BlockCheckMode::DefaultBlock,
             UnsafeBlock(CompilerGenerated) => types::BlockCheckMode::UnsafeBlockCompilerGenerated,
             UnsafeBlock(UserProvided) => types::BlockCheckMode::UnsafeBlockUserProvided,
-            PushUnsafeBlock(CompilerGenerated) => {
-                types::BlockCheckMode::PushUnsafeBlockCompilerGenerated
-            }
-            PushUnsafeBlock(UserProvided) => types::BlockCheckMode::PushUnsafeBlockUserProvided,
-            PopUnsafeBlock(CompilerGenerated) => {
-                types::BlockCheckMode::PopUnsafeBlockCompilerGenerated
-            }
-            PopUnsafeBlock(UserProvided) => types::BlockCheckMode::PopUnsafeBlockUserProvided,
         }
     }
 }
