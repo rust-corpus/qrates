@@ -18,7 +18,6 @@ use rustc_hir::Node;
 use rustc_middle::bug;
 use rustc_middle::mir::visit::{MutatingUseContext, PlaceContext, Visitor};
 use rustc_middle::mir::*;
-use rustc_middle::ty::cast::CastTy;
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_session::lint::builtin::{UNSAFE_OP_IN_UNSAFE_FN, UNUSED_UNSAFE};
 use rustc_session::lint::Level;
@@ -154,25 +153,6 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
                     self.register_violations(&violations, &unsafe_blocks);
                 }
             },
-            // casting pointers to ints is unsafe in const fn because the const evaluator cannot
-            // possibly know what the result of various operations like `address / 2` would be
-            // pointers during const evaluation have no integral address, only an abstract one
-            Rvalue::Cast(CastKind::Misc, ref operand, cast_ty)
-                if self.const_context && self.tcx.features().const_raw_ptr_to_usize_cast =>
-            {
-                let operand_ty = operand.ty(self.body, self.tcx);
-                let cast_in = CastTy::from_ty(operand_ty).expect("bad input type for cast");
-                let cast_out = CastTy::from_ty(cast_ty).expect("bad output type for cast");
-                match (cast_in, cast_out) {
-                    (CastTy::Ptr(_) | CastTy::FnPtr, CastTy::Int(_)) => {
-                        self.require_unsafe(
-                            UnsafetyViolationKind::General,
-                            UnsafetyViolationDetails::CastOfPointerToInt,
-                        );
-                    }
-                    _ => {}
-                }
-            }
             _ => {}
         }
         self.super_rvalue(rvalue, location);

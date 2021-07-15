@@ -57,18 +57,9 @@ impl ConvertInto<types::SpanExpansionKind> for rustc_span::hygiene::ExpnKind {
         use rustc_span::hygiene::MacroKind;
         match self {
             Root => types::SpanExpansionKind::Root,
-            Macro {
-                kind: MacroKind::Bang,
-                ..
-            } => types::SpanExpansionKind::MacroBang,
-            Macro {
-                kind: MacroKind::Attr,
-                ..
-            } => types::SpanExpansionKind::MacroAttr,
-            Macro {
-                kind: MacroKind::Derive,
-                ..
-            } => types::SpanExpansionKind::MacroDerive,
+            Macro(MacroKind::Bang, _) => types::SpanExpansionKind::MacroBang,
+            Macro(MacroKind::Attr, _) => types::SpanExpansionKind::MacroAttr,
+            Macro(MacroKind::Derive, _) => types::SpanExpansionKind::MacroDerive,
             AstPass(AstPass::StdImports) => types::SpanExpansionKind::AstPassStdImports,
             AstPass(AstPass::TestHarness) => types::SpanExpansionKind::AstPassTestHarness,
             AstPass(AstPass::ProcMacroHarness) => types::SpanExpansionKind::AstPassProcMacroHarness,
