@@ -297,6 +297,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
             }
             hir::ItemKind::ExternCrate(_)
             | hir::ItemKind::Use(_, _)
+            | hir::ItemKind::Macro(_)
             | hir::ItemKind::Fn(_, _, _)
             | hir::ItemKind::TraitAlias(_, _) => {
                 let (item_id,) = self.filler.tables.register_items(
