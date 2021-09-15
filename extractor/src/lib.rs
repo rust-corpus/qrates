@@ -14,7 +14,7 @@ extern crate rustc_hir;
 extern crate rustc_interface;
 extern crate rustc_metadata;
 extern crate rustc_middle;
-extern crate rustc_mir;
+extern crate rustc_mir_transform;
 extern crate rustc_session;
 extern crate rustc_span;
 extern crate rustc_target;
@@ -29,7 +29,6 @@ mod table_filler;
 use lazy_static::lazy_static;
 use rustc_data_structures::fx::FxHashSet;
 use rustc_hir::def_id::DefId;
-use rustc_hir::intravisit::walk_crate;
 use rustc_interface::interface::Compiler;
 use rustc_interface::Queries;
 use rustc_middle::ty::{self, query::Providers, TyCtxt};
@@ -114,11 +113,11 @@ fn analyse_with_tcx(name: String, tcx: TyCtxt, session: &Session) {
     }
 
     let hir_map = &tcx.hir();
-    let krate = hir_map.krate();
 
     let mut hir_visitor = hir_visitor::HirVisitor::new(tables, build, session, hir_map, tcx);
 
-    walk_crate(&mut hir_visitor, krate);
+    tcx.hir().walk_toplevel_module(&mut hir_visitor);
+    tcx.hir().walk_attributes(&mut hir_visitor);
 
     let mut filler = hir_visitor.filler();
 
@@ -202,7 +201,7 @@ fn unsafety_check_result<'tcx>(
     local_def_id: LocalDefId,
 ) -> &'tcx rustc_middle::mir::UnsafetyCheckResult {
     let mut providers = Providers::default();
-    rustc_mir::provide(&mut providers);
+    rustc_mir_transform::provide(&mut providers);
     let original_unsafety_check_result = providers.unsafety_check_result;
     if let None = ty::WithOptConstParam::try_lookup(local_def_id, tcx) {
         let (result, reasons) = check_unsafety::unsafety_check_result(
@@ -222,7 +221,7 @@ fn unsafety_check_result_for_const_arg<'tcx>(
     (local_def_id, param_did): (LocalDefId, DefId),
 ) -> &'tcx rustc_middle::mir::UnsafetyCheckResult {
     let mut providers = Providers::default();
-    rustc_mir::provide(&mut providers);
+    rustc_mir_transform::provide(&mut providers);
     let original_unsafety_check_result_for_const_arg =
         providers.unsafety_check_result_for_const_arg;
     {
