@@ -267,6 +267,18 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         }
                         (stmt, "Assign/Aggregate")
                     }
+                    mir::Rvalue::ShallowInitBox(operand, typ) => {
+                        let interned_type = self.filler.register_type(typ);
+                        let interned_operand = self.visit_operand(operand);
+                        let (stmt,) = self
+                            .filler
+                            .tables
+                            .register_statements_assign_shallow_init_box(
+                                interned_operand,
+                                interned_type,
+                            );
+                        (stmt, "Assign/ShallowInitBox")
+                    }
                 };
                 (stmt, kind)
             }
