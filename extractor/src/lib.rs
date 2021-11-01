@@ -31,7 +31,11 @@ use rustc_data_structures::fx::FxHashSet;
 use rustc_hir::def_id::DefId;
 use rustc_interface::interface::Compiler;
 use rustc_interface::Queries;
-use rustc_middle::ty::{self, query::Providers, TyCtxt};
+use rustc_middle::ty::{
+    self,
+    query::{ExternProviders, Providers},
+    TyCtxt,
+};
 use rustc_session::Session;
 use rustc_span::def_id::LocalDefId;
 use std::collections::HashMap;
@@ -190,7 +194,7 @@ pub fn analyse<'tcx>(compiler: &Compiler, queries: &'tcx Queries<'tcx>) {
 pub fn override_queries(
     _session: &Session,
     providers: &mut Providers,
-    _providers_extern: &mut Providers,
+    _providers_extern: &mut ExternProviders,
 ) {
     providers.unsafety_check_result = unsafety_check_result;
     providers.unsafety_check_result_for_const_arg = unsafety_check_result_for_const_arg;
