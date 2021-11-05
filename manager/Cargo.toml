@@ -2,7 +2,7 @@
 name = "corpus-manager"
 version = "0.1.0"
 authors = ["Vytautas Astrauskas <vytautas.astrauskas@inf.ethz.ch>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 default-run = "corpus-manager-driver"
 build = "build.rs"
