@@ -158,7 +158,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         let (stmt,) = self.filler.tables.register_statements_assign_repeat(
                             interned_target_type,
                             interned_operand,
-                            len.eval_usize(self.tcx, ty::ParamEnv::reveal_all()),
+                            0, // FIXME: this code panics: len.eval_usize(self.tcx, ty::ParamEnv::reveal_all()),
                         );
                         (stmt, "Assign/Repeat")
                     }
