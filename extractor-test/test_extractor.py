@@ -110,6 +110,7 @@ def check_output():
         if string.startswith('# '):
             continue
         assert string in tables.strings, string
+    assert len(tables.relation('terminators_call')) == 18
 
     # for t in sorted(tables.strings):
         # if t.startswith('extractor_test.'):
