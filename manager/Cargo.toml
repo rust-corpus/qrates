@@ -22,7 +22,7 @@ datapond-derive = { git = "https://github.com/vakaras/datapond.git", branch = "n
 structopt = "0.3"
 color-backtrace = "0.5"
 log = "0.4"
-simplelog = "0.10"
+simplelog = "0.11"
 chrono = "0.4"
 reqwest = { version = "0.11.6", features = ["blocking"] }
 serde = "1.0.130"
