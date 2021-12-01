@@ -153,7 +153,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                             );
                         (stmt, "Assign/ThreadLocalRef")
                     }
-                    mir::Rvalue::Repeat(operand, len) => {
+                    mir::Rvalue::Repeat(operand, _len) => {
                         let interned_operand = self.visit_operand(operand);
                         let (stmt,) = self.filler.tables.register_statements_assign_repeat(
                             interned_target_type,
