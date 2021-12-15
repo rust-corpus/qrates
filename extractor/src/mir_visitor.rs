@@ -554,6 +554,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 options: _,
                 line_spans: _,
                 destination: _,
+                cleanup: _,
             } => {
                 self.filler.tables.register_terminators_inline_asm(block);
                 "InlineAsm"
