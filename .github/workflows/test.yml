@@ -5,9 +5,9 @@ env:
 
 on:
   push:
-    branches: [ '**' ]
+    branches: [main, staging, trying]
   pull_request:
-    branches: [ '**' ]
+    branches: [main]
 
 jobs:
 
