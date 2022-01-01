@@ -51,14 +51,14 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
     }
     pub fn resolve_def_id(&mut self, def_id: hir::def_id::DefId) -> types::DefPath {
         let crate_num = def_id.krate;
-        let crate_name = &self.tcx.crate_name(crate_num).as_str();
+        let crate_name = self.tcx.crate_name(crate_num).as_str().to_string();
         let crate_hash = self.tcx.crate_hash(crate_num).as_u64().into();
         let def_path_str = self.tcx.def_path_debug_str(def_id);
         let def_path_hash = self.tcx.def_path_hash(def_id).0.as_value().into();
         let summary_key_str = mirai_utils::summary_key_str(self.tcx, def_id);
         let summary_key_str_value = std::rc::Rc::try_unwrap(summary_key_str).unwrap();
         let def_path = self.tables.register_def_paths(
-            crate_name.to_string(),
+            crate_name,
             crate_hash,
             def_path_str,
             def_path_hash,

@@ -1,5 +1,5 @@
 // This file was originally taken from
-// https://raw.githubusercontent.com/rust-lang/rust/master/compiler/rustc_mir/src/transform/check_unsafety.rs
+// https://github.com/rust-lang/rust/blob/master/compiler/rustc_mir_transform/src/check_unsafety.rs
 //
 // This source code is licensed under the MIT or Apache 2 license found in
 // https://raw.githubusercontent.com/rust-lang/rust/ae1b871cca56613b1af1a5121dd24ac810ff4b89/LICENSE-MIT and
@@ -136,8 +136,8 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
         match rvalue {
             Rvalue::Aggregate(box ref aggregate, _) => match aggregate {
                 &AggregateKind::Array(..) | &AggregateKind::Tuple => {}
-                &AggregateKind::Adt(ref def, ..) => {
-                    match self.tcx.layout_scalar_valid_range(def.did) {
+                &AggregateKind::Adt(adt_did, ..) => {
+                    match self.tcx.layout_scalar_valid_range(adt_did) {
                         (Bound::Unbounded, Bound::Unbounded) => {}
                         _ => self.require_unsafe(
                             UnsafetyViolationKind::General,
