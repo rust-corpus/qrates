@@ -345,6 +345,7 @@ fn push_component_name(component_data: DefPathData, target: &mut String) {
         _ => target.push_str(match component_data {
             CrateRoot => "crate_root",
             Impl => "implement",
+            ForeignMod => "foreign",
             Misc => "miscellaneous",
             ClosureExpr => "closure",
             Ctor => "ctor",
