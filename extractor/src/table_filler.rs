@@ -149,7 +149,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                             interned_type,
                             variant_index,
                             variant_def_path,
-                            variant.ident.to_string(),
+                            variant.ident(self.tcx).to_string(),
                         );
                         for field in &variant.fields {
                             let field_def_path = self.resolve_def_id(field.did);
@@ -158,7 +158,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                                 interned_type,
                                 variant_index,
                                 field_def_path,
-                                field.ident.to_string(),
+                                field.ident(self.tcx).to_string(),
                                 field.vis.convert_into(),
                                 field_type,
                             );
