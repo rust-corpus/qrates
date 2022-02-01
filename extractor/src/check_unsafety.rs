@@ -123,10 +123,6 @@ impl<'a, 'tcx> Visitor<'tcx> for UnsafetyChecker<'a, 'tcx> {
                 // safe (at least as emitted during MIR construction)
             }
 
-            StatementKind::LlvmInlineAsm { .. } => self.require_unsafe(
-                UnsafetyViolationKind::General,
-                UnsafetyViolationDetails::UseOfInlineAssembly,
-            ),
             StatementKind::CopyNonOverlapping(..) => unreachable!(),
         }
         self.super_statement(statement, location);
@@ -404,13 +400,7 @@ struct UnusedUnsafeVisitor<'a> {
     unsafe_blocks: &'a mut Vec<(hir::HirId, bool)>,
 }
 
-impl<'a, 'tcx> intravisit::Visitor<'tcx> for UnusedUnsafeVisitor<'a> {
-    type Map = intravisit::ErasedMap<'tcx>;
-
-    fn nested_visit_map(&mut self) -> intravisit::NestedVisitorMap<Self::Map> {
-        intravisit::NestedVisitorMap::None
-    }
-
+impl<'tcx> intravisit::Visitor<'tcx> for UnusedUnsafeVisitor<'_> {
     fn visit_block(&mut self, block: &'tcx hir::Block<'tcx>) {
         intravisit::walk_block(self, block);
 

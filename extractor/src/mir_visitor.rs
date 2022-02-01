@@ -282,26 +282,6 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 };
                 (stmt, kind)
             }
-            mir::StatementKind::LlvmInlineAsm(box mir::LlvmInlineAsm {
-                outputs: box outputs,
-                inputs: box inputs,
-                ..
-            }) => {
-                let stmt = self.filler.tables.get_fresh_statement();
-                for (_, operand) in inputs {
-                    let interned_operand = self.visit_operand(operand);
-                    self.filler
-                        .tables
-                        .register_statements_inline_asm_inputs(stmt, interned_operand);
-                }
-                for place in outputs {
-                    let interned_type = self.filler.register_type(place.ty(self.body, self.tcx).ty);
-                    self.filler
-                        .tables
-                        .register_statements_inline_asm_outputs(stmt, interned_type);
-                }
-                (stmt, "InlineAsm")
-            }
             mir::StatementKind::FakeRead(..) => {
                 (self.filler.tables.get_fresh_statement(), "FakeRead")
             }

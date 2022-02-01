@@ -157,6 +157,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
 
 impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
     type Map = HirMap<'tcx>;
+    type NestedFilter = rustc_middle::hir::nested_filter::All;
     fn visit_item(&mut self, item: &'tcx hir::Item) {
         let name: &str = &item.ident.name.as_str();
         let visibility: types::Visibility = item.vis.convert_into();
@@ -427,7 +428,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
 
         self.visit_mir(def_id, mir_body);
     }
-    fn nested_visit_map<'this>(&'this mut self) -> intravisit::NestedVisitorMap<Self::Map> {
-        intravisit::NestedVisitorMap::All(self.tcx.hir())
+    fn nested_visit_map<'this>(&'this mut self) -> Self::Map {
+        self.tcx.hir()
     }
 }
