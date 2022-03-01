@@ -13,7 +13,6 @@ use log_derive::{logfn, logfn_inputs};
 use rustc_hir::def_id::DefId;
 use rustc_hir::definitions::{DefPathData, DisambiguatedDefPathData};
 use rustc_hir::{ItemKind, Node};
-use rustc_middle::ty::print::{FmtPrinter, Printer};
 use rustc_middle::ty::subst::{GenericArgKind, SubstsRef};
 use rustc_middle::ty::{self, DefIdTree, Ty, TyCtxt, TyKind};
 use std::rc::Rc;
@@ -190,11 +189,11 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
         Str => str.push_str("str"),
         Array(ty, _) => {
             str.push_str("array_");
-            append_mangled_type(str, ty, tcx);
+            append_mangled_type(str, *ty, tcx);
         }
         Slice(ty) => {
             str.push_str("slice_");
-            append_mangled_type(str, ty, tcx);
+            append_mangled_type(str, *ty, tcx);
         }
         RawPtr(ty_and_mut) => {
             str.push_str("pointer_");
@@ -209,13 +208,13 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
             if *mutability == rustc_hir::Mutability::Mut {
                 str.push_str("mut_");
             }
-            append_mangled_type(str, ty, tcx);
+            append_mangled_type(str, *ty, tcx);
         }
         FnPtr(poly_fn_sig) => {
             let fn_sig = poly_fn_sig.skip_binder();
             str.push_str("fn_ptr_");
             for arg_type in fn_sig.inputs() {
-                append_mangled_type(str, arg_type, tcx);
+                append_mangled_type(str, *arg_type, tcx);
                 str.push_str("_");
             }
             append_mangled_type(str, fn_sig.output(), tcx);
@@ -225,12 +224,12 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
             str.push_str(&format!("{}", types.len()));
             types.iter().for_each(|t| {
                 str.push('_');
-                append_mangled_type(str, t.expect_ty(), tcx);
+                append_mangled_type(str, t, tcx);
             });
         }
         Param(param_ty) => {
             let pty: Ty<'tcx> = param_ty.to_ty(tcx);
-            if ty.eq(pty) {
+            if ty.eq(&pty) {
                 str.push_str(&format!("{:?}", ty));
             } else {
                 append_mangled_type(str, pty, tcx);
@@ -354,17 +353,4 @@ fn push_component_name(component_data: DefPathData, target: &mut String) {
             _ => unreachable!(),
         }),
     };
-}
-
-/// Returns a readable display name for a DefId. This name may not be unique.
-pub fn def_id_display_name(tcx: TyCtxt<'_>, def_id: DefId) -> String {
-    struct PrettyDefId<'tcx>(DefId, TyCtxt<'tcx>);
-    impl std::fmt::Debug for PrettyDefId<'_> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            FmtPrinter::new(self.1, f, rustc_hir::def::Namespace::ValueNS)
-                .print_def_path(self.0, &[])?;
-            Ok(())
-        }
-    }
-    format!("{:?}", PrettyDefId(def_id, tcx))
 }
