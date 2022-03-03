@@ -109,7 +109,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
     fn insert_new_type_into_table(&mut self, kind: &str, typ: ty::Ty<'tcx>) -> types::Type {
         assert!(!self.type_registry.contains_key(&typ));
         let (interned_type,) = self.tables.register_types(kind.to_string());
-        self.type_registry.insert(&typ, interned_type);
+        self.type_registry.insert(typ, interned_type);
         interned_type
     }
     pub fn register_type(&mut self, typ: ty::Ty<'tcx>) -> types::Type {
@@ -180,21 +180,21 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 }
                 ty::TyKind::Array(element_type, _len) => {
                     let interned_type = self.insert_new_type_into_table("Array", typ);
-                    let element_interned_type = self.register_type(element_type);
+                    let element_interned_type = self.register_type(*element_type);
                     self.tables
                         .register_types_array(interned_type, element_interned_type);
                     interned_type
                 }
                 ty::TyKind::Slice(element_type) => {
                     let interned_type = self.insert_new_type_into_table("Slice", typ);
-                    let element_interned_type = self.register_type(element_type);
+                    let element_interned_type = self.register_type(*element_type);
                     self.tables
                         .register_types_slice(interned_type, element_interned_type);
                     interned_type
                 }
                 ty::TyKind::RawPtr(ty::TypeAndMut { ty, mutbl }) => {
                     let interned_type = self.insert_new_type_into_table("RawPtr", typ);
-                    let target_type = self.register_type(ty);
+                    let target_type = self.register_type(*ty);
                     self.tables.register_types_raw_ptr(
                         interned_type,
                         target_type,
@@ -204,7 +204,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 }
                 ty::TyKind::Ref(_region, ty, mutbl) => {
                     let interned_type = self.insert_new_type_into_table("Ref", typ);
-                    let target_type = self.register_type(ty);
+                    let target_type = self.register_type(*ty);
                     self.tables.register_types_ref(
                         interned_type,
                         target_type,
@@ -274,7 +274,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 ty::TyKind::Tuple(_substs) => {
                     let interned_type = self.insert_new_type_into_table("Tuple", typ);
                     self.tables.register_types_tuple(interned_type);
-                    for (i, field_type) in typ.tuple_fields().enumerate() {
+                    for (i, field_type) in typ.tuple_fields().iter().enumerate() {
                         let element_type = self.register_type(field_type);
                         self.tables.register_types_tuple_element(
                             interned_type,

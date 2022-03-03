@@ -299,7 +299,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
             }
             hir::ItemKind::ExternCrate(_)
             | hir::ItemKind::Use(_, _)
-            | hir::ItemKind::Macro(_)
+            | hir::ItemKind::Macro(_, _)
             | hir::ItemKind::Fn(_, _, _)
             | hir::ItemKind::TraitAlias(_, _) => {
                 let (item_id,) = self.filler.tables.register_items(
@@ -381,7 +381,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     return_type,
                 );
                 for (i, input) in fn_sig.inputs().iter().enumerate() {
-                    let param_type = self.filler.register_type(input);
+                    let param_type = self.filler.register_type(*input);
                     self.filler.tables.register_function_parameter_types(
                         function,
                         i.into(),

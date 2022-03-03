@@ -190,7 +190,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                     }
                     mir::Rvalue::Cast(kind, operand, typ) => {
                         let interned_operand = self.visit_operand(operand);
-                        let interned_type = self.filler.register_type(typ);
+                        let interned_type = self.filler.register_type(*typ);
                         let (stmt,) = self.filler.tables.register_statements_assign_cast(
                             interned_target_type,
                             kind.convert_into(),
@@ -225,7 +225,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         (stmt, "Assign/CheckedBinaryOp")
                     }
                     mir::Rvalue::NullaryOp(op, typ) => {
-                        let interned_type = self.filler.register_type(typ);
+                        let interned_type = self.filler.register_type(*typ);
                         let (stmt,) = self.filler.tables.register_statements_assign_nullary_op(
                             interned_target_type,
                             format!("{:?}", op),
@@ -268,7 +268,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         (stmt, "Assign/Aggregate")
                     }
                     mir::Rvalue::ShallowInitBox(operand, typ) => {
-                        let interned_type = self.filler.register_type(typ);
+                        let interned_type = self.filler.register_type(*typ);
                         let interned_operand = self.visit_operand(operand);
                         let (stmt,) = self
                             .filler
@@ -348,7 +348,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 targets,
             } => {
                 let discriminant = self.visit_operand(&discr);
-                let typ = self.filler.register_type(switch_ty);
+                let typ = self.filler.register_type(*switch_ty);
                 self.filler
                     .tables
                     .register_terminators_switch_int(block, discriminant, typ);

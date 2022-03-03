@@ -5,6 +5,7 @@
 #![feature(rustc_private)]
 #![feature(box_patterns)]
 #![feature(bool_to_option)]
+#![feature(let_else)]
 
 extern crate rustc_ast;
 extern crate rustc_data_structures;
@@ -19,7 +20,6 @@ extern crate rustc_session;
 extern crate rustc_span;
 extern crate rustc_target;
 
-mod check_unsafety;
 mod converters;
 mod hir_visitor;
 mod mir_visitor;
@@ -208,14 +208,15 @@ fn unsafety_check_result<'tcx>(
     rustc_mir_transform::provide(&mut providers);
     let original_unsafety_check_result = providers.unsafety_check_result;
     if let None = ty::WithOptConstParam::try_lookup(local_def_id, tcx) {
-        let (result, reasons) = check_unsafety::unsafety_check_result(
-            tcx,
-            ty::WithOptConstParam::unknown(local_def_id),
-        );
-        let def_id = local_def_id.to_def_id();
-        let mut state = SHARED_STATE.lock().unwrap();
-        state.function_unsafe_use.insert(def_id, result);
-        state.function_unsafe_reasons.insert(def_id, reasons);
+        // FIXME: check_unsafety changed too much and needs to be written from scratch.
+        // let (result, reasons) = check_unsafety::unsafety_check_result(
+        //     tcx,
+        //     ty::WithOptConstParam::unknown(local_def_id),
+        // );
+        // let def_id = local_def_id.to_def_id();
+        // let mut state = SHARED_STATE.lock().unwrap();
+        // state.function_unsafe_use.insert(def_id, result);
+        // state.function_unsafe_reasons.insert(def_id, reasons);
     }
     original_unsafety_check_result(tcx, local_def_id)
 }
@@ -229,17 +230,18 @@ fn unsafety_check_result_for_const_arg<'tcx>(
     let original_unsafety_check_result_for_const_arg =
         providers.unsafety_check_result_for_const_arg;
     {
-        let (result, reasons) = check_unsafety::unsafety_check_result(
-            tcx,
-            ty::WithOptConstParam {
-                did: local_def_id,
-                const_param_did: Some(param_did),
-            },
-        );
-        let def_id = local_def_id.to_def_id();
-        let mut state = SHARED_STATE.lock().unwrap();
-        state.function_unsafe_use.insert(def_id, result);
-        state.function_unsafe_reasons.insert(def_id, reasons);
+        // FIXME: check_unsafety changed too much and needs to be written from scratch.
+        // let (result, reasons) = check_unsafety::unsafety_check_result(
+        //     tcx,
+        //     ty::WithOptConstParam {
+        //         did: local_def_id,
+        //         const_param_did: Some(param_did),
+        //     },
+        // );
+        // let def_id = local_def_id.to_def_id();
+        // let mut state = SHARED_STATE.lock().unwrap();
+        // state.function_unsafe_use.insert(def_id, result);
+        // state.function_unsafe_reasons.insert(def_id, reasons);
     }
     original_unsafety_check_result_for_const_arg(tcx, (local_def_id, param_did))
 }
