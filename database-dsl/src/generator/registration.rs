@@ -15,7 +15,7 @@ pub(super) fn generate_registration_functions(schema: &ast::DatabaseSchema) -> T
         };
     }
     for relation in &schema.relations {
-        let function = generate_relation_registration(&relation, schema);
+        let function = generate_relation_registration(relation, schema);
         functions.extend(function);
     }
     functions
@@ -36,7 +36,7 @@ fn generate_intern_tuple_registration(
         let template = format!("value_{}", value_type.to_token_stream()).to_lowercase();
         let mut name_generator = NameGenerator::new(template);
         let (final_name, param_type, tokens) =
-            generate_interning_type(&value_type, schema, &mut name_generator);
+            generate_interning_type(value_type, schema, &mut name_generator);
         let param_name = name_generator.get_ident();
         param_tokens.extend(quote! {
             #param_name: #param_type,
@@ -104,7 +104,7 @@ fn generate_relation_registration(
         } else {
             let mut name_generator = NameGenerator::new(name.to_string());
             let (final_name, param_type, tokens) =
-                generate_interning_type(&typ, schema, &mut name_generator);
+                generate_interning_type(typ, schema, &mut name_generator);
             let param_name = name_generator.get_ident();
             param_tokens.extend(quote! {
                 #param_name: #param_type,

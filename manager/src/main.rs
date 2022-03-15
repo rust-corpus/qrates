@@ -2,7 +2,6 @@
 // http://opensource.org/licenses/MIT>. This file may not be copied,
 // modified, or distributed except according to those terms.
 
-use corpus_manager;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Duration;

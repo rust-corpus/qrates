@@ -8,7 +8,7 @@ use syn::Token;
 pub(crate) fn generate(schema: ast::DatabaseSchema, input: TokenStream) -> TokenStream {
     let program: Program = match syn::parse2(input) {
         Ok(parsed_result) => parsed_result,
-        Err(err) => return TokenStream::from(err.to_compile_error()),
+        Err(err) => return err.to_compile_error(),
     };
     let (mut tokens, datapond_input) = program.to_tokens(schema);
     let datafrog = datapond::generate_datafrog(datapond_input);
@@ -65,7 +65,7 @@ impl Parse for LoadInstructions {
             .collect();
         Ok(LoadInstructions {
             loader: Some(loader),
-            instructions: instructions,
+            instructions,
         })
     }
 }

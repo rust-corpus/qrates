@@ -168,7 +168,7 @@ impl<'b> SpanResolver<'b> {
             )
             .collect();
         Self {
-            spans: spans,
+            spans,
             span_file_names: loader.load_span_file_names(),
             strings: loader.load_strings(),
         }

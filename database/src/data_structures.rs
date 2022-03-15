@@ -42,7 +42,7 @@ impl<T> Into<Vec<T>> for Relation<T> {
 
 impl<T> From<Vec<T>> for Relation<T> {
     fn from(facts: Vec<T>) -> Self {
-        Self { facts: facts }
+        Self { facts }
     }
 }
 

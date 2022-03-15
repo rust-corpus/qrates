@@ -68,19 +68,19 @@ impl CompileManager {
             .expect("Failed to convert the workspace path to absolute.");
         let extracted_files_path = workspace_canonical.join("rust-corpus");
         Self {
-            crates_list: crates_list,
+            crates_list,
             workspace: workspace_canonical,
-            toolchain: toolchain,
-            max_log_size: max_log_size,
-            memory_limit: memory_limit,
-            timeout: timeout,
-            enable_networking: enable_networking,
-            output_json: output_json,
-            use_original_rustc: use_original_rustc,
-            purge_build_dir: purge_build_dir,
-            extractor_path: extractor_path,
-            extracted_files_path: extracted_files_path,
-            custom_registry: custom_registry,
+            toolchain,
+            max_log_size,
+            memory_limit,
+            timeout,
+            enable_networking,
+            output_json,
+            use_original_rustc,
+            purge_build_dir,
+            extractor_path,
+            extracted_files_path,
+            custom_registry,
         }
     }
     #[logfn(Trace)]

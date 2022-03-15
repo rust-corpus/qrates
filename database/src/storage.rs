@@ -149,8 +149,8 @@ fn unsafe_load_vec<T: Copy>(
     let data = unsafe { std::slice::from_raw_parts_mut(begin_ptr, expected_fact_size * len) };
     let mut total_bytes_read = 0;
     loop {
-        let mut remainder = &mut data[total_bytes_read..];
-        let bytes_read = buf_reader.read(&mut remainder)?;
+        let remainder = &mut data[total_bytes_read..];
+        let bytes_read = buf_reader.read(remainder)?;
         if bytes_read == 0 {
             break;
         }

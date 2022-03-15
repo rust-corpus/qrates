@@ -1,6 +1,5 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use syn;
 
 /// The kind of a identifier.
 #[derive(Debug, Clone, Copy)]

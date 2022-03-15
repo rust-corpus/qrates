@@ -127,7 +127,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
             });
         }
         Adt(def, subs) => {
-            str.push_str(qualified_type_name(tcx, def.did).as_str());
+            str.push_str(qualified_type_name(tcx, def.did()).as_str());
             for sub in *subs {
                 if let GenericArgKind::Type(ty) = sub.unpack() {
                     str.push('_');

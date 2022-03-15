@@ -134,15 +134,15 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 }
                 ty::TyKind::Adt(adt_def, substs) => {
                     let interned_type = self.insert_new_type_into_table("Adt", typ);
-                    let adt_def_path = self.resolve_def_id(adt_def.did);
+                    let adt_def_path = self.resolve_def_id(adt_def.did());
                     self.tables.register_types_adt_def(
                         interned_type,
                         adt_def_path,
                         adt_def.adt_kind().convert_into(),
-                        adt_def.repr.c(),
+                        adt_def.repr().c(),
                         adt_def.is_phantom_data(),
                     );
-                    for (i, variant) in adt_def.variants.iter_enumerated() {
+                    for (i, variant) in adt_def.variants().iter_enumerated() {
                         let variant_def_path = self.resolve_def_id(variant.def_id);
                         let variant_index = i.convert_into();
                         self.tables.register_types_adt_variant(
