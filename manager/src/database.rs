@@ -11,7 +11,6 @@ use log_derive::logfn;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::{ffi, fs, io};
-use walkdir;
 
 pub struct DatabaseManager {
     loaded_crates_path: PathBuf,

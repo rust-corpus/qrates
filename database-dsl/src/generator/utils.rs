@@ -8,10 +8,7 @@ pub struct NameGenerator {
 
 impl NameGenerator {
     pub fn new(name: String) -> Self {
-        Self {
-            name: name,
-            counter: 0,
-        }
+        Self { name, counter: 0 }
     }
     /// Generate a new ident.
     pub fn inc(&mut self) {

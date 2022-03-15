@@ -86,8 +86,8 @@ impl CratesList {
             }
         }
         Self {
-            creation_date: creation_date,
-            crates: crates,
+            creation_date,
+            crates,
         }
     }
 
@@ -121,8 +121,8 @@ impl CratesList {
             }
         }
         Self {
-            creation_date: creation_date,
-            crates: crates,
+            creation_date,
+            crates,
         }
     }
 
