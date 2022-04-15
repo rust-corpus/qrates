@@ -419,7 +419,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         let def_kind = self.tcx.def_kind(def_id);
         let mir_body = match def_kind {
             DefKind::Const
-            | DefKind::Static
+            | DefKind::Static(_)
             | DefKind::AssocConst
             | DefKind::Ctor(..)
             | DefKind::AnonConst => self.tcx.mir_for_ctfe_opt_const_arg(def),

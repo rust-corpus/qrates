@@ -306,6 +306,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 "CopyNonOverlapping",
             ),
             mir::StatementKind::Nop => (self.filler.tables.get_fresh_statement(), "Nop"),
+            mir::StatementKind::Deinit(..) => (self.filler.tables.get_fresh_statement(), "Deinit"),
         };
         (stmt, kind.to_string())
     }
