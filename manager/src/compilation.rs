@@ -302,7 +302,7 @@ impl<'a> CrateCompiler<'a> {
                     let mut builder = build
                         .cargo()
                         .timeout(self.timeout)
-                        .args(&["check", "--all"])
+                        .args(&["check", "--all", "--frozen"])
                         .env("RUST_BACKTRACE", "1");
                     if !self.use_original_rustc {
                         builder = builder
