@@ -4,8 +4,9 @@
 
 //! Module for managing lists of crate sources.
 
-use cargo::core::{Dependency, InternedString, Source, SourceId};
+use cargo::core::{Dependency, Source, SourceId};
 use cargo::sources::RegistrySource;
+use cargo::util::interning::InternedString;
 use cargo::util::Config;
 use log_derive::{logfn, logfn_inputs};
 use serde::{Deserialize, Serialize};
@@ -97,10 +98,8 @@ impl CratesList {
     #[logfn_inputs(Trace)]
     pub fn all_crates(all_versions: bool) -> Self {
         let creation_date = SystemTime::now();
-        let index = crates_index::Index::new_cargo_default();
-        index
-            .retrieve_or_update()
-            .expect("Unable to update registry");
+        let mut index = crates_index::Index::new_cargo_default().unwrap();
+        index.update().expect("Unable to update registry");
         let mut crates = Vec::new();
         for krate in index.crates() {
             if all_versions {
