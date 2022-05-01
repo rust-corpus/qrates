@@ -14,17 +14,17 @@ relation selected_scopes(
 /// Type definitions that belong to `selected_builds`.
 relation selected_type_defs(
     build: Build, item: Item, typ: Type, def_path: DefPath, name: InternedString,
-    visibility: Visibility, type_kind: TyKind, def_kind: TyDefKind);
+    visibility: TyVisibility, type_kind: TyKind, def_kind: TyDefKind);
 /// ADT definitions that belong to `selected_builds`.
 relation selected_adts(
     build: Build, item: Item, typ: Type, def_path: DefPath, def_path2: DefPath,
-    name: InternedString, visibility: Visibility, type_kind: TyKind, def_kind: TyDefKind,
+    name: InternedString, visibility: TyVisibility, type_kind: TyKind, def_kind: TyDefKind,
     kind: AdtKind, c_repr: bool, is_phantom: bool);
 /// Fields of ADTs that belong to `selected_builds`.
 relation selected_adt_field_types(
     build: Build, item: Item, adt: Type, adt_variant: AdtVariantIndex, adt_def_path: DefPath,
     resolved_adt_def_path: DefPath, field_def_path: DefPath,
-    name: InternedString, visibility: Visibility, type_kind: TyKind, def_kind: TyDefKind,
+    name: InternedString, visibility: TyVisibility, type_kind: TyKind, def_kind: TyDefKind,
     kind: AdtKind, c_repr: bool, is_phantom: bool,
     field_name: InternedString, field_visibility: TyVisibility, field_type: Type,
     field_type_kind: TyKind);
@@ -51,7 +51,7 @@ relation functions_unsafe_blocks(
 /// `uses_unsafe` – whether the function uses unsafe code directly in its body.
 relation selected_function_definitions(
     build: Build, item: Item, def_path: DefPath, module: Module,
-    visibility: Visibility, unsafety: Unsafety, abi: Abi,
+    visibility: TyVisibility, unsafety: Unsafety, abi: Abi,
     return_ty: Type, uses_unsafe: bool);
 /// Statements used inside unsafe blocks.
 /// `unsafe_scope` is a foreign key into `unsafe_blocks.scope`.
@@ -88,7 +88,7 @@ relation adts_with_unsafe_cell_fields(
 /// Information about function size in terms of MIR statements and terminators.
 relation selected_function_sizes(
     build: Build, item: Item, def_path: DefPath,
-    visibility: Visibility, unsafety: Unsafety, abi: Abi,
+    visibility: TyVisibility, unsafety: Unsafety, abi: Abi,
     uses_unsafe: bool,
     statement_count: u64,
     unsafe_statement_count: u64,

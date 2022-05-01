@@ -73,20 +73,20 @@ enum Constness {
     Unknown,
 }
 
-/// The visibility of an item.
-enum Visibility {
-    /// The item is declared as public (`pub`).
-    Public,
-    /// The item is declared as public within the crate (`pub(crate)`).
-    Crate,
-    /// The item is declared as public for some modules (`pub(in foo:bar)`).
-    Restricted,
-    /// The item is declared as private (default visibility).
-    Private,
-    /// Failed to obtain visibility information from the compiler.
-    #[default]
-    Unknown,
-}
+// /// The visibility of an item.
+// enum Visibility {
+//     /// The item is declared as public (`pub`).
+//     Public,
+//     /// The item is declared as public within the crate (`pub(crate)`).
+//     Crate,
+//     /// The item is declared as public for some modules (`pub(in foo:bar)`).
+//     Restricted,
+//     /// The item is declared as private (default visibility).
+//     Private,
+//     /// Failed to obtain visibility information from the compiler.
+//     #[default]
+//     Unknown,
+// }
 
 /// The visibility of an item used in `ty`.
 enum TyVisibility {
@@ -365,24 +365,24 @@ relation root_modules(build: Build, root_module: auto Module);
 /// `(parent, child)` relation between modules.
 ///
 /// If `abi` is not `NONE`, the `child` module is foreign.
-relation submodules(def_path: DefPath, parent: Module, child: auto Module, name: Name, visibility: Visibility, abi: Abi);
+relation submodules(def_path: DefPath, parent: Module, child: auto Module, name: Name, visibility: TyVisibility, abi: Abi);
 /// An item that is a function definition.
-relation function_definitions(item: auto Item, def_path: DefPath, module: Module, visibility: Visibility, unsafety: Unsafety, abi: Abi, return_ty: Type);
+relation function_definitions(item: auto Item, def_path: DefPath, module: Module, visibility: TyVisibility, unsafety: Unsafety, abi: Abi, return_ty: Type);
 relation function_parameter_types(function: Item, index: FnParamIndex, typ: Type);
 /// Marks whether a function uses unsafe operations directly in its body.
 /// Only functions marked as `unsafe` can do that.
 relation function_unsafe_use(def_path: DefPath, uses_unsafe: bool);
 relation function_unsafe_reasons(def_path: DefPath, index: u32, reason: InternedString);
 /// An item that is either a constant or a static.
-relation static_definitions(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: Visibility, mutability: Mutability);
+relation static_definitions(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: TyVisibility, mutability: Mutability);
 /// An impl item.
-relation impl_definitions(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: Visibility, unsafety: Unsafety, polarity: ImplPolarity, defaultness: Defaultness, constness: Constness, typ: Type);
+relation impl_definitions(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: TyVisibility, unsafety: Unsafety, polarity: ImplPolarity, defaultness: Defaultness, constness: Constness, typ: Type);
 /// An impl item that implements a trait for a type.
 relation trait_impls(item: Item, typ: Type, trait_def_path: DefPath);
 /// An item that is a global assembly block.
-relation global_asm_blocks(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: Visibility);
+relation global_asm_blocks(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: TyVisibility);
 /// A generic item that is not included in any of the categories above.
-relation items(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: Visibility);
+relation items(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: TyVisibility);
 /// MIR cfgs inside a specific item.
 relation mir_cfgs(item: Item, body_def_path: DefPath, root_scope: auto Scope);
 /// parent_scope, scope, scope's safety.
@@ -416,7 +416,7 @@ relation crate_keywords(build: Build, keyword: InternedString);
 /// Crate categories.
 relation crate_categories(build: Build, category: InternedString);
 /// A marker that `def_path` is a type.
-relation type_defs(item: auto Item, typ: Type, def_path: DefPath, name: InternedString, visibility: Visibility, kind: TyDefKind);
+relation type_defs(item: auto Item, typ: Type, def_path: DefPath, name: InternedString, visibility: TyVisibility, kind: TyDefKind);
 /// A fact indicating that we have a monomorphized type with id `typ`.
 ///
 /// **Note:** the fact that `typ` refers to a monomorphized type means that
@@ -447,7 +447,7 @@ relation types_opaque(typ: Type, def_path: DefPath);
 relation types_param(typ: Type, index: u32, name: InternedString);
 
 /// Traits.
-relation traits(item: auto Item, def_path: DefPath, name: InternedString, visibility: Visibility, is_auto: bool, is_marker: bool, unsafety: Unsafety);
+relation traits(item: auto Item, def_path: DefPath, name: InternedString, visibility: TyVisibility, is_auto: bool, is_marker: bool, unsafety: Unsafety);
 /// Items mentioned inside the trait.
 relation trait_items(trait_id: Item, def_path: DefPath, defaultness: Defaultness);
 

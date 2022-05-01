@@ -10,16 +10,16 @@ pub trait ConvertInto<T> {
     fn convert_into(&self) -> T;
 }
 
-impl<'hir> ConvertInto<types::Visibility> for hir::Visibility<'hir> {
-    fn convert_into(&self) -> types::Visibility {
-        match self.node {
-            hir::VisibilityKind::Public => types::Visibility::Public,
-            hir::VisibilityKind::Crate(_) => types::Visibility::Crate,
-            hir::VisibilityKind::Restricted { .. } => types::Visibility::Restricted,
-            hir::VisibilityKind::Inherited => types::Visibility::Private,
-        }
-    }
-}
+// impl<'hir> ConvertInto<types::Visibility> for hir::Visibility<'hir> {
+//     fn convert_into(&self) -> types::Visibility {
+//         match self.node {
+//             hir::VisibilityKind::Public => types::Visibility::Public,
+//             hir::VisibilityKind::Crate(_) => types::Visibility::Crate,
+//             hir::VisibilityKind::Restricted { .. } => types::Visibility::Restricted,
+//             hir::VisibilityKind::Inherited => types::Visibility::Private,
+//         }
+//     }
+// }
 
 impl ConvertInto<types::TyVisibility> for ty::Visibility {
     fn convert_into(&self) -> types::TyVisibility {
@@ -31,14 +31,14 @@ impl ConvertInto<types::TyVisibility> for ty::Visibility {
     }
 }
 
-impl<'hir> ConvertInto<types::Visibility> for Option<&hir::Visibility<'hir>> {
-    fn convert_into(&self) -> types::Visibility {
-        match self {
-            Some(visibility) => visibility.convert_into(),
-            None => types::Visibility::Unknown,
-        }
-    }
-}
+// impl<'hir> ConvertInto<types::Visibility> for Option<&hir::Visibility<'hir>> {
+//     fn convert_into(&self) -> types::Visibility {
+//         match self {
+//             Some(visibility) => visibility.convert_into(),
+//             None => types::Visibility::Unknown,
+//         }
+//     }
+// }
 
 impl ConvertInto<types::Unsafety> for hir::Unsafety {
     fn convert_into(&self) -> types::Unsafety {

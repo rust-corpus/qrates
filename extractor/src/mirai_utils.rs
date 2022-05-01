@@ -43,6 +43,7 @@ pub fn find_sysroot() -> String {
 #[logfn(TRACE)]
 pub fn is_public(def_id: DefId, tcx: TyCtxt<'_>) -> bool {
     if let Some(node) = tcx.hir().get_if_local(def_id) {
+        let visibility = tcx.visibility(def_id);
         match node {
             Node::Expr(rustc_hir::Expr {
                 kind: rustc_hir::ExprKind::Closure(..),
@@ -56,14 +57,14 @@ pub fn is_public(def_id: DefId, tcx: TyCtxt<'_>) -> bool {
             }
             Node::Item(item) => match item.kind {
                 ItemKind::Fn(..) | ItemKind::Const(..) | ItemKind::Static(..) => {
-                    item.vis.node.is_pub()
+                    visibility == ty::Visibility::Public
                 }
                 _ => {
                     debug!("def_id is unsupported item kind {:?}", item.kind);
                     false
                 }
             },
-            Node::ImplItem(item) => item.vis.node.is_pub(),
+            Node::ImplItem(_) => visibility == ty::Visibility::Public,
             Node::TraitItem(..) => true,
             Node::AnonConst(..) => false,
             _ => {
