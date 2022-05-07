@@ -52,7 +52,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         &mut self,
         def_id: types::DefPath,
         name: &str,
-        visibility: types::Visibility,
+        visibility: types::TyVisibility,
         module: &'tcx hir::Mod,
         id: HirId,
     ) {
@@ -72,7 +72,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         &mut self,
         def_id: types::DefPath,
         name: &str,
-        visibility: types::Visibility,
+        visibility: types::TyVisibility,
         abi: &'tcx rustc_target::spec::abi::Abi,
         items: &'tcx [rustc_hir::ForeignItemRef],
         id: HirId,
@@ -94,7 +94,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         &mut self,
         def_id: types::DefPath,
         name: &str,
-        visibility: types::Visibility,
+        visibility: types::TyVisibility,
         mutability: types::Mutability,
         typ: &'tcx hir::Ty,
         id: HirId,
@@ -126,7 +126,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         def_path: types::DefPath,
         def_id: rustc_span::def_id::LocalDefId,
         name: &str,
-        visibility: types::Visibility,
+        visibility: types::TyVisibility,
         kind: types::TyDefKind,
     ) {
         let typ = self.filler.register_type(self.tcx.type_of(def_id));
@@ -160,7 +160,8 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
     type NestedFilter = rustc_middle::hir::nested_filter::All;
     fn visit_item(&mut self, item: &'tcx hir::Item) {
         let name: &str = &item.ident.name.as_str();
-        let visibility: types::Visibility = item.vis.convert_into();
+        let visibility = self.tcx.visibility(item.def_id);
+        let visibility: types::TyVisibility = visibility.convert_into();
         let def_path = self.filler.resolve_hir_id(item.hir_id());
         let def_id = self.hir_map.local_def_id(item.hir_id());
         match &item.kind {
@@ -322,10 +323,12 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         span: Span,
         id: HirId,
     ) {
+        let def_id = self.hir_map.local_def_id(id);
+        let visibility = self.tcx.visibility(def_id);
         let def_path = self.filler.resolve_hir_id(id);
         let (param_types, return_type) = self.get_fn_param_and_return_types(id);
         let (function,) = match fn_kind {
-            intravisit::FnKind::Method(_name, method_sig, visibility) => {
+            intravisit::FnKind::Method(_name, method_sig) => {
                 self.filler.tables.register_function_definitions(
                     def_path,
                     self.current_module,
@@ -335,7 +338,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     return_type,
                 )
             }
-            intravisit::FnKind::ItemFn(_name, _generics, header, visibility) => {
+            intravisit::FnKind::ItemFn(_name, _generics, header) => {
                 self.filler.tables.register_function_definitions(
                     def_path,
                     self.current_module,
@@ -348,7 +351,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
             intravisit::FnKind::Closure => self.filler.tables.register_function_definitions(
                 def_path,
                 self.current_module,
-                types::Visibility::Unknown,
+                types::TyVisibility::Unknown,
                 types::Unsafety::Unknown,
                 "Closure".to_string(),
                 return_type,
@@ -365,7 +368,9 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
     }
     fn visit_foreign_item(&mut self, item: &'tcx hir::ForeignItem) {
         let def_path = self.filler.resolve_hir_id(item.hir_id());
-        let visibility = item.vis.convert_into();
+        let def_id = self.hir_map.local_def_id(item.hir_id());
+        let visibility = self.tcx.visibility(def_id);
+        let visibility = visibility.convert_into();
         let item_id = match item.kind {
             hir::ForeignItemKind::Fn(..) => {
                 let def_id = self.hir_map.local_def_id(item.hir_id());

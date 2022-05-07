@@ -331,7 +331,7 @@ mod tests {
                 def_path_1_1,
                 root_1_1,
                 String::from("mod1"),
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 String::from("abi1"),
             );
             assert_eq!(tables1.relations.submodules.len(), 1);
@@ -342,7 +342,7 @@ mod tests {
                 def_path_1_2,
                 module_1_1,
                 String::from("mod2"),
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 String::from("abi1"),
             );
             assert_eq!(tables1.relations.submodules.len(), 2);
@@ -398,7 +398,7 @@ mod tests {
                 def_path_2_1,
                 root_2_1,
                 String::from("mod1"),
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 String::from("abi1"),
             );
             assert_eq!(tables2.relations.submodules.len(), 1);
@@ -409,7 +409,7 @@ mod tests {
                 def_path_2_2,
                 module_2_1,
                 String::from("mod3"),
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 String::from("abi2"),
             );
             assert_eq!(tables2.relations.submodules.len(), 2);
@@ -456,7 +456,7 @@ mod tests {
                 0usize.into(),
                 1usize.into(),
                 "mod1",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi1",
             ),
             (
@@ -468,7 +468,7 @@ mod tests {
                 1usize.into(),
                 2usize.into(),
                 "mod2",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi1",
             ),
             (
@@ -480,7 +480,7 @@ mod tests {
                 3usize.into(),
                 4usize.into(),
                 "mod1",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi1",
             ),
             (
@@ -492,7 +492,7 @@ mod tests {
                 4usize.into(),
                 5usize.into(),
                 "mod2",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi1",
             ),
         ];
@@ -568,7 +568,7 @@ mod tests {
                 0usize.into(),
                 1usize.into(),
                 "mod1",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi1",
             ),
             (
@@ -580,7 +580,7 @@ mod tests {
                 1usize.into(),
                 2usize.into(),
                 "mod2",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi1",
             ),
             (
@@ -592,7 +592,7 @@ mod tests {
                 3usize.into(),
                 4usize.into(),
                 "mod1",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi1",
             ),
             (
@@ -604,7 +604,7 @@ mod tests {
                 4usize.into(),
                 5usize.into(),
                 "mod2",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi1",
             ),
             (
@@ -616,7 +616,7 @@ mod tests {
                 6usize.into(),
                 7usize.into(),
                 "mod1",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi1",
             ),
             (
@@ -628,7 +628,7 @@ mod tests {
                 7usize.into(),
                 8usize.into(),
                 "mod3",
-                types::Visibility::Public,
+                types::TyVisibility::Public,
                 "abi2",
             ),
         ];
