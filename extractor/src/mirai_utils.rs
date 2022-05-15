@@ -49,11 +49,8 @@ pub fn is_public(def_id: DefId, tcx: TyCtxt<'_>) -> bool {
                 kind: rustc_hir::ExprKind::Closure(..),
                 ..
             }) => {
-                if let Some(parent_def_id) = tcx.parent(def_id) {
-                    is_public(parent_def_id, tcx)
-                } else {
-                    false
-                }
+                let parent_def_id = tcx.parent(def_id);
+                is_public(parent_def_id, tcx)
             }
             Node::Item(item) => match item.kind {
                 ItemKind::Fn(..) | ItemKind::Const(..) | ItemKind::Static(..) => {
@@ -298,16 +295,15 @@ pub fn summary_key_str(tcx: TyCtxt<'_>, def_id: DefId) -> Rc<String> {
         if component.disambiguator != 0 {
             name.push('_');
             if component.data == DefPathData::Impl {
-                if let Some(parent_def_id) = tcx.parent(def_id) {
-                    if let Some(type_ns) = &type_ns {
-                        let def_kind = tcx.def_kind(parent_def_id);
-                        use rustc_hir::def::DefKind::*;
-                        if type_ns == "num"
-                            && (def_kind == Struct || def_kind == Union || def_kind == Enum)
-                        {
-                            append_mangled_type(&mut name, tcx.type_of(parent_def_id), tcx);
-                            continue;
-                        }
+                let parent_def_id = tcx.parent(def_id);
+                if let Some(type_ns) = &type_ns {
+                    let def_kind = tcx.def_kind(parent_def_id);
+                    use rustc_hir::def::DefKind::*;
+                    if type_ns == "num"
+                        && (def_kind == Struct || def_kind == Union || def_kind == Enum)
+                    {
+                        append_mangled_type(&mut name, tcx.type_of(parent_def_id), tcx);
+                        continue;
                     }
                 }
                 if let Some(type_ns) = &type_ns {
@@ -346,7 +342,8 @@ fn push_component_name(component_data: DefPathData, target: &mut String) {
             CrateRoot => "crate_root",
             Impl => "implement",
             ForeignMod => "foreign",
-            Misc => "miscellaneous",
+            Use => "use",
+            GlobalAsm => "global_asm",
             ClosureExpr => "closure",
             Ctor => "ctor",
             AnonConst => "constant",
