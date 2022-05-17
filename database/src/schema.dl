@@ -296,6 +296,8 @@ enum SpanExpansionKind {
     DesugaringWhileLoop,
     /// Desugaring done by the compiler during HIR lowering.
     DesugaringLetElse,
+    /// Desugaring done by the compiler during HIR lowering.
+    DesugaringYeetExpr,
     /// Inlined MIR.
     Inlined,
 }
