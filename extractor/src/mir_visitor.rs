@@ -403,20 +403,20 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 func,
                 args,
                 destination,
+                target,
                 cleanup,
                 from_hir_call: _,
                 fn_span,
             } => {
                 let interned_func = self.visit_operand(func);
-                let (return_ty, destination_block) =
-                    if let Some((target_place, target_block)) = destination {
-                        (
-                            target_place.ty(self.body, self.tcx).ty,
-                            basic_blocks[target_block],
-                        )
-                    } else {
-                        (self.tcx.mk_unit(), no_block)
-                    };
+                let (return_ty, destination_block) = if let Some(target_block) = target {
+                    (
+                        destination.ty(self.body, self.tcx).ty,
+                        basic_blocks[target_block],
+                    )
+                } else {
+                    (self.tcx.mk_unit(), no_block)
+                };
                 let interned_return_ty = self.filler.register_type(return_ty);
                 let func_ty = func.ty(self.body, self.tcx);
                 let sig = func_ty.fn_sig(self.tcx);
