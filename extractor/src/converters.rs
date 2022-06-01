@@ -148,6 +148,7 @@ impl ConvertInto<types::CastKind> for mir::CastKind {
                 ty::adjustment::PointerCast::ArrayToPointer => types::CastKind::ArrayToPointer,
                 ty::adjustment::PointerCast::Unsize => types::CastKind::UnsizePointer,
             },
+            mir::CastKind::PointerAddress => types::CastKind::PointerAddress,
         }
     }
 }

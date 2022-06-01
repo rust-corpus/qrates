@@ -94,11 +94,10 @@ pub fn argument_types_key_str<'tcx>(
 /// generic trait methods).
 #[logfn(TRACE)]
 fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) {
-    use TyKind::*;
     match ty.kind() {
-        Bool => str.push_str("bool"),
-        Char => str.push_str("char"),
-        Int(int_ty) => {
+        TyKind::Bool => str.push_str("bool"),
+        TyKind::Char => str.push_str("char"),
+        TyKind::Int(int_ty) => {
             str.push_str(match int_ty {
                 ty::IntTy::Isize => "isize",
                 ty::IntTy::I8 => "i8",
@@ -108,7 +107,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 ty::IntTy::I128 => "i128",
             });
         }
-        Uint(uint_ty) => {
+        TyKind::Uint(uint_ty) => {
             str.push_str(match uint_ty {
                 ty::UintTy::Usize => "usize",
                 ty::UintTy::U8 => "u8",
@@ -118,13 +117,13 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 ty::UintTy::U128 => "u128",
             });
         }
-        Float(float_ty) => {
+        TyKind::Float(float_ty) => {
             str.push_str(match float_ty {
                 ty::FloatTy::F32 => "f32",
                 ty::FloatTy::F64 => "f64",
             });
         }
-        Adt(def, subs) => {
+        TyKind::Adt(def, subs) => {
             str.push_str(qualified_type_name(tcx, def.did()).as_str());
             for sub in *subs {
                 if let GenericArgKind::Type(ty) = sub.unpack() {
@@ -133,7 +132,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 }
             }
         }
-        Closure(def_id, subs) => {
+        TyKind::Closure(def_id, subs) => {
             str.push_str("closure_");
             str.push_str(qualified_type_name(tcx, *def_id).as_str());
             for sub in subs.as_closure().substs {
@@ -143,12 +142,12 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 }
             }
         }
-        Dynamic(..) => str.push_str(&format!("dyn_{:?}", ty)),
-        Foreign(def_id) => {
+        TyKind::Dynamic(..) => str.push_str(&format!("dyn_{:?}", ty)),
+        TyKind::Foreign(def_id) => {
             str.push_str("extern_type_");
             str.push_str(qualified_type_name(tcx, *def_id).as_str());
         }
-        FnDef(def_id, subs) => {
+        TyKind::FnDef(def_id, subs) => {
             str.push_str("fn_");
             str.push_str(qualified_type_name(tcx, *def_id).as_str());
             for sub in *subs {
@@ -158,7 +157,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 }
             }
         }
-        Generator(def_id, subs, ..) => {
+        TyKind::Generator(def_id, subs, ..) => {
             str.push_str("generator_");
             str.push_str(qualified_type_name(tcx, *def_id).as_str());
             for sub in subs.as_generator().substs {
@@ -168,13 +167,13 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 }
             }
         }
-        GeneratorWitness(binder) => {
+        TyKind::GeneratorWitness(binder) => {
             for ty in binder.skip_binder().iter() {
                 str.push('_');
                 append_mangled_type(str, ty, tcx)
             }
         }
-        Opaque(def_id, subs) => {
+        TyKind::Opaque(def_id, subs) => {
             str.push_str("impl_");
             str.push_str(qualified_type_name(tcx, *def_id).as_str());
             for sub in *subs {
@@ -184,16 +183,16 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 }
             }
         }
-        Str => str.push_str("str"),
-        Array(ty, _) => {
+        TyKind::Str => str.push_str("str"),
+        TyKind::Array(ty, _) => {
             str.push_str("array_");
             append_mangled_type(str, *ty, tcx);
         }
-        Slice(ty) => {
+        TyKind::Slice(ty) => {
             str.push_str("slice_");
             append_mangled_type(str, *ty, tcx);
         }
-        RawPtr(ty_and_mut) => {
+        TyKind::RawPtr(ty_and_mut) => {
             str.push_str("pointer_");
             match ty_and_mut.mutbl {
                 rustc_hir::Mutability::Mut => str.push_str("mut_"),
@@ -201,14 +200,14 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
             }
             append_mangled_type(str, ty_and_mut.ty, tcx);
         }
-        Ref(_, ty, mutability) => {
+        TyKind::Ref(_, ty, mutability) => {
             str.push_str("ref_");
             if *mutability == rustc_hir::Mutability::Mut {
                 str.push_str("mut_");
             }
             append_mangled_type(str, *ty, tcx);
         }
-        FnPtr(poly_fn_sig) => {
+        TyKind::FnPtr(poly_fn_sig) => {
             let fn_sig = poly_fn_sig.skip_binder();
             str.push_str("fn_ptr_");
             for arg_type in fn_sig.inputs() {
@@ -217,7 +216,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
             }
             append_mangled_type(str, fn_sig.output(), tcx);
         }
-        Tuple(types) => {
+        TyKind::Tuple(types) => {
             str.push_str("tuple_");
             str.push_str(&format!("{}", types.len()));
             types.iter().for_each(|t| {
@@ -225,7 +224,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 append_mangled_type(str, t, tcx);
             });
         }
-        Param(param_ty) => {
+        TyKind::Param(param_ty) => {
             let pty: Ty<'tcx> = param_ty.to_ty(tcx);
             if ty.eq(&pty) {
                 str.push_str(&format!("{:?}", ty));
@@ -233,7 +232,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 append_mangled_type(str, pty, tcx);
             }
         }
-        Projection(projection_ty) => {
+        TyKind::Projection(projection_ty) => {
             append_mangled_type(str, projection_ty.self_ty(), tcx);
             str.push_str("_as_");
             str.push_str(qualified_type_name(tcx, projection_ty.item_def_id).as_str());
