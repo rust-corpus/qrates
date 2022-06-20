@@ -10,7 +10,7 @@ use rustwide::{cmd::SandboxBuilder, Crate, Toolchain, Workspace, WorkspaceBuilde
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 pub struct CompileManager {
     /// The list of crates we want to compile.
@@ -116,7 +116,7 @@ impl CompileManager {
             info!("The standard library is already built.");
             return Ok(());
         }
-        let tmp_dir = TempDir::new("corpus-stdlib")?;
+        let tmp_dir = TempDir::new()?;
         let tmp_dir = tmp_dir.path();
         let cargo_toml = tmp_dir.join("Cargo.toml");
 
