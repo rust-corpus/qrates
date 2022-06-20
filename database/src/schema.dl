@@ -231,7 +231,8 @@ enum CastKind {
     MutToConstPointer,
     ArrayToPointer,
     UnsizePointer,
-    PointerAddress,
+    PointerExposeAddress,
+    PointerFromExposedAddress,
 }
 
 /// The kind of a MIR borrow statement.
