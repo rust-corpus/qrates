@@ -23,7 +23,6 @@ structopt = "0.3"
 color-backtrace = "0.5"
 log = "0.4"
 simplelog = "0.12"
-chrono = "0.4"
 reqwest = { version = "0.11.11", features = ["blocking"] }
 serde = "1.0.137"
 serde_derive = "1.0.136"
@@ -32,7 +31,6 @@ toml = "0.5"
 log-derive = "0.4"
 semver = "1.0.10"
 cargo = "0.61.0"
-tokio-process = "0.2"
 tokio = "1.19"
 nix = "0.24.1"
 failure = "0.1.5"
@@ -42,4 +40,9 @@ crates-index = "0.18"
 datafrog = "2"
 csv = "1.1"
 itertools = "0.10"
-tempdir = "0.3"
+tempfile = "3.3.0"
+
+[dependencies.chrono]
+version = "0.4"
+default-features = false
+features = ["clock", "std"]
