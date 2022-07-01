@@ -46,7 +46,7 @@ pub fn is_public(def_id: DefId, tcx: TyCtxt<'_>) -> bool {
         let visibility = tcx.visibility(def_id);
         match node {
             Node::Expr(rustc_hir::Expr {
-                kind: rustc_hir::ExprKind::Closure(..),
+                kind: rustc_hir::ExprKind::Closure { .. },
                 ..
             }) => {
                 let parent_def_id = tcx.parent(def_id);
