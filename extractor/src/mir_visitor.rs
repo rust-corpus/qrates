@@ -279,6 +279,14 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                             );
                         (stmt, "Assign/ShallowInitBox")
                     }
+                    mir::Rvalue::CopyForDeref(place) => {
+                        let place_ty = self.filler.register_type(place.ty(self.body, self.tcx).ty);
+                        let (stmt,) = self
+                            .filler
+                            .tables
+                            .register_statements_assign_copy_for_deref(place_ty);
+                        (stmt, "Assign/CopyForDeref")
+                    }
                 };
                 (stmt, kind)
             }
