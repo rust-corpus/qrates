@@ -475,6 +475,7 @@ relation statements_assign_discriminant(stmt: auto Statement, target_type: Type,
 relation statements_assign_aggregate(stmt: auto Statement, target_type: Type, kind: AggregateKind);
 relation statements_assign_aggregate_operands(stmt: Statement, index: OperandIndex, operand: Operand);
 relation statements_assign_shallow_init_box(stmt: auto Statement, operand: Operand, typ: Type);
+relation statements_assign_copy_for_deref(stmt: auto Statement, place_type: Type);
 relation statements_inline_asm_inputs(stmt: Statement, operand: Operand);
 relation statements_inline_asm_outputs(stmt: Statement, typ: Type);
 relation operands(operand: auto Operand, kind: OperandKind, typ: Type);
