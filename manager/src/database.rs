@@ -4,8 +4,8 @@
 
 //! Module responsible for managing the database.
 
+use anyhow::Result;
 use corpus_database::tables;
-use failure::Error;
 use log::{debug, error, info, trace};
 use log_derive::logfn;
 use std::collections::HashSet;
@@ -108,7 +108,7 @@ impl DatabaseManager {
             .filter(|path| path.extension() == Some(ffi::OsStr::new("bincode")))
     }
     #[logfn(Trace)]
-    fn load_crate(&mut self, file_name: String, crate_path: PathBuf) -> Result<(), Error> {
+    fn load_crate(&mut self, file_name: String, crate_path: PathBuf) -> Result<()> {
         let crate_tables = tables::Tables::load(&crate_path)?;
         self.database.merge(crate_tables);
         self.loaded_crates.insert(file_name);

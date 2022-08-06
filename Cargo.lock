@@ -370,9 +370,9 @@ checksum = "5827cebf4670468b8772dd191856768aedcb1b0278a04f989f7766351917b9dc"
 name = "corpus-database"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bincode",
  "corpus-database-dsl",
- "failure",
  "log",
  "rand",
  "serde",
@@ -406,6 +406,7 @@ dependencies = [
 name = "corpus-manager"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cargo",
  "chrono",
  "color-backtrace",
@@ -416,7 +417,6 @@ dependencies = [
  "csv",
  "datafrog",
  "datapond-derive",
- "failure",
  "itertools",
  "log",
  "log-derive",

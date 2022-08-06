@@ -6,66 +6,25 @@
 
 use crate::data_structures::{InterningTable, InterningTableKey, InterningTableValue, Relation};
 use crate::tables::Tables;
-use failure::{Error, Fail};
+use anyhow::{Context, Result};
 use log::trace;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use std::io::{BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-#[derive(Debug)]
-enum LoadError {
-    OpenFileError { path: PathBuf, error: String },
-    InvalidBincode { path: PathBuf, error: String },
-    InvalidJson { path: PathBuf, error: String },
-}
-
-impl Fail for LoadError {}
-
-impl fmt::Display for LoadError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        match self {
-            LoadError::OpenFileError { path, error } => {
-                write!(f, "Failed to open file {:?}: {}", path, error)
-            }
-            LoadError::InvalidBincode { path, error } => {
-                write!(f, "Invalid bincode {:?}: {}", path, error)
-            }
-            LoadError::InvalidJson { path, error } => {
-                write!(f, "Invalid JSON {:?}: {}", path, error)
-            }
-        }
-    }
-}
-
-type LoadResult<T> = Result<T, Error>;
-
-pub fn load<T>(path: &Path) -> LoadResult<T>
+pub fn load<T>(path: &Path) -> Result<T>
 where
     for<'de> T: Deserialize<'de>,
 {
     trace!("[enter] load({:?})", path);
     let extension = path.extension().unwrap();
-    let file = std::fs::File::open(path).map_err(|e| LoadError::OpenFileError {
-        path: path.to_path_buf(),
-        error: e.to_string(),
-    })?;
+    let file =
+        std::fs::File::open(path).with_context(|| format!("Failed to open file: {:?}", path))?;
     let result = if extension == "bincode" {
-        bincode::deserialize_from(file).map_err(|e| {
-            LoadError::InvalidBincode {
-                path: path.to_path_buf(),
-                error: e.to_string(),
-            }
-            .into()
-        })
+        bincode::deserialize_from(file)
+            .with_context(|| format!("Invalid bincode in file: {:?}", path))
     } else if extension == "json" {
-        serde_json::from_reader(file).map_err(|e| {
-            LoadError::InvalidJson {
-                path: path.to_path_buf(),
-                error: e.to_string(),
-            }
-            .into()
-        })
+        serde_json::from_reader(file).with_context(|| format!("Invalid json in file: {:?}", path))
     } else {
         unreachable!("Unknown extension: {:?}", extension);
     };
@@ -116,18 +75,14 @@ fn unsafe_save_vec<T: Copy>(vec: &Vec<T>, schema_hash: u64, mut path: std::path:
     trace!("[exit] save({:?})", path);
 }
 
-/// **Note:** this function is not marked unsafe just so that we could use unsafe blocks
-/// to mark precisely where we are performing unsafe operations.
-fn unsafe_load_vec<T: Copy>(
+unsafe fn unsafe_load_vec<T: Copy>(
     expected_relation_hash: u64,
     mut path: std::path::PathBuf,
-) -> Result<Vec<T>, Error> {
+) -> Result<Vec<T>> {
     path.set_extension("rc");
     trace!("[enter] load({:?})", path);
-    let file = std::fs::File::open(&path).map_err(|e| LoadError::OpenFileError {
-        path: path.to_path_buf(),
-        error: e.to_string(),
-    })?;
+    let file =
+        std::fs::File::open(&path).with_context(|| format!("Failed to open file: {:?}", path))?;
     let mut buf_reader = BufReader::new(file);
     if cfg!(target_endian = "big") {
         unreachable!("We assume little endian machines");
@@ -174,11 +129,8 @@ impl<T: Copy> Relation<T> {
     }
     /// This function is safe only when T does not contain references or pointers.
     /// Also, ``relation_hash`` must be correctly initialized.
-    pub unsafe fn load(
-        expected_relation_hash: u64,
-        path: std::path::PathBuf,
-    ) -> Result<Self, Error> {
-        unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into())
+    pub unsafe fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
+        unsafe { unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into()) }
     }
 }
 
@@ -196,11 +148,8 @@ where
     }
     /// This function is safe only when T does not contain references or pointers.
     /// Also, ``relation_hash`` must be correctly initialized.
-    pub unsafe fn load(
-        expected_relation_hash: u64,
-        path: std::path::PathBuf,
-    ) -> Result<Self, Error> {
-        unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into())
+    pub unsafe fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
+        unsafe { unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into()) }
     }
 }
 
@@ -216,7 +165,7 @@ impl Tables {
         save(&self, &path);
     }
     /// ``path`` – the path **with** the extension.
-    pub fn load(path: &std::path::Path) -> Result<Self, Error> {
+    pub fn load(path: &std::path::Path) -> Result<Self> {
         load(path)
     }
 }
