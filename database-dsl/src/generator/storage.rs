@@ -14,7 +14,7 @@ pub(super) fn generate_load_save_functions(schema: &ast::DatabaseSchema) -> Toke
         impl Tables {
             pub fn load_multifile(
                 database_root: &Path
-            ) -> Result<Tables, Error> {
+            ) -> Result<Tables> {
                 let relations = load_multifile_relations(&database_root.join("relations"))?;
                 let counters = load_counters(&database_root.join("counters.bincode"))?;
                 let interning_tables = load_interning_tables(&database_root.join("interning"))?;
@@ -26,10 +26,10 @@ pub(super) fn generate_load_save_functions(schema: &ast::DatabaseSchema) -> Toke
             }
             pub fn load_single_file(
                 tables_file: &Path
-            ) -> Result<Tables, Error> {
+            ) -> Result<Tables> {
                 crate::storage::load(tables_file)
             }
-            pub fn store_multifile(&self, database_root: &Path) -> Result<(), Error> {
+            pub fn store_multifile(&self, database_root: &Path) -> Result<()> {
                 let relations_path = database_root.join("relations");
                 std::fs::create_dir_all(&relations_path)?;
                 store_multifile_relations(&self.relations, &relations_path);
@@ -64,7 +64,7 @@ fn load_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStrea
         });
     }
     quote! {
-        fn load_multifile_relations(path: &Path) -> Result<Relations, Error> {
+        fn load_multifile_relations(path: &Path) -> Result<Relations> {
             Ok(Relations {
                 #load_fields
             })
@@ -94,7 +94,7 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
 
 fn load_counters_function() -> TokenStream {
     quote! {
-        fn load_counters(path: &Path) -> Result<Counters, Error> {
+        fn load_counters(path: &Path) -> Result<Counters> {
             crate::storage::load(&path)
         }
     }
@@ -126,7 +126,7 @@ fn load_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStream
         }
     }
     quote! {
-        fn load_interning_tables(path: &Path) -> Result<InterningTables, Error> {
+        fn load_interning_tables(path: &Path) -> Result<InterningTables> {
             Ok(InterningTables {
                 #load_fields
             })
