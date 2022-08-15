@@ -111,7 +111,7 @@ impl CratesList {
                     crates.push(Crate::Package(package));
                 }
             } else {
-                let version = krate.latest_version();
+                let version = krate.most_recent_version();
                 let package = Package {
                     name: version.name().to_string(),
                     version: version.version().to_string(),
