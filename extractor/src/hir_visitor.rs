@@ -291,7 +291,9 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     self.filler.tables.register_trait_items(
                         item_id,
                         trait_item_def_path,
-                        trait_item.defaultness.convert_into(),
+                        self.tcx
+                            .impl_defaultness(self.hir_map.local_def_id(trait_item.id.hir_id()))
+                            .convert_into(),
                     )
                 }
                 let old_item = mem::replace(&mut self.current_item, Some(item_id));
@@ -427,7 +429,8 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
             | DefKind::Static(_)
             | DefKind::AssocConst
             | DefKind::Ctor(..)
-            | DefKind::AnonConst => self.tcx.mir_for_ctfe_opt_const_arg(def),
+            | DefKind::AnonConst
+            | DefKind::InlineConst => self.tcx.mir_for_ctfe_opt_const_arg(def),
             _ => self.tcx.optimized_mir(def.did),
         };
 

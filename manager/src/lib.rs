@@ -4,8 +4,6 @@
 
 //! Library for managing crate sources.
 
-#![feature(backtrace)]
-
 mod compilation;
 mod compilation_utils;
 mod database;
@@ -63,7 +61,8 @@ pub fn compile(
     );
     manager
         .compile_all()
-        .map_err(|e| panic!("Error: {}, {:?}", e, e.backtrace().map(|bt| bt.to_string())))
+        // .map_err(|e| panic!("Error: {}, {:?}", e, e.backtrace().map(|bt| bt.to_string())))
+        .map_err(|e| panic!("Error: {}", e))
         .unwrap();
 }
 
