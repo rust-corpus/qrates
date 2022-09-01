@@ -42,7 +42,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
     pub fn visit(&mut self) {
         self.visit_scopes();
         let mut basic_blocks = HashMap::new();
-        for (basic_block_index, basic_block_data) in self.body.basic_blocks().iter_enumerated() {
+        for (basic_block_index, basic_block_data) in self.body.basic_blocks.iter_enumerated() {
             let basic_block_kind = if basic_block_index == mir::START_BLOCK {
                 assert!(!basic_block_data.is_cleanup);
                 types::BasicBlockKind::Entry
@@ -70,7 +70,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 );
             }
         }
-        for (basic_block_index, basic_block_data) in self.body.basic_blocks().iter_enumerated() {
+        for (basic_block_index, basic_block_data) in self.body.basic_blocks.iter_enumerated() {
             let terminator = basic_block_data.terminator();
             let basic_block = basic_blocks[&basic_block_index];
             let kind = self.visit_terminator(basic_block, &terminator, &basic_blocks);

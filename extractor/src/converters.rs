@@ -26,7 +26,6 @@ impl ConvertInto<types::TyVisibility> for ty::Visibility {
         match self {
             ty::Visibility::Public => types::TyVisibility::Public,
             ty::Visibility::Restricted(_) => types::TyVisibility::Restricted,
-            ty::Visibility::Invisible => types::TyVisibility::Invisible,
         }
     }
 }
