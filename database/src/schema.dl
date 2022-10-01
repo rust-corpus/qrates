@@ -233,6 +233,13 @@ enum CastKind {
     UnsizePointer,
     PointerExposeAddress,
     PointerFromExposedAddress,
+    DynStar,
+    IntToInt,
+    FloatToInt,
+    IntToFloat,
+    FloatToFloat,
+    PtrToPtr,
+    FnPtrToPtr,
 }
 
 /// The kind of a MIR borrow statement.

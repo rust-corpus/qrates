@@ -309,12 +309,11 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
             mir::StatementKind::Coverage(..) => {
                 (self.filler.tables.get_fresh_statement(), "Coverage")
             }
-            mir::StatementKind::CopyNonOverlapping(..) => (
-                self.filler.tables.get_fresh_statement(),
-                "CopyNonOverlapping",
-            ),
             mir::StatementKind::Nop => (self.filler.tables.get_fresh_statement(), "Nop"),
             mir::StatementKind::Deinit(..) => (self.filler.tables.get_fresh_statement(), "Deinit"),
+            mir::StatementKind::Intrinsic(..) => {
+                (self.filler.tables.get_fresh_statement(), "Intrinsic")
+            }
         };
         (stmt, kind.to_string())
     }

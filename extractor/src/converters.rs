@@ -10,18 +10,7 @@ pub trait ConvertInto<T> {
     fn convert_into(&self) -> T;
 }
 
-// impl<'hir> ConvertInto<types::Visibility> for hir::Visibility<'hir> {
-//     fn convert_into(&self) -> types::Visibility {
-//         match self.node {
-//             hir::VisibilityKind::Public => types::Visibility::Public,
-//             hir::VisibilityKind::Crate(_) => types::Visibility::Crate,
-//             hir::VisibilityKind::Restricted { .. } => types::Visibility::Restricted,
-//             hir::VisibilityKind::Inherited => types::Visibility::Private,
-//         }
-//     }
-// }
-
-impl ConvertInto<types::TyVisibility> for ty::Visibility {
+impl ConvertInto<types::TyVisibility> for ty::Visibility<rustc_hir::def_id::DefId> {
     fn convert_into(&self) -> types::TyVisibility {
         match self {
             ty::Visibility::Public => types::TyVisibility::Public,
@@ -29,15 +18,6 @@ impl ConvertInto<types::TyVisibility> for ty::Visibility {
         }
     }
 }
-
-// impl<'hir> ConvertInto<types::Visibility> for Option<&hir::Visibility<'hir>> {
-//     fn convert_into(&self) -> types::Visibility {
-//         match self {
-//             Some(visibility) => visibility.convert_into(),
-//             None => types::Visibility::Unknown,
-//         }
-//     }
-// }
 
 impl ConvertInto<types::Unsafety> for hir::Unsafety {
     fn convert_into(&self) -> types::Unsafety {
@@ -132,7 +112,6 @@ impl ConvertInto<types::BorrowKind> for mir::BorrowKind {
 impl ConvertInto<types::CastKind> for mir::CastKind {
     fn convert_into(&self) -> types::CastKind {
         match self {
-            mir::CastKind::Misc => types::CastKind::Misc,
             mir::CastKind::Pointer(pointer) => match pointer {
                 ty::adjustment::PointerCast::ReifyFnPointer => types::CastKind::ReifyFnPointer,
                 ty::adjustment::PointerCast::UnsafeFnPointer => types::CastKind::UnsafeFnPointer,
@@ -148,6 +127,13 @@ impl ConvertInto<types::CastKind> for mir::CastKind {
             },
             mir::CastKind::PointerExposeAddress => types::CastKind::PointerExposeAddress,
             mir::CastKind::PointerFromExposedAddress => types::CastKind::PointerFromExposedAddress,
+            mir::CastKind::DynStar => types::CastKind::DynStar,
+            mir::CastKind::IntToInt => types::CastKind::IntToInt,
+            mir::CastKind::FloatToInt => types::CastKind::FloatToInt,
+            mir::CastKind::IntToFloat => types::CastKind::IntToFloat,
+            mir::CastKind::FloatToFloat => types::CastKind::FloatToFloat,
+            mir::CastKind::PtrToPtr => types::CastKind::PtrToPtr,
+            mir::CastKind::FnPtrToPtr => types::CastKind::FnPtrToPtr,
         }
     }
 }
