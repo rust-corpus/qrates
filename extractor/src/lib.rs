@@ -4,7 +4,6 @@
 
 #![feature(rustc_private)]
 #![feature(box_patterns)]
-#![feature(let_else)]
 
 extern crate rustc_ast;
 extern crate rustc_data_structures;

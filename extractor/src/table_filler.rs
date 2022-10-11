@@ -224,7 +224,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                     self.tables.register_types_fn_ptr(interned_type);
                     interned_type
                 }
-                ty::TyKind::Dynamic(binder, _region) => {
+                ty::TyKind::Dynamic(binder, _region, _) => {
                     let interned_type = self.insert_new_type_into_table("Dynamic", typ);
                     self.tables.register_types_dynamic(interned_type);
                     for predicate in binder.iter() {

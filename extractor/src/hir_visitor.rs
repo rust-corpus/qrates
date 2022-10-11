@@ -322,7 +322,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         fn_kind: intravisit::FnKind<'tcx>,
         fn_def: &'tcx hir::FnDecl,
         body_id: hir::BodyId,
-        span: Span,
+        _span: Span,
         id: HirId,
     ) {
         let def_id = self.hir_map.local_def_id(id);
@@ -360,7 +360,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
             ),
         };
         let old_item = mem::replace(&mut self.current_item, Some(function));
-        intravisit::walk_fn(self, fn_kind, fn_def, body_id, span, id);
+        intravisit::walk_fn(self, fn_kind, fn_def, body_id, id);
         self.current_item = old_item;
         for (i, param_type) in param_types.into_iter().enumerate() {
             self.filler
