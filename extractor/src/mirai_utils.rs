@@ -361,8 +361,6 @@ fn build_pretty_description(tcx: TyCtxt<'_>, def_id: DefId, desc: &mut String) {
     let def_path = tcx.def_path(def_id);
     if let Some(last_component) = def_path.data.last() {
         let parent = tcx.parent(def_id);
-        build_pretty_description(tcx, parent, desc);
-        desc.push_str("::");
 
         use DefPathData::*;
         match last_component.data {
@@ -372,16 +370,17 @@ fn build_pretty_description(tcx: TyCtxt<'_>, def_id: DefId, desc: &mut String) {
                 }
                 ty::ImplSubject::Trait(trait_ref) => {
                     desc.push_str(
-                        format!(
+                        &format!(
                             "<{} as {}>",
                             trait_ref.self_ty(),
                             trait_ref.print_only_trait_path()
-                        )
-                        .as_str(),
+                        ),
                     );
                 }
             },
             _ => {
+                build_pretty_description(tcx, parent, desc);
+                desc.push_str("::");
                 push_component_name(last_component.data, desc);
             }
         }
