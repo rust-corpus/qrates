@@ -350,3 +350,46 @@ fn push_component_name(component_data: DefPathData, target: &mut String) {
         }),
     };
 }
+
+pub fn pretty_description(tcx: TyCtxt<'_>, def_id: DefId) -> String {
+    println!();
+    let def_path = tcx.def_path(def_id);
+    println!("{:?}", def_path);
+    let mut desc = String::new();
+    build_pretty_description(tcx, def_id, &mut desc);
+    println!("pretty desc: {}", desc);
+    desc
+}
+
+fn build_pretty_description(tcx: TyCtxt<'_>, def_id: DefId, desc: &mut String) {
+    let def_path = tcx.def_path(def_id);
+    if let Some(last_component) = def_path.data.last() {
+        let parent = tcx.parent(def_id);
+        build_pretty_description(tcx, parent, desc);
+        desc.push_str("::");
+
+        use DefPathData::*;
+        match last_component.data {
+            Impl => match tcx.impl_subject(def_id) {
+                ty::ImplSubject::Inherent(ty) => {
+                    desc.push_str(&ty.to_string());
+                }
+                ty::ImplSubject::Trait(trait_ref) => {
+                    desc.push_str(
+                        format!(
+                            "<{} as {}>",
+                            trait_ref.self_ty(),
+                            trait_ref.print_only_trait_path()
+                        )
+                        .as_str(),
+                    );
+                }
+            },
+            _ => {
+                push_component_name(last_component.data, desc);
+            }
+        }
+    } else {
+        desc.push_str(tcx.crate_name(def_id.krate).as_str())
+    }
+}

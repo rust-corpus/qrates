@@ -64,6 +64,10 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
             def_path_hash,
             summary_key_str_value,
         );
+        
+        let pretty_description = mirai_utils::pretty_description(self.tcx, def_id);
+        self.tables.register_def_path_description(def_path, pretty_description);
+        
         if def_id.is_local() {
             // This will panic if def_id is non-local
             let def_span = self.tcx.def_span(def_id);

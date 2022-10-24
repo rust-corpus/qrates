@@ -345,6 +345,8 @@ intern summary_keys<InternedString as SummaryId<u32>>;
 intern abis<InternedString as Abi<u8>>;
 /// Definition paths is a globablly unique identifier of the definition.
 intern def_paths<(Krate, CrateHash, RelativeDefId, DefPathHash, SummaryId) as DefPath<u64>>;
+/// Interned pretty descriptions for def paths.
+intern def_path_descriptions<InternedString as DefPathDescription<u32>>;
 /// A crate compiled with a specific configuration.
 intern builds<(Package, PackageVersion, Krate, CrateHash, Edition) as Build<u32>>;
 /// Interned span locations.
@@ -369,6 +371,7 @@ intern terminator_kinds<InternedString as TerminatorKind<u8>>;
 // Relations.
 
 relation def_path_span(def_path: DefPath, span: Span);
+relation def_path_description(def_path: DefPath, description: DefPathDescription);
 /// The crate types associated with the build.
 relation build_crate_types(build: Build, crate_type: InternedString);
 /// The module that is the root of the AST tree.
