@@ -352,12 +352,8 @@ fn push_component_name(component_data: DefPathData, target: &mut String) {
 }
 
 pub fn pretty_description(tcx: TyCtxt<'_>, def_id: DefId) -> String {
-    println!();
-    let def_path = tcx.def_path(def_id);
-    println!("{:?}", def_path);
     let mut desc = String::new();
     build_pretty_description(tcx, def_id, &mut desc);
-    println!("pretty desc: {}", desc);
     desc
 }
 
