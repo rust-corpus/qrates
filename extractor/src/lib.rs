@@ -23,6 +23,7 @@ mod hir_visitor;
 mod mir_visitor;
 mod mirai_utils;
 mod table_filler;
+mod utils;
 
 use lazy_static::lazy_static;
 use rustc_data_structures::fx::FxHashSet;

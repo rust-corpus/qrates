@@ -343,10 +343,8 @@ intern relative_def_paths<InternedString as RelativeDefId<u32>>;
 intern summary_keys<InternedString as SummaryId<u32>>;
 /// Interned ABI.
 intern abis<InternedString as Abi<u8>>;
-/// Definition paths is a globablly unique identifier of the definition.
+/// Definition paths is a globally unique identifier of the definition.
 intern def_paths<(Krate, CrateHash, RelativeDefId, DefPathHash, SummaryId) as DefPath<u64>>;
-/// Interned pretty descriptions for def paths.
-intern def_path_descriptions<InternedString as DefPathDescription<u32>>;
 /// A crate compiled with a specific configuration.
 intern builds<(Package, PackageVersion, Krate, CrateHash, Edition) as Build<u32>>;
 /// Interned span locations.
@@ -371,7 +369,7 @@ intern terminator_kinds<InternedString as TerminatorKind<u8>>;
 // Relations.
 
 relation def_path_span(def_path: DefPath, span: Span);
-relation def_path_description(def_path: DefPath, description: DefPathDescription);
+relation type_description(ty: Type, description: InternedString);
 /// The crate types associated with the build.
 relation build_crate_types(build: Build, crate_type: InternedString);
 /// The module that is the root of the AST tree.
@@ -499,7 +497,7 @@ relation terminators_drop_and_replace(block: BasicBlock, location: Type, value: 
 relation terminators_call(block: BasicBlock, call: auto FunctionCall, func: Operand, unsafety: Unsafety, abi: Abi, return_ty: Type, destination: BasicBlock, cleanup: BasicBlock, span: Span);
 relation terminators_call_arg(call: FunctionCall, index: CallArgIndex, arg: Operand);
 /// The called function or trait method.
-relation terminators_call_const_target(call: FunctionCall, def_path: DefPath);
+relation terminators_call_const_target(call: FunctionCall, def_path: DefPath, target_desc: InternedString);
 /// The self argument of the called method.
 relation terminators_call_const_target_self(call: FunctionCall, typ: Type);
 relation terminators_assert(block: BasicBlock, cond: Operand, expected: bool, target: BasicBlock, cleanup: BasicBlock);

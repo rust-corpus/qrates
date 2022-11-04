@@ -4,6 +4,7 @@
 
 use crate::converters::ConvertInto;
 use crate::table_filler::TableFiller;
+use crate::utils::*;
 use corpus_database::types;
 use rustc_hir as hir;
 use rustc_middle::mir;
@@ -453,6 +454,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         match constant.literal.ty().kind() {
                             ty::TyKind::FnDef(target_id, substs) => {
                                 let generics = self.tcx.generics_of(*target_id);
+                                // TODO: store in db
                                 if generics.has_self {
                                     let self_ty = substs.type_at(0);
                                     let interned_type = self.filler.register_type(self_ty);
@@ -463,10 +465,13 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                                             interned_type,
                                         );
                                 }
+                                let desc = pretty_description(self.tcx, *target_id, substs);
+                                // TODO: identify receiver type in static dispatch
                                 let def_path = self.filler.resolve_def_id(*target_id);
                                 self.filler.tables.register_terminators_call_const_target(
                                     function_call,
                                     def_path,
+                                    desc
                                 );
                             }
                             ty::TyKind::FnPtr(_) => {

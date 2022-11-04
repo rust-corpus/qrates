@@ -148,7 +148,7 @@ fn report_non_const_call_targets(loader: &Loader, report_path: &Path) {
     let const_calls: HashSet<_> = loader
         .load_terminators_call_const_target()
         .iter()
-        .map(|(call, _def_path)| *call)
+        .map(|(call, _def_path, _desc)| *call)
         .collect();
     let build_resolver = BuildResolver::new(loader);
     let strings = loader.load_strings();
@@ -187,7 +187,8 @@ fn report_const_call_targets(loader: &Loader, report_path: &Path) {
     let const_calls_map: HashMap<_, _> = loader
         .load_terminators_call_const_target()
         .iter()
-        .cloned()
+        .copied()
+        .map(|(id, target, _desc)| (id, target))
         .collect();
     let def_path_resolver = DefPathResolver::new(loader);
     let build_resolver = BuildResolver::new(loader);

@@ -293,10 +293,10 @@ pub fn summary_key_str(tcx: TyCtxt<'_>, def_id: DefId) -> Rc<String> {
         }
         if component.disambiguator != 0 {
             name.push('_');
-            
+
             let da = component.disambiguator.to_string();
             name.push_str(da.as_str());
-            
+
             if component.data == DefPathData::Impl {
                 let parent_def_id = tcx.parent(def_id);
                 if let Some(type_ns) = &type_ns {
@@ -331,60 +331,21 @@ pub fn is_foreign_contract(tcx: TyCtxt<'_>, def_id: DefId) -> bool {
 }
 
 fn push_component_name(component_data: DefPathData, target: &mut String) {
+    target.push_str(component_name(&component_data));
+}
+
+pub fn component_name(component_data: &DefPathData) -> &str {
     use DefPathData::*;
     match component_data {
-        TypeNs(name) | ValueNs(name) | MacroNs(name) | LifetimeNs(name) => {
-            target.push_str(name.as_str());
-        }
-        _ => target.push_str(match component_data {
-            CrateRoot => "crate_root",
-            Impl => "implement",
-            ForeignMod => "foreign",
-            Use => "use",
-            GlobalAsm => "global_asm",
-            ClosureExpr => "closure",
-            Ctor => "ctor",
-            AnonConst => "constant",
-            ImplTrait => "implement_trait",
-            _ => unreachable!(),
-        }),
-    };
-}
-
-pub fn pretty_description(tcx: TyCtxt<'_>, def_id: DefId) -> String {
-    let mut desc = String::new();
-    build_pretty_description(tcx, def_id, &mut desc);
-    desc
-}
-
-fn build_pretty_description(tcx: TyCtxt<'_>, def_id: DefId, desc: &mut String) {
-    let def_path = tcx.def_path(def_id);
-    if let Some(last_component) = def_path.data.last() {
-        let parent = tcx.parent(def_id);
-
-        use DefPathData::*;
-        match last_component.data {
-            Impl => match tcx.impl_subject(def_id) {
-                ty::ImplSubject::Inherent(ty) => {
-                    desc.push_str(&ty.to_string());
-                }
-                ty::ImplSubject::Trait(trait_ref) => {
-                    desc.push_str(
-                        &format!(
-                            "<{} as {}>",
-                            trait_ref.self_ty(),
-                            trait_ref.print_only_trait_path()
-                        ),
-                    );
-                }
-            },
-            _ => {
-                build_pretty_description(tcx, parent, desc);
-                desc.push_str("::");
-                push_component_name(last_component.data, desc);
-            }
-        }
-    } else {
-        desc.push_str(tcx.crate_name(def_id.krate).as_str())
+        TypeNs(name) | ValueNs(name) | MacroNs(name) | LifetimeNs(name) => name.as_str(),
+        CrateRoot => "crate_root",
+        Impl => "implement",
+        ForeignMod => "foreign",
+        Use => "use",
+        GlobalAsm => "global_asm",
+        ClosureExpr => "closure",
+        Ctor => "ctor",
+        AnonConst => "constant",
+        ImplTrait => "implement_trait",
     }
 }

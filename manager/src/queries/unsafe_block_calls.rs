@@ -13,9 +13,12 @@ fn report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
     let span_resolver = SpanResolver::new(loader);
 
     let def_paths = loader.load_def_paths();
-    let terminators_call_const_target = loader.load_terminators_call_const_target();
-    let terminators_call_const_target: HashMap<_, _> =
-        terminators_call_const_target.iter().copied().collect();
+    let terminators_call_const_target: HashMap<_, _> = loader
+        .load_terminators_call_const_target()
+        .iter()
+        .copied()
+        .map(|(id, target, _desc)| (id, target))
+        .collect();
     let crate_names = loader.load_crate_names();
     let relative_def_paths = loader.load_relative_def_paths();
     let strings = loader.load_strings();
@@ -85,9 +88,12 @@ fn report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
 /// Report information about all calls in our codebase.
 fn report_all_calls(loader: &Loader, report_path: &Path) {
     let def_paths = loader.load_def_paths();
-    let terminators_call_const_target = loader.load_terminators_call_const_target();
-    let terminators_call_const_target: HashMap<_, _> =
-        terminators_call_const_target.iter().copied().collect();
+    let terminators_call_const_target: HashMap<_, _> = loader
+        .load_terminators_call_const_target()
+        .iter()
+        .copied()
+        .map(|(id, target, _desc)| (id, target))
+        .collect();
     let strings = loader.load_strings();
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();

@@ -65,9 +65,6 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
             summary_key_str_value,
         );
         
-        let pretty_description = mirai_utils::pretty_description(self.tcx, def_id);
-        self.tables.register_def_path_description(def_path, pretty_description);
-        
         if def_id.is_local() {
             // This will panic if def_id is non-local
             let def_span = self.tcx.def_span(def_id);
@@ -113,6 +110,10 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
     fn insert_new_type_into_table(&mut self, kind: &str, typ: ty::Ty<'tcx>) -> types::Type {
         assert!(!self.type_registry.contains_key(&typ));
         let (interned_type,) = self.tables.register_types(kind.to_string());
+        // get crate of type
+        //let crate_num = typ.ty_adt_def().unwrap().did.krate;
+        let desc = typ.to_string();
+        self.tables.register_type_description(interned_type, desc);
         self.type_registry.insert(typ, interned_type);
         interned_type
     }
