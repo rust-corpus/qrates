@@ -1,11 +1,8 @@
 //! Report information about calls in our codebase.
 //! For trait methods whose receiver is statically known, report this resolved type rather than the trait.
 
-use super::utils::DefPathResolver;
 use crate::write_csv;
 use corpus_database::tables::Loader;
-use corpus_database::{types::*, InterningTable};
-use std::cell::Ref;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
@@ -14,12 +11,10 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .load_terminators_call_const_target()
         .iter()
         .copied()
+        .map(|(id, def_path, desc)| (id, (def_path, desc)))
         .collect();
-    let terminators_call_const_target_self: HashMap<_, _> = loader
-        .load_terminators_call_const_target_self()
-        .iter()
-        .copied()
-        .collect();
+    let terminators_call_const_target_self =
+        loader.load_terminators_call_const_target_self_as_map();
     let strings = loader.load_strings();
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
@@ -27,45 +22,48 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .iter()
         .map(|(_trait_id, def_path, _defaultness)| def_path)
         .collect();
-    let def_path_descriptions = loader.load_def_path_descriptions();
-    let pretty_descriptions: HashMap<_, _> = loader
-        .load_def_path_description()
+    let def_paths = loader.load_def_paths();
+    let crate_names = loader.load_crate_names();
+    let type_descriptions = loader.load_type_description_as_map();
+    let basic_block_def_paths: HashMap<_, _> = loader
+        .load_basic_blocks()
         .iter()
-        .map(|&(def_path, description)| (def_path, &strings[def_path_descriptions[description]]))
+        .map(|&(bb, def_path, _kind)| (bb, def_path))
         .collect();
 
-    let type_name_resolver = TypeNameResolver::new(loader);
+    //let type_name_resolver = TypeNameResolver::new(loader);
 
     let all_calls = loader.load_terminators_call();
-    let all_calls = all_calls.iter().map(
-        |&(_block, call, func, _unsafety, abi, _return_ty, _destination, _cleanup, _span)| {
-            // TODO: crate of call site
-            let (call_target, is_trait_item) = if let Some(target) =
-                terminators_call_const_target.get(&call)
-            {
-                (
-                    pretty_descriptions[target].as_ref(),
-                    trait_items.contains(target),
-                )
-            } else {
-                ("non-const", false)
-            };
+    let all_calls = all_calls.iter().filter_map(
+        |&(block, call, func, _unsafety, abi, _return_ty, _destination, _cleanup, _span)| {
+            let (caller_crate, _, _, _, _) = def_paths[basic_block_def_paths[&block]];
+            let caller_crate_name = &strings[crate_names[caller_crate]];
+
+            let (target, target_desc) = terminators_call_const_target.get(&call)?; // none for function pointers
+            let (target_crate, _, _, _, _) = def_paths[*target];
+            let target_crate_name = &strings[crate_names[target_crate]];
+            let is_trait_item = trait_items.contains(target);
+
             let call_receiver_name = terminators_call_const_target_self
                 .get(&call)
-                .map_or_else(|| "".to_string(), |typ| type_name_resolver.resolve(typ));
-            (
+                .map_or_else(|| "", |typ| &strings[type_descriptions[typ]]);
+
+            Some((
                 call,
                 func,
                 strings[abis[abi]].to_string(),
                 call_receiver_name,
-                call_target,
+                &strings[*target_desc],
+                caller_crate_name,
+                target_crate_name,
                 is_trait_item,
-            )
+            ))
         },
     );
     write_csv!(report_path, all_calls);
 }
 
+/*
 struct TypeNameResolver<'b> {
     def_path_resolver: DefPathResolver<'b>,
     types: HashMap<Type, TyKind>,
@@ -119,3 +117,4 @@ impl<'b> TypeNameResolver<'b> {
         }
     }
 }
+*/
