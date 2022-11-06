@@ -38,20 +38,20 @@ fn build_pretty_description(
             Impl => {
                 match tcx.impl_subject(def_id) {
                     ty::ImplSubject::Inherent(ty) => {
-						let parent_substs = if substs.is_empty() {
-							&[]
-						} else {
-							// as seen in rustc_middle::ty::print::Printer::default_print_def_path
-							let generics = tcx.generics_of(def_id);
-							&substs[..generics.parent_count.min(substs.len())]
-						};
-						// get DefId of the type
-						if let Some(ty_def) = ty.ty_adt_def() {
-							build_pretty_description(tcx, ty_def.did(), parent_substs, desc);
-						} else {
-							let ty_desc = ty.to_string();
-							desc.push_str(&ty_desc);
-						}
+                        let parent_substs = if substs.is_empty() {
+                            &[]
+                        } else {
+                            // as seen in rustc_middle::ty::print::Printer::default_print_def_path
+                            let generics = tcx.generics_of(def_id);
+                            &substs[..generics.parent_count.min(substs.len())]
+                        };
+                        // get DefId of the type
+                        if let Some(ty_def) = ty.ty_adt_def() {
+                            build_pretty_description(tcx, ty_def.did(), parent_substs, desc);
+                        } else {
+                            let ty_desc = ty.to_string();
+                            desc.push_str(&ty_desc);
+                        }
                     }
                     ty::ImplSubject::Trait(_trait_ref) => {
                         desc.push_str("<APPARENTLY NOT UNREACHABLE>");
@@ -66,7 +66,7 @@ fn build_pretty_description(
                 let parent_substs = if substs.is_empty() {
                     &[]
                 } else {
-					// as seen in rustc_middle::ty::print::Printer::default_print_def_path
+                    // as seen in rustc_middle::ty::print::Printer::default_print_def_path
                     let generics = tcx.generics_of(def_id);
                     &substs[..generics.parent_count.min(substs.len())]
                 };
@@ -77,23 +77,23 @@ fn build_pretty_description(
                 //println!("back to {:?}", def_key.disambiguated_data.data);
             }
         }
-		
-		if !substs.is_empty() {
-			let generics = tcx.generics_of(def_id);
-			//println!("generics: {:?}", generics);
 
-			let start_index = if generics.has_self { 1 } else { 0 };
-			let params: Vec<_> = generics
-				.params
-				.iter()
-				.filter(|p| p.index >= start_index)
+        if !substs.is_empty() {
+            let generics = tcx.generics_of(def_id);
+            //println!("generics: {:?}", generics);
+
+            let start_index = if generics.has_self { 1 } else { 0 };
+            let params: Vec<_> = generics
+                .params
+                .iter()
+                .filter(|p| p.index >= start_index)
                 .filter(|p| matches!(p.kind, ty::GenericParamDefKind::Type { .. }))
-				.collect();
+                .collect();
 
-			if !params.is_empty() {
-				desc.push('<');
-				for generic in params {
-					let subst = substs[generic.index as usize];
+            if !params.is_empty() {
+                desc.push('<');
+                for generic in params {
+                    let subst = substs[generic.index as usize];
                     let subst_ty = match subst.unpack() {
                         ty::subst::GenericArgKind::Type(ty) => ty,
                         _ => unreachable!(), // such params would be filtered out above
@@ -107,10 +107,10 @@ fn build_pretty_description(
                     };
                     println!("generic: {} for {}", subst_desc, generic.name);
                     desc.push_str(&subst_desc);
-				}
-				desc.push('>');
-			}
-		}
+                }
+                desc.push('>');
+            }
+        }
     } else {
         //println!("root");
         desc.push_str(tcx.crate_name(def_id.krate).as_str())
