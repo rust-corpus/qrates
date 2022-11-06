@@ -87,14 +87,26 @@ fn build_pretty_description(
 				.params
 				.iter()
 				.filter(|p| p.index >= start_index)
+                .filter(|p| matches!(p.kind, ty::GenericParamDefKind::Type { .. }))
 				.collect();
 
 			if !params.is_empty() {
 				desc.push('<');
 				for generic in params {
 					let subst = substs[generic.index as usize];
-					//println!("generic: {} for {}", subst, generic.name);
-					desc.push_str(&subst.to_string());
+                    let subst_ty = match subst.unpack() {
+                        ty::subst::GenericArgKind::Type(ty) => ty,
+                        _ => unreachable!(), // such params would be filtered out above
+                    };
+                    let subst_desc = match subst_ty.kind() {
+                        // for our evaluation, we don't care which function is passed, or even how it's referenced
+                        ty::TyKind::Closure(..) | ty::TyKind::FnDef(..) | ty::TyKind::FnPtr(..) => {
+                            "$fn".to_string()
+                        }
+                        _ => subst_ty.to_string(),
+                    };
+                    println!("generic: {} for {}", subst_desc, generic.name);
+                    desc.push_str(&subst_desc);
 				}
 				desc.push('>');
 			}
