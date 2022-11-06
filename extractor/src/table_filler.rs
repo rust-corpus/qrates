@@ -4,6 +4,7 @@
 
 use crate::converters::ConvertInto;
 use crate::mirai_utils;
+use crate::utils::pretty_description;
 use corpus_database::{tables::Tables, types};
 use rustc_hir::{self as hir, HirId};
 use rustc_middle::hir::map::Map as HirMap;
@@ -110,9 +111,12 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
     fn insert_new_type_into_table(&mut self, kind: &str, typ: ty::Ty<'tcx>) -> types::Type {
         assert!(!self.type_registry.contains_key(&typ));
         let (interned_type,) = self.tables.register_types(kind.to_string());
-        // get crate of type
-        //let crate_num = typ.ty_adt_def().unwrap().did.krate;
-        let desc = typ.to_string();
+        let desc = match typ.ty_adt_def() {
+            Some(def) => pretty_description(self.tcx, def.did(), &[]),
+            None => typ.to_string(),
+        };
+        //println!("orig: {}", typ.to_string());
+        //println!("desc: {}", desc);
         self.tables.register_type_description(interned_type, desc);
         self.type_registry.insert(typ, interned_type);
         interned_type
