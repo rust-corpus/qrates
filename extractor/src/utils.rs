@@ -105,7 +105,7 @@ fn build_pretty_description(
                         }
                         _ => subst_ty.to_string(),
                     };
-                    println!("generic: {} for {}", subst_desc, generic.name);
+                    //println!("generic: {} for {}", subst_desc, generic.name);
                     desc.push_str(&subst_desc);
                 }
                 desc.push('>');
