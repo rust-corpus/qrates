@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use rustc_hir::def_id::DefId;
 use rustc_hir::definitions::DefPathData;
 use rustc_middle::ty::{self, GenericArg, TyCtxt};
@@ -15,8 +16,8 @@ pub fn pretty_description<'t>(
     //    tcx.def_path_str_with_substs(def_id, substs)
     //);
     build_pretty_description(tcx, def_id, substs, &mut desc);
-    //println!("pretty_description: {}", desc);
-    //println!();
+    println!("pretty_description: {}", desc);
+    println!();
     desc
 }
 
@@ -92,22 +93,26 @@ fn build_pretty_description(
 
             if !params.is_empty() {
                 desc.push('<');
-                for generic in params {
-                    let subst = substs[generic.index as usize];
-                    let subst_ty = match subst.unpack() {
-                        ty::subst::GenericArgKind::Type(ty) => ty,
-                        _ => unreachable!(), // such params would be filtered out above
-                    };
-                    let subst_desc = match subst_ty.kind() {
-                        // for our evaluation, we don't care which function is passed, or even how it's referenced
-                        ty::TyKind::Closure(..) | ty::TyKind::FnDef(..) | ty::TyKind::FnPtr(..) => {
-                            "$fn".to_string()
-                        }
-                        _ => subst_ty.to_string(),
-                    };
-                    //println!("generic: {} for {}", subst_desc, generic.name);
-                    desc.push_str(&subst_desc);
-                }
+                let resolved_generics = params
+                    .iter()
+                    .map(|generic| {
+                        let subst = substs[generic.index as usize];
+                        let subst_ty = match subst.unpack() {
+                            ty::subst::GenericArgKind::Type(ty) => ty,
+                            _ => unreachable!(), // such params would be filtered out above
+                        };
+                        let subst_desc = match subst_ty.kind() {
+                            // for our evaluation, we don't care which function is passed, or even how it's referenced
+                            ty::TyKind::Closure(..)
+                            | ty::TyKind::FnDef(..)
+                            | ty::TyKind::FnPtr(..) => "$fn".to_string(),
+                            _ => subst_ty.to_string(),
+                        };
+                        //println!("generic: {} for {}", subst_desc, generic.name);
+                        subst_desc
+                    })
+                    .join(", ");
+                desc.push_str(&resolved_generics);
                 desc.push('>');
             }
         }
