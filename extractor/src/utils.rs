@@ -1,14 +1,14 @@
 use itertools::Itertools;
-use rustc_hir::def_id::DefId;
 use rustc_hir::definitions::DefPathData;
+use rustc_hir::{def::DefKind, def_id::DefId};
 use rustc_middle::ty::{self, GenericArg, TyCtxt};
 
 pub fn pretty_description<'t>(
     tcx: TyCtxt<'t>,
     def_id: DefId,
     substs: &'t [GenericArg<'t>],
-) -> String {
-    let mut desc = String::new();
+) -> PrettyDescription {
+    let mut desc = PrettyDescription::new();
     //let path = tcx.def_path(def_id);
     //println!();
     //println!(
@@ -16,16 +16,60 @@ pub fn pretty_description<'t>(
     //    tcx.def_path_str_with_substs(def_id, substs)
     //);
     build_pretty_description(tcx, def_id, substs, &mut desc);
-    println!("pretty_description: {}", desc);
-    println!();
+    println!("pretty_description for {} is {:?}", tcx.def_path_str_with_substs(def_id, substs), desc);
+    //println!();
     desc
 }
 
-fn build_pretty_description(
-    tcx: TyCtxt<'_>,
+pub fn pretty_type_description<'t>(tcx: TyCtxt<'t>, ty: &ty::Ty<'t>) -> String {
+    let desc = match ty.kind() {
+        ty::Adt(adt, substs) => {
+            let desc = pretty_description(tcx, adt.did(), substs);
+            if !desc.type_generics.is_empty() {
+                format!("{}<{}>", desc.path, desc.type_generics)
+            } else {
+                desc.path
+            }
+        }
+        ty::Slice(element) | ty::Array(element, _) => {
+            format!("&[{}]", pretty_type_description(tcx, element))
+        }
+        ty::Tuple(elements) => {
+            format!(
+                "({})",
+                elements
+                    .iter()
+                    .map(|element| pretty_type_description(tcx, &element))
+                    .join(", ")
+            )
+        }
+        ty::Ref(_, ty, _) => {
+            format!("&{}", pretty_type_description(tcx, ty))
+        }
+        _ => ty.to_string(),
+    };
+    println!("type description {} for type: {}", desc, ty);
+    desc
+}
+
+#[derive(Debug, Default)]
+pub struct PrettyDescription {
+    pub path: String,
+    pub function_generics: String,
+    pub type_generics: String,
+}
+
+impl PrettyDescription {
+    fn new() -> Self {
+        Self::default()
+    }
+}
+
+fn build_pretty_description<'t>(
+    tcx: TyCtxt<'t>,
     def_id: DefId,
-    substs: &[GenericArg],
-    desc: &mut String,
+    substs: &'t [GenericArg<'t>],
+    desc: &mut PrettyDescription,
 ) {
     let def_key = tcx.def_key(def_id);
     //println!("data: {:?}", def_key.disambiguated_data.data);
@@ -37,25 +81,20 @@ fn build_pretty_description(
         use DefPathData::*;
         match def_key.disambiguated_data.data {
             Impl => {
+                let parent_substs = if substs.is_empty() {
+                    &[]
+                } else {
+                    // as seen in rustc_middle::ty::print::Printer::default_print_def_path
+                    let generics = tcx.generics_of(def_id);
+                    &substs[..generics.parent_count.min(substs.len())]
+                };
                 match tcx.impl_subject(def_id) {
                     ty::ImplSubject::Inherent(ty) => {
-                        let parent_substs = if substs.is_empty() {
-                            &[]
-                        } else {
-                            // as seen in rustc_middle::ty::print::Printer::default_print_def_path
-                            let generics = tcx.generics_of(def_id);
-                            &substs[..generics.parent_count.min(substs.len())]
-                        };
-                        // get DefId of the type
-                        if let Some(ty_def) = ty.ty_adt_def() {
-                            build_pretty_description(tcx, ty_def.did(), parent_substs, desc);
-                        } else {
-                            let ty_desc = ty.to_string();
-                            desc.push_str(&ty_desc);
-                        }
+                        let ty_desc = pretty_type_description(tcx, &ty);
+                        desc.path.push_str(&ty_desc);
                     }
-                    ty::ImplSubject::Trait(_trait_ref) => {
-                        desc.push_str("<APPARENTLY NOT UNREACHABLE>");
+                    ty::ImplSubject::Trait(trait_ref) => {
+                        build_pretty_description(tcx, trait_ref.def_id, parent_substs, desc);
                     }
                 }
             }
@@ -72,8 +111,9 @@ fn build_pretty_description(
                     &substs[..generics.parent_count.min(substs.len())]
                 };
                 build_pretty_description(tcx, parent_id, parent_substs, desc);
-                desc.push_str("::");
-                desc.push_str(crate::mirai_utils::component_name(&data));
+                let component_name = crate::mirai_utils::component_name(&data);
+                desc.path.push_str("::");
+                desc.path.push_str(component_name);
 
                 //println!("back to {:?}", def_key.disambiguated_data.data);
             }
@@ -83,41 +123,44 @@ fn build_pretty_description(
             let generics = tcx.generics_of(def_id);
             //println!("generics: {:?}", generics);
 
-            let start_index = if generics.has_self { 1 } else { 0 };
-            let params: Vec<_> = generics
-                .params
+            let resolved_generics = generics
+                .own_substs_no_defaults(tcx, substs)
                 .iter()
-                .filter(|p| p.index >= start_index)
-                .filter(|p| matches!(p.kind, ty::GenericParamDefKind::Type { .. }))
-                .collect();
+                .flat_map(|arg| {
+                    use ty::GenericArgKind::*;
+                    let subst_ty = match arg.unpack() {
+                        Type(ty) => ty,
+                        Lifetime(_) | Const(_) => return None,
+                    };
+                    let subst_desc = match subst_ty.kind() {
+                        // for our evaluation, we don't care which function is passed, or even how it's referenced
+                        ty::TyKind::Closure(..) | ty::TyKind::FnDef(..) | ty::TyKind::FnPtr(..) => {
+                            "$fn".to_string()
+                        }
+                        _ => pretty_type_description(tcx, &subst_ty),
+                    };
+                    Some(subst_desc)
+                })
+                .join(", ");
 
-            if !params.is_empty() {
-                desc.push('<');
-                let resolved_generics = params
-                    .iter()
-                    .map(|generic| {
-                        let subst = substs[generic.index as usize];
-                        let subst_ty = match subst.unpack() {
-                            ty::subst::GenericArgKind::Type(ty) => ty,
-                            _ => unreachable!(), // such params would be filtered out above
-                        };
-                        let subst_desc = match subst_ty.kind() {
-                            // for our evaluation, we don't care which function is passed, or even how it's referenced
-                            ty::TyKind::Closure(..)
-                            | ty::TyKind::FnDef(..)
-                            | ty::TyKind::FnPtr(..) => "$fn".to_string(),
-                            _ => subst_ty.to_string(),
-                        };
-                        //println!("generic: {} for {}", subst_desc, generic.name);
-                        subst_desc
-                    })
-                    .join(", ");
-                desc.push_str(&resolved_generics);
-                desc.push('>');
+            if !resolved_generics.is_empty() {
+                let dest = match tcx.def_kind(def_id) {
+                    DefKind::Fn | DefKind::AssocFn => {
+                        println!("function generics: {}", resolved_generics);
+                        &mut desc.function_generics
+                    }
+                    kind => {
+                        println!("type generics for {:?}: {}", kind, resolved_generics);
+                        &mut desc.type_generics
+                    }
+                };
+                assert!(dest.is_empty());
+                *dest = resolved_generics.clone();
             }
         }
     } else {
         //println!("root");
-        desc.push_str(tcx.crate_name(def_id.krate).as_str())
+        let crate_name = tcx.crate_name(def_id.krate);
+        desc.path.push_str(crate_name.as_str());
     }
 }

@@ -7,16 +7,18 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 pub fn query(loader: &Loader, report_path: &Path) {
-    let terminators_call_const_target: HashMap<_, _> = loader
-        .load_terminators_call_const_target()
-        .iter()
-        .copied()
-        .map(|(id, def_path, desc)| (id, (def_path, desc)))
-        .collect();
+    let terminators_call_const_target = loader.load_terminators_call_const_target_as_map();
     let terminators_call_const_target_self =
         loader.load_terminators_call_const_target_self_as_map();
+    let terminators_call_const_target_desc: HashMap<_, _> = loader
+        .load_terminators_call_const_target_desc()
+        .iter()
+        .copied()
+        .map(|(call, desc, function_generics, type_generics)| {
+            (call, (desc, function_generics, type_generics))
+        })
+        .collect();
     let strings = loader.load_strings();
-    let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
     let trait_items: HashSet<_> = trait_items
         .iter()
@@ -24,7 +26,12 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .collect();
     let def_paths = loader.load_def_paths();
     let crate_names = loader.load_crate_names();
-    let type_descriptions = loader.load_type_description_as_map();
+    let type_descriptions: HashMap<_, _> = loader
+        .load_type_description()
+        .iter()
+        .copied()
+        .map(|(ty, desc, generics)| (ty, (desc, generics)))
+        .collect();
     let basic_block_def_paths: HashMap<_, _> = loader
         .load_basic_blocks()
         .iter()
@@ -35,25 +42,34 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let all_calls = loader.load_terminators_call();
     let all_calls = all_calls.iter().filter_map(
-        |&(block, call, func, _unsafety, abi, _return_ty, _destination, _cleanup, _span)| {
+        |&(block, call, func, _unsafety, _abi, _return_ty, _destination, _cleanup, _span)| {
             let (caller_crate, _, _, _, _) = def_paths[basic_block_def_paths[&block]];
             let caller_crate_name = &strings[crate_names[caller_crate]];
 
-            let (target, target_desc) = terminators_call_const_target.get(&call)?; // none for function pointers
+            let target = terminators_call_const_target.get(&call)?; // none for function pointers
+            let (target_desc, function_generics, type_generics) =
+                terminators_call_const_target_desc[&call];
             let (target_crate, _, _, _, _) = def_paths[*target];
             let target_crate_name = &strings[crate_names[target_crate]];
             let is_trait_item = trait_items.contains(target);
 
-            let call_receiver_name = terminators_call_const_target_self
-                .get(&call)
-                .map_or_else(|| "", |typ| &strings[type_descriptions[typ]]);
+            let (receiver_name, receiver_generics) =
+                terminators_call_const_target_self.get(&call).map_or_else(
+                    || ("", ""),
+                    |typ| {
+                        let (desc, generics) = type_descriptions[typ];
+                        (&strings[desc], &strings[generics])
+                    },
+                );
 
             Some((
                 call,
                 func,
-                strings[abis[abi]].to_string(),
-                call_receiver_name,
-                &strings[*target_desc],
+                receiver_name,
+                receiver_generics,
+                &strings[target_desc],
+                &strings[type_generics],
+                &strings[function_generics],
                 caller_crate_name,
                 target_crate_name,
                 is_trait_item,

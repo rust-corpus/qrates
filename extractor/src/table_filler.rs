@@ -111,13 +111,16 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
     fn insert_new_type_into_table(&mut self, kind: &str, typ: ty::Ty<'tcx>) -> types::Type {
         assert!(!self.type_registry.contains_key(&typ));
         let (interned_type,) = self.tables.register_types(kind.to_string());
-        let desc = match typ.ty_adt_def() {
-            Some(def) => pretty_description(self.tcx, def.did(), &[]),
-            None => typ.to_string(),
+        let (desc, generics) = match typ.kind() {
+            ty::Adt(def, substs) => {
+                let desc = pretty_description(self.tcx, def.did(), substs);
+                (desc.path, desc.type_generics)
+            }
+            _ => (typ.to_string(), Default::default()),
         };
         //println!("orig: {}", typ.to_string());
         //println!("desc: {}", desc);
-        self.tables.register_type_description(interned_type, desc);
+        self.tables.register_type_description(interned_type, desc, generics);
         self.type_registry.insert(typ, interned_type);
         interned_type
     }

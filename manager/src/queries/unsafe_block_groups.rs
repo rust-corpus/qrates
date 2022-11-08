@@ -6,7 +6,7 @@ use crate::write_csv;
 use corpus_database::tables::Loader;
 use corpus_queries_derive::datapond_query;
 use log::info;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::path::Path;
 
@@ -148,7 +148,7 @@ fn report_non_const_call_targets(loader: &Loader, report_path: &Path) {
     let const_calls: HashSet<_> = loader
         .load_terminators_call_const_target()
         .iter()
-        .map(|(call, _def_path, _desc)| *call)
+        .map(|(call, _def_path)| *call)
         .collect();
     let build_resolver = BuildResolver::new(loader);
     let strings = loader.load_strings();
@@ -184,12 +184,7 @@ fn report_non_const_call_targets(loader: &Loader, report_path: &Path) {
 /// 3. Dynamic calls on trait objects.
 /// 4. Calls of closures.
 fn report_const_call_targets(loader: &Loader, report_path: &Path) {
-    let const_calls_map: HashMap<_, _> = loader
-        .load_terminators_call_const_target()
-        .iter()
-        .copied()
-        .map(|(id, target, _desc)| (id, target))
-        .collect();
+    let const_calls_map = loader.load_terminators_call_const_target_as_map();
     let def_path_resolver = DefPathResolver::new(loader);
     let build_resolver = BuildResolver::new(loader);
     let strings = loader.load_strings();

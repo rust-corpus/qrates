@@ -466,13 +466,19 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                                         );
                                 }
                                 let desc = pretty_description(self.tcx, *target_id, substs);
-                                // TODO: identify receiver type in static dispatch
                                 let def_path = self.filler.resolve_def_id(*target_id);
                                 self.filler.tables.register_terminators_call_const_target(
                                     function_call,
                                     def_path,
-                                    desc
                                 );
+                                self.filler
+                                    .tables
+                                    .register_terminators_call_const_target_desc(
+                                        function_call,
+                                        desc.path,
+                                        desc.function_generics,
+                                        desc.type_generics,
+                                    );
                             }
                             ty::TyKind::FnPtr(_) => {
                                 // Calling a function pointer.
