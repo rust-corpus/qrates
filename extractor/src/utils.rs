@@ -16,7 +16,7 @@ pub fn pretty_description<'t>(
     //    tcx.def_path_str_with_substs(def_id, substs)
     //);
     build_pretty_description(tcx, def_id, substs, &mut desc);
-    println!("pretty_description for {} is {:?}", tcx.def_path_str_with_substs(def_id, substs), desc);
+    //println!("pretty_description for {} is {:?}", tcx.def_path_str_with_substs(def_id, substs), desc);
     //println!();
     desc
 }
@@ -48,7 +48,7 @@ pub fn pretty_type_description<'t>(tcx: TyCtxt<'t>, ty: &ty::Ty<'t>) -> String {
         }
         _ => ty.to_string(),
     };
-    println!("type description {} for type: {}", desc, ty);
+    //println!("type description {} for type: {}", desc, ty);
     desc
 }
 
@@ -146,11 +146,11 @@ fn build_pretty_description<'t>(
             if !resolved_generics.is_empty() {
                 let dest = match tcx.def_kind(def_id) {
                     DefKind::Fn | DefKind::AssocFn => {
-                        println!("function generics: {}", resolved_generics);
+                        //println!("function generics: {}", resolved_generics);
                         &mut desc.function_generics
                     }
-                    kind => {
-                        println!("type generics for {:?}: {}", kind, resolved_generics);
+                    _kind => {
+                        //println!("type generics for {:?}: {}", _kind, resolved_generics);
                         &mut desc.type_generics
                     }
                 };
