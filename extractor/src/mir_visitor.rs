@@ -454,7 +454,6 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         match constant.literal.ty().kind() {
                             ty::TyKind::FnDef(target_id, substs) => {
                                 let generics = self.tcx.generics_of(*target_id);
-                                // TODO: store in db
                                 if generics.has_self {
                                     let self_ty = substs.type_at(0);
                                     let interned_type = self.filler.register_type(self_ty);

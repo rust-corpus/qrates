@@ -9,15 +9,7 @@ pub fn pretty_description<'t>(
     substs: &'t [GenericArg<'t>],
 ) -> PrettyDescription {
     let mut desc = PrettyDescription::new();
-    //let path = tcx.def_path(def_id);
-    //println!();
-    //println!(
-    //    "building for {}",
-    //    tcx.def_path_str_with_substs(def_id, substs)
-    //);
     build_pretty_description(tcx, def_id, substs, &mut desc);
-    //println!("pretty_description for {} is {:?}", tcx.def_path_str_with_substs(def_id, substs), desc);
-    //println!();
     desc
 }
 
@@ -48,7 +40,6 @@ pub fn pretty_type_description<'t>(tcx: TyCtxt<'t>, ty: &ty::Ty<'t>) -> String {
         }
         _ => ty.to_string(),
     };
-    //println!("type description {} for type: {}", desc, ty);
     desc
 }
 
@@ -72,56 +63,40 @@ fn build_pretty_description<'t>(
     desc: &mut PrettyDescription,
 ) {
     let def_key = tcx.def_key(def_id);
-    //println!("data: {:?}", def_key.disambiguated_data.data);
     if let Some(parent) = def_key.parent {
-        //println!("desc: {}, last_component: {:?}", desc, last_component);
-        //let generics = tcx.generics_of(def_id);
-        //println!("generics: {:?}", generics);
+        let parent_substs = if substs.is_empty() {
+            &[]
+        } else {
+            // as seen in rustc_middle::ty::print::Printer::default_print_def_path
+            let generics = tcx.generics_of(def_id);
+            &substs[..generics.parent_count.min(substs.len())]
+        };
 
         use DefPathData::*;
         match def_key.disambiguated_data.data {
-            Impl => {
-                let parent_substs = if substs.is_empty() {
-                    &[]
-                } else {
-                    // as seen in rustc_middle::ty::print::Printer::default_print_def_path
-                    let generics = tcx.generics_of(def_id);
-                    &substs[..generics.parent_count.min(substs.len())]
-                };
-                match tcx.impl_subject(def_id) {
-                    ty::ImplSubject::Inherent(ty) => {
-                        let ty_desc = pretty_type_description(tcx, &ty);
-                        desc.path.push_str(&ty_desc);
-                    }
-                    ty::ImplSubject::Trait(trait_ref) => {
-                        build_pretty_description(tcx, trait_ref.def_id, parent_substs, desc);
-                    }
+            Impl => match tcx.impl_subject(def_id) {
+                ty::ImplSubject::Inherent(ty) => {
+                    let ty_desc = pretty_type_description(tcx, &ty);
+                    desc.path.push_str(&ty_desc);
                 }
-            }
+                ty::ImplSubject::Trait(trait_ref) => {
+                    build_pretty_description(tcx, trait_ref.def_id, parent_substs, desc);
+                }
+            },
             data => {
                 let parent_id = DefId {
                     krate: def_id.krate,
                     index: parent,
                 };
-                let parent_substs = if substs.is_empty() {
-                    &[]
-                } else {
-                    // as seen in rustc_middle::ty::print::Printer::default_print_def_path
-                    let generics = tcx.generics_of(def_id);
-                    &substs[..generics.parent_count.min(substs.len())]
-                };
                 build_pretty_description(tcx, parent_id, parent_substs, desc);
                 let component_name = crate::mirai_utils::component_name(&data);
                 desc.path.push_str("::");
                 desc.path.push_str(component_name);
-
-                //println!("back to {:?}", def_key.disambiguated_data.data);
             }
         }
 
         if !substs.is_empty() {
             let generics = tcx.generics_of(def_id);
-            //println!("generics: {:?}", generics);
 
             let resolved_generics = generics
                 .own_substs_no_defaults(tcx, substs)
@@ -145,21 +120,14 @@ fn build_pretty_description<'t>(
 
             if !resolved_generics.is_empty() {
                 let dest = match tcx.def_kind(def_id) {
-                    DefKind::Fn | DefKind::AssocFn => {
-                        //println!("function generics: {}", resolved_generics);
-                        &mut desc.function_generics
-                    }
-                    _kind => {
-                        //println!("type generics for {:?}: {}", _kind, resolved_generics);
-                        &mut desc.type_generics
-                    }
+                    DefKind::Fn | DefKind::AssocFn => &mut desc.function_generics,
+                    _kind => &mut desc.type_generics,
                 };
                 assert!(dest.is_empty());
                 *dest = resolved_generics.clone();
             }
         }
     } else {
-        //println!("root");
         let crate_name = tcx.crate_name(def_id.krate);
         desc.path.push_str(crate_name.as_str());
     }

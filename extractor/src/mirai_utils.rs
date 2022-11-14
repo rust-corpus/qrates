@@ -294,24 +294,26 @@ pub fn summary_key_str(tcx: TyCtxt<'_>, def_id: DefId) -> Rc<String> {
         if component.disambiguator != 0 {
             name.push('_');
 
-            let da = component.disambiguator.to_string();
-            name.push_str(da.as_str());
-
             if component.data == DefPathData::Impl {
                 let parent_def_id = tcx.parent(def_id);
                 if let Some(type_ns) = &type_ns {
                     let def_kind = tcx.def_kind(parent_def_id);
                     use rustc_hir::def::DefKind::*;
-                    name.push('_');
+
                     if type_ns == "num"
                         && (def_kind == Struct || def_kind == Union || def_kind == Enum)
                     {
                         append_mangled_type(&mut name, tcx.type_of(parent_def_id), tcx);
-                    } else {
-                        name.push_str(&type_ns);
+                        continue;
                     }
                 }
+                if let Some(type_ns) = &type_ns {
+                    name.push_str(&type_ns);
+                    continue;
+                }
             }
+            let da = component.disambiguator.to_string();
+            name.push_str(da.as_str());
         }
     }
     Rc::new(name)

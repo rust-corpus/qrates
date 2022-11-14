@@ -118,8 +118,6 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
             }
             _ => (typ.to_string(), Default::default()),
         };
-        //println!("orig: {}", typ.to_string());
-        //println!("desc: {}", desc);
         self.tables.register_type_description(interned_type, desc, generics);
         self.type_registry.insert(typ, interned_type);
         interned_type
