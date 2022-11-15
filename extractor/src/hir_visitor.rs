@@ -160,7 +160,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
     type NestedFilter = rustc_middle::hir::nested_filter::All;
     fn visit_item(&mut self, item: &'tcx hir::Item) {
         let name: &str = &item.ident.name.as_str();
-        let visibility = self.tcx.visibility(item.def_id);
+        let visibility = self.tcx.visibility(item.owner_id.def_id);
         let visibility: types::TyVisibility = visibility.convert_into();
         let def_path = self.filler.resolve_hir_id(item.hir_id());
         let def_id = self.hir_map.local_def_id(item.hir_id());
