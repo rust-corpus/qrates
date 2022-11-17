@@ -43,9 +43,10 @@ pub(super) fn generate_loader_functions(
                 *self.#name.borrow_mut() = Some(relation.into());
             }
         });
-        
+
         if let [key, value] = parameters.as_slice() {
-            let load_fn_name_as_map = syn::Ident::new(&format!("load_{}_as_map", name), Span::call_site());
+            let load_fn_name_as_map =
+                syn::Ident::new(&format!("load_{}_as_map", name), Span::call_site());
             let key = &key.typ;
             let value = &value.typ;
             function_tokens.extend(quote! {

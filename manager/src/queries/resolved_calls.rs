@@ -71,15 +71,19 @@ pub fn query(loader: &Loader, report_path: &Path) {
         *counts.entry(row).or_insert(0) += 1;
         counts
     });
-    let all_calls = counts.iter().map(|((a, b, c, d, e, f, g), count)| (a, b, c, d, e, f, g, count));
+    let all_calls = counts
+        .iter()
+        .map(|((a, b, c, d, e, f, g), count)| (a, b, c, d, e, f, g, count));
 
     // sort for much better gzip compression
-    let all_calls: Vec<_> = all_calls.sorted_by_key(|(_, _, target, ..)| target.clone()).collect();
-    
-    let cross_crate_calls = all_calls.iter().filter(|&(_, _, _, _, _, caller_crate, target_crate, _)| {
-        caller_crate != target_crate
-    });
+    let all_calls: Vec<_> = all_calls
+        .sorted_by_key(|(_, _, target, ..)| target.clone())
+        .collect();
+
+    let cross_crate_calls = all_calls
+        .iter()
+        .filter(|&(_, _, _, _, _, caller_crate, target_crate, _)| caller_crate != target_crate);
     write_csv!(report_path, cross_crate_calls);
-    
+
     write_csv!(report_path, all_calls);
 }

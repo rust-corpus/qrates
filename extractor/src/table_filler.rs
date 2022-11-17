@@ -65,7 +65,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
             def_path_hash,
             summary_key_str_value,
         );
-        
+
         if def_id.is_local() {
             // This will panic if def_id is non-local
             let def_span = self.tcx.def_span(def_id);
@@ -118,7 +118,8 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
             }
             _ => (typ.to_string(), Default::default()),
         };
-        self.tables.register_type_description(interned_type, desc, generics);
+        self.tables
+            .register_type_description(interned_type, desc, generics);
         self.type_registry.insert(typ, interned_type);
         interned_type
     }
