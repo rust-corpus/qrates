@@ -14,12 +14,12 @@ use std::path::Path;
 /// - the crate of the call site and of the called function
 ///
 /// The produced table is deduplicated, with each row instead saying how many times it occurs.
-/// 
+///
 /// As an example, for a call in crate `foo` to `Option::map` mapping an optional string slice (`&str`) to an owned `String`, these would be:
 /// - empty strings for the receiver and its generics, since this is not part of a trait.
 /// - `core::option::Option<T>::map`, `&str`, and `String, $fn`
 /// - `foo` and `core` (the crates involved)
-/// 
+///
 /// Note that function references & closures are always reported as `$fn`.
 /// Further, and perhaps unexpectedly, the path to the target includes generic parameters, but they are simply what the corresponding `impl` block calls them, not the actual types used---these are found in the type generics (here, `&str` is the value of `T`).
 pub fn query(loader: &Loader, report_path: &Path) {
