@@ -33,6 +33,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
             (call, (desc, function_generics, type_generics))
         })
         .collect();
+    let call_target_macro = loader.load_terminators_call_macro_backtrace_as_map();
 
     let strings = loader.load_strings();
     let def_paths = loader.load_def_paths();
@@ -69,6 +70,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
                     (&strings[desc], &strings[generics])
                 },
             );
+            
+            let macro_path = call_target_macro.get(&call).map_or("", |path| &strings[*path]);
 
             Some((
                 receiver_name,
@@ -78,6 +81,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 &strings[function_generics],
                 caller_crate_name,
                 target_crate_name,
+                macro_path,
             ))
         },
     );
@@ -88,7 +92,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
     });
     let all_calls = counts
         .iter()
-        .map(|((a, b, c, d, e, f, g), count)| (a, b, c, d, e, f, g, count));
+        .map(|((a, b, c, d, e, f, g, h), count)| (a, b, c, d, e, f, g, h, count));
 
     // sort for much better gzip compression
     let all_calls: Vec<_> = all_calls
@@ -97,7 +101,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let cross_crate_calls = all_calls
         .iter()
-        .filter(|&(_, _, _, _, _, caller_crate, target_crate, _)| caller_crate != target_crate);
+        .filter(|&(_, _, _, _, _, caller_crate, target_crate, _, _)| caller_crate != target_crate);
     write_csv!(report_path, cross_crate_calls);
 
     write_csv!(report_path, all_calls);

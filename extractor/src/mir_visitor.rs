@@ -449,6 +449,21 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         interned_arg,
                     );
                 }
+
+                let top_foreign_macro = terminator
+                    .source_info
+                    .span
+                    .macro_backtrace()
+                    .flat_map(|element| element.macro_def_id)
+                    .filter(|macro_def| macro_def.krate != hir::def_id::LOCAL_CRATE)
+                    .last();
+                if let Some(def_id) = top_foreign_macro {
+                    let desc = pretty_description(self.tcx, def_id, &[]);
+                    self.filler
+                        .tables
+                        .register_terminators_call_macro_backtrace(function_call, desc.path);
+                }
+
                 match func {
                     mir::Operand::Constant(constant) => {
                         match constant.literal.ty().kind() {
