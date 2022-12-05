@@ -12,6 +12,7 @@ use std::path::Path;
 /// - the receiver of a trait method (if applicable) & its generics
 /// - the call's target method & the generics of its type & function
 /// - the crate of the call site and of the called function
+/// - if applicable, the first macro involved in the call stack that is not from the calling crate
 ///
 /// The produced table is deduplicated, with each row instead saying how many times it occurs.
 ///
