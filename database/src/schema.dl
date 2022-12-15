@@ -489,7 +489,7 @@ relation operands(operand: auto Operand, kind: OperandKind, typ: Type);
 /// Block terminators. Eeach block has exactly one terminator.
 relation terminators(block: BasicBlock, kind: TerminatorKind, scope: Scope);
 relation terminators_goto(block: BasicBlock, target: BasicBlock);
-relation terminators_switch_int(block: BasicBlock, discriminant: Operand, switch_ty: Type);
+relation terminators_switch_int(block: BasicBlock, discriminant: Operand);
 relation terminators_switch_int_targets(block: BasicBlock, condition_value: u128, target: BasicBlock);
 relation terminators_drop(block: BasicBlock, location: Type, target: BasicBlock, unwind: BasicBlock);
 relation terminators_drop_and_replace(block: BasicBlock, location: Type, value: Operand, target: BasicBlock, unwind: BasicBlock);

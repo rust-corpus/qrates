@@ -350,16 +350,11 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                     .register_terminators_goto(block, basic_blocks[target]);
                 "Goto"
             }
-            mir::TerminatorKind::SwitchInt {
-                discr,
-                switch_ty,
-                targets,
-            } => {
+            mir::TerminatorKind::SwitchInt { discr, targets } => {
                 let discriminant = self.visit_operand(&discr);
-                let typ = self.filler.register_type(*switch_ty);
                 self.filler
                     .tables
-                    .register_terminators_switch_int(block, discriminant, typ);
+                    .register_terminators_switch_int(block, discriminant);
                 for (value, target) in targets.iter() {
                     self.filler.tables.register_terminators_switch_int_targets(
                         block,
