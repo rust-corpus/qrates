@@ -177,7 +177,7 @@ fn analyse_with_tcx(name: String, tcx: TyCtxt, session: &Session) {
 }
 
 pub fn analyse<'tcx>(compiler: &Compiler, queries: &'tcx Queries<'tcx>) {
-    let name = queries.crate_name().unwrap().peek().clone();
+    let name = queries.crate_name().unwrap().peek().clone().to_string();
     assert!(
         name != "rust_out",
         "Why this crate has such a strange name?"

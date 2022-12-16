@@ -284,24 +284,26 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                     }
                     interned_type
                 }
-                ty::TyKind::Projection(projection) => {
-                    let interned_type = self.insert_new_type_into_table("Projection", typ);
-                    let trait_def_id = projection.trait_ref(self.tcx).def_id;
-                    let trait_def_path = self.resolve_def_id(trait_def_id);
-                    let trait_item = self.resolve_def_id(projection.item_def_id);
-                    self.tables.register_types_projection(
-                        interned_type,
-                        trait_def_path,
-                        trait_item,
-                    );
-                    interned_type
-                }
-                ty::TyKind::Opaque(def_id, _substs) => {
-                    let interned_type = self.insert_new_type_into_table("Opaque", typ);
-                    let def_path = self.resolve_def_id(*def_id);
-                    self.tables.register_types_opaque(interned_type, def_path);
-                    interned_type
-                }
+                ty::TyKind::Alias(alias_kind, alias_type) => match alias_kind {
+                    ty::AliasKind::Projection => {
+                        let interned_type = self.insert_new_type_into_table("Projection", typ);
+                        let trait_def_id = alias_type.trait_def_id(self.tcx);
+                        let trait_def_path = self.resolve_def_id(trait_def_id);
+                        let trait_item = self.resolve_def_id(alias_type.def_id);
+                        self.tables.register_types_projection(
+                            interned_type,
+                            trait_def_path,
+                            trait_item,
+                        );
+                        interned_type
+                    }
+                    ty::AliasKind::Opaque => {
+                        let interned_type = self.insert_new_type_into_table("Opaque", typ);
+                        let def_path = self.resolve_def_id(alias_type.def_id);
+                        self.tables.register_types_opaque(interned_type, def_path);
+                        interned_type
+                    }
+                },
                 ty::TyKind::Param(param_ty) => {
                     let interned_type = self.insert_new_type_into_table("Param", typ);
                     self.tables.register_types_param(
