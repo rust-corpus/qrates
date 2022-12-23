@@ -71,8 +71,10 @@ pub fn query(loader: &Loader, report_path: &Path) {
                     (&strings[desc], &strings[generics])
                 },
             );
-            
-            let macro_path = call_target_macro.get(&call).map_or("", |path| &strings[*path]);
+
+            let macro_path = call_target_macro
+                .get(&call)
+                .map_or("", |path| &strings[*path]);
 
             Some((
                 receiver_name,
