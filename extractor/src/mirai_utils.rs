@@ -295,11 +295,13 @@ pub fn summary_key_str(tcx: TyCtxt<'_>, def_id: DefId) -> Rc<String> {
         }
         if component.disambiguator != 0 {
             name.push('_');
+
             if component.data == DefPathData::Impl {
                 let parent_def_id = tcx.parent(def_id);
                 if let Some(type_ns) = &type_ns {
                     let def_kind = tcx.def_kind(parent_def_id);
                     use rustc_hir::def::DefKind::*;
+
                     if type_ns == "num"
                         && (def_kind == Struct || def_kind == Union || def_kind == Enum)
                     {
@@ -333,23 +335,21 @@ pub fn is_foreign_contract(tcx: TyCtxt<'_>, def_id: DefId) -> bool {
 }
 
 fn push_component_name(component_data: DefPathData, target: &mut String) {
-    use std::ops::Deref;
+    target.push_str(component_name(&component_data));
+}
+
+pub fn component_name(component_data: &DefPathData) -> &str {
     use DefPathData::*;
     match component_data {
-        TypeNs(name) | ValueNs(name) | MacroNs(name) | LifetimeNs(name) => {
-            target.push_str(name.as_str().deref());
-        }
-        _ => target.push_str(match component_data {
-            CrateRoot => "crate_root",
-            Impl => "implement",
-            ForeignMod => "foreign",
-            Use => "use",
-            GlobalAsm => "global_asm",
-            ClosureExpr => "closure",
-            Ctor => "ctor",
-            AnonConst => "constant",
-            ImplTrait => "implement_trait",
-            _ => unreachable!(),
-        }),
-    };
+        TypeNs(name) | ValueNs(name) | MacroNs(name) | LifetimeNs(name) => name.as_str(),
+        CrateRoot => "crate_root",
+        Impl => "implement",
+        ForeignMod => "foreign",
+        Use => "use",
+        GlobalAsm => "global_asm",
+        ClosureExpr => "closure",
+        Ctor => "ctor",
+        AnonConst => "constant",
+        ImplTrait => "implement_trait",
+    }
 }

@@ -404,6 +404,7 @@ name = "corpus-extractor"
 version = "0.1.0"
 dependencies = [
  "corpus-database",
+ "itertools",
  "lazy_static",
  "log",
  "log-derive",

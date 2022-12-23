@@ -4,6 +4,7 @@
 
 use crate::converters::ConvertInto;
 use crate::mirai_utils;
+use crate::utils::pretty_description;
 use corpus_database::{tables::Tables, types};
 use rustc_hir::{self as hir, HirId};
 use rustc_middle::hir::map::Map as HirMap;
@@ -64,6 +65,7 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
             def_path_hash,
             summary_key_str_value,
         );
+
         if def_id.is_local() {
             // This will panic if def_id is non-local
             let def_span = self.tcx.def_span(def_id);
@@ -109,6 +111,15 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
     fn insert_new_type_into_table(&mut self, kind: &str, typ: ty::Ty<'tcx>) -> types::Type {
         assert!(!self.type_registry.contains_key(&typ));
         let (interned_type,) = self.tables.register_types(kind.to_string());
+        let (desc, generics) = match typ.kind() {
+            ty::Adt(def, substs) => {
+                let desc = pretty_description(self.tcx, def.did(), substs);
+                (desc.path, desc.type_generics)
+            }
+            _ => (typ.to_string(), Default::default()),
+        };
+        self.tables
+            .register_type_description(interned_type, desc, generics);
         self.type_registry.insert(typ, interned_type);
         interned_type
     }

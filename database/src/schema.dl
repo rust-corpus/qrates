@@ -343,7 +343,7 @@ intern relative_def_paths<InternedString as RelativeDefId<u32>>;
 intern summary_keys<InternedString as SummaryId<u32>>;
 /// Interned ABI.
 intern abis<InternedString as Abi<u8>>;
-/// Definition paths is a globablly unique identifier of the definition.
+/// Definition paths is a globally unique identifier of the definition.
 intern def_paths<(Krate, CrateHash, RelativeDefId, DefPathHash, SummaryId) as DefPath<u64>>;
 /// A crate compiled with a specific configuration.
 intern builds<(Package, PackageVersion, Krate, CrateHash, Edition) as Build<u32>>;
@@ -369,6 +369,7 @@ intern terminator_kinds<InternedString as TerminatorKind<u8>>;
 // Relations.
 
 relation def_path_span(def_path: DefPath, span: Span);
+relation type_description(ty: Type, description: InternedString, generics: InternedString);
 /// The crate types associated with the build.
 relation build_crate_types(build: Build, crate_type: InternedString);
 /// The module that is the root of the AST tree.
@@ -497,8 +498,11 @@ relation terminators_call(block: BasicBlock, call: auto FunctionCall, func: Oper
 relation terminators_call_arg(call: FunctionCall, index: CallArgIndex, arg: Operand);
 /// The called function or trait method.
 relation terminators_call_const_target(call: FunctionCall, def_path: DefPath);
+relation terminators_call_const_target_desc(call: FunctionCall, target: InternedString, function_generics: InternedString, type_generics: InternedString);
 /// The self argument of the called method.
 relation terminators_call_const_target_self(call: FunctionCall, typ: Type);
+/// For calls originating from a macro, the path of the top macro in the backtrace that's from a different crate than the call site.
+relation terminators_call_macro_backtrace(call: FunctionCall, macro_path: InternedString);
 relation terminators_assert(block: BasicBlock, cond: Operand, expected: bool, target: BasicBlock, cleanup: BasicBlock);
 relation terminators_yield(block: BasicBlock, value: Operand, resume: BasicBlock, drop: BasicBlock);
 relation terminators_false_edges(block: BasicBlock, real_target: BasicBlock, imaginary_target: BasicBlock);

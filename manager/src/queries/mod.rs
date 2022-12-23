@@ -8,6 +8,7 @@ mod function_size;
 mod non_tree_types;
 mod prepare_builds;
 mod prepare_items;
+mod resolved_calls;
 mod size;
 mod traits;
 mod types;
@@ -57,6 +58,7 @@ pub fn run_query(
         "build-files" => build_files::query(&loader, &report_path.join("build-files")),
         "traits" => traits::query(&loader, &report_path.join("traits")),
         "types" => types::query(&loader, &report_path.join("types")),
+        "resolved-calls" => resolved_calls::query(&loader, &report_path.join("resolved-calls")),
         "unsafe-types" => unsafe_types::query(&loader, &report_path.join("unsafe-types")),
         "unsafe-block-groups" => {
             unsafe_block_groups::query(&loader, &report_path.join("unsafe-block-groups"))

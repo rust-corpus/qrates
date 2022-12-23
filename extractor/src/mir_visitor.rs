@@ -4,6 +4,7 @@
 
 use crate::converters::ConvertInto;
 use crate::table_filler::TableFiller;
+use crate::utils::*;
 use corpus_database::types;
 use rustc_hir as hir;
 use rustc_middle::mir;
@@ -443,6 +444,21 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                         interned_arg,
                     );
                 }
+
+                let top_foreign_macro = terminator
+                    .source_info
+                    .span
+                    .macro_backtrace()
+                    .flat_map(|element| element.macro_def_id)
+                    .filter(|macro_def| macro_def.krate != hir::def_id::LOCAL_CRATE)
+                    .last();
+                if let Some(def_id) = top_foreign_macro {
+                    let desc = pretty_description(self.tcx, def_id, &[]);
+                    self.filler
+                        .tables
+                        .register_terminators_call_macro_backtrace(function_call, desc.path);
+                }
+
                 match func {
                     mir::Operand::Constant(constant) => {
                         match constant.literal.ty().kind() {
@@ -458,11 +474,20 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                                             interned_type,
                                         );
                                 }
+                                let desc = pretty_description(self.tcx, *target_id, substs);
                                 let def_path = self.filler.resolve_def_id(*target_id);
                                 self.filler.tables.register_terminators_call_const_target(
                                     function_call,
                                     def_path,
                                 );
+                                self.filler
+                                    .tables
+                                    .register_terminators_call_const_target_desc(
+                                        function_call,
+                                        desc.path,
+                                        desc.function_generics,
+                                        desc.type_generics,
+                                    );
                             }
                             ty::TyKind::FnPtr(_) => {
                                 // Calling a function pointer.
