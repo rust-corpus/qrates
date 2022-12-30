@@ -56,47 +56,21 @@ enum Command {
         all_versions: bool,
     },
     #[structopt(name = "compile", about = "Compile the list of crates.")]
-    Compile {
-        #[structopt(long, help = "Should the extractor output also json, or only bincode?")]
-        output_json: bool,
+    Compile(CompileOpts),
+    #[structopt(
+        name = "compile-batched",
+        about = "For very large numbers of crates: run batches of crates through compilation, updating the database and deleting the build output after each batch. This makes even hundreds of thousands crates feasible within reasonable disk space."
+    )]
+    CompileBatched {
         #[structopt(
-            default_value = "4000000000",   // 4 GB
-            long = "memory-limit",
-            help = "The memory limit that is set while building a crate. 0 means no limit."
+            default_value = "1000",
+            long = "batch-size",
+            short = "size",
+            help = "How many crates to process in each batch. Lower values require less disk space, but more frequently rebuild commonly-reused dependencies, and perform more database updates."
         )]
-        memory_limit: usize,
-        #[structopt(
-            long = "enable-networking",
-            help = "Should the network be enabled while building a crate?"
-        )]
-        enable_networking: bool,
-        #[structopt(
-            long = "use-original-rustc",
-            help = "Should use the original rustc instead of the extractor for building a crate?"
-        )]
-        use_original_rustc: bool,
-        #[structopt(
-            long = "purge-build-dir",
-            help = "Should we purge the build directory before compiling the crate?"
-        )]
-        purge_build_dir: bool,
-        #[structopt(
-            default_value = "900",
-            long = "compilation-timeout",
-            help = "The compilation timeout in seconds. 0 means no timeout."
-        )]
-        compilation_timeout: u64,
-        #[structopt(
-            default_value = "5242880",   // 5 MB
-            long = "max-log-size",
-            help = "The maximum log size per build before it gets truncated (in bytes)."
-        )]
-        max_log_size: usize,
-        #[structopt(
-            long = "custom-cargo-registry",
-            help = "Should we use a different cargo registry than crates.io?"
-        )]
-        custom_registry: Option<String>,
+        batch_size: usize,
+        #[structopt(flatten)]
+        options: CompileOpts,
     },
     #[structopt(
         name = "check-compilation",
@@ -134,6 +108,51 @@ enum Command {
         )]
         report_path: PathBuf,
     },
+}
+
+// shared between Compile and CompileBatched
+#[derive(StructOpt)]
+struct CompileOpts {
+    #[structopt(long, help = "Should the extractor output also json, or only bincode?")]
+    output_json: bool,
+    #[structopt(
+        default_value = "4000000000",   // 4 GB
+        long = "memory-limit",
+        help = "The memory limit that is set while building a crate. 0 means no limit."
+    )]
+    memory_limit: usize,
+    #[structopt(
+        long = "enable-networking",
+        help = "Should the network be enabled while building a crate?"
+    )]
+    enable_networking: bool,
+    #[structopt(
+        long = "use-original-rustc",
+        help = "Should use the original rustc instead of the extractor for building a crate?"
+    )]
+    use_original_rustc: bool,
+    #[structopt(
+        long = "purge-build-dir",
+        help = "Should we purge the build directory before compiling the crate?"
+    )]
+    purge_build_dir: bool,
+    #[structopt(
+        default_value = "900",
+        long = "compilation-timeout",
+        help = "The compilation timeout in seconds. 0 means no timeout."
+    )]
+    compilation_timeout: u64,
+    #[structopt(
+        default_value = "5242880",   // 5 MB
+        long = "max-log-size",
+        help = "The maximum log size per build before it gets truncated (in bytes)."
+    )]
+    max_log_size: usize,
+    #[structopt(
+        long = "custom-cargo-registry",
+        help = "Should we use a different cargo registry than crates.io?"
+    )]
+    custom_registry: Option<String>,
 }
 
 fn main() {
@@ -177,63 +196,19 @@ fn main() {
         Command::InitAll { all_versions } => {
             corpus_manager::initialise_with_all(&args.crate_list_path, all_versions);
         }
-        Command::Compile {
-            output_json,
-            memory_limit,
-            enable_networking,
-            use_original_rustc,
-            purge_build_dir,
-            compilation_timeout,
-            max_log_size,
-            custom_registry,
+        Command::Compile(options) => {
+            corpus_manager::compile(&args.crate_list_path, &args.workspace, &options.into());
+        }
+        Command::CompileBatched {
+            batch_size,
+            options,
         } => {
-            let toolchain = {
-                use std::io::Read;
-                let mut file = std::fs::File::open("rust-toolchain")
-                    .expect("Failed to open file “rust-toolchain”.");
-                let mut contents = String::new();
-                file.read_to_string(&mut contents)
-                    .expect("Failed to read “rust-toolchain”.");
-                let toolchain_toml = contents
-                    .parse::<toml::Value>()
-                    .expect("Failed to parse “rust-toolchain” as toml value");
-                if let toml::Value::Table(table) = toolchain_toml {
-                    if let Some(toml::Value::Table(toolchain_table)) = table.get("toolchain") {
-                        if let Some(toml::Value::String(toolchain)) = toolchain_table.get("channel")
-                        {
-                            toolchain.to_owned()
-                        } else {
-                            panic!("Missing “channel” key in the “rust-toolchain” file.")
-                        }
-                    } else {
-                        panic!("Missing “toolchain” table in the “rust-toolchain” file.")
-                    }
-                } else {
-                    panic!("“rust-toolchain” file has to be a table")
-                }
-            };
-            let memory_limit = if memory_limit == 0 {
-                None
-            } else {
-                Some(memory_limit)
-            };
-            let timeout = if compilation_timeout == 0 {
-                None
-            } else {
-                Some(Duration::from_secs(compilation_timeout))
-            };
-            corpus_manager::compile(
+            corpus_manager::compile_batched(
+                batch_size,
                 &args.crate_list_path,
                 &args.workspace,
-                toolchain,
-                max_log_size,
-                memory_limit,
-                timeout,
-                enable_networking,
-                output_json,
-                use_original_rustc,
-                purge_build_dir,
-                custom_registry,
+                &args.database_root,
+                &options.into(),
             );
         }
         Command::CheckCompilation { delete_failures } => {
@@ -257,5 +232,49 @@ fn main() {
                 &args.crate_list_path,
             );
         }
+    }
+}
+
+impl From<CompileOpts> for corpus_manager::CompilationSettings {
+    fn from(opts: CompileOpts) -> Self {
+        let toolchain = {
+            use std::io::Read;
+            let mut file = std::fs::File::open("rust-toolchain")
+                .expect("Failed to open file “rust-toolchain”.");
+            let mut contents = String::new();
+            file.read_to_string(&mut contents)
+                .expect("Failed to read “rust-toolchain”.");
+            let toolchain_toml = contents
+                .parse::<toml::Value>()
+                .expect("Failed to parse “rust-toolchain” as toml value");
+            if let toml::Value::Table(table) = toolchain_toml {
+                if let Some(toml::Value::Table(toolchain_table)) = table.get("toolchain") {
+                    if let Some(toml::Value::String(toolchain)) = toolchain_table.get("channel") {
+                        toolchain.to_owned()
+                    } else {
+                        panic!("Missing “channel” key in the “rust-toolchain” file.")
+                    }
+                } else {
+                    panic!("Missing “toolchain” table in the “rust-toolchain” file.")
+                }
+            } else {
+                panic!("“rust-toolchain” file has to be a table")
+            }
+        };
+        let memory_limit = Some(opts.memory_limit).filter(|&limit| limit > 0);
+        let timeout = Some(opts.compilation_timeout)
+            .filter(|&timeout| timeout > 0)
+            .map(Duration::from_secs);
+        corpus_manager::CompilationSettings::new(
+            toolchain,
+            opts.max_log_size,
+            memory_limit,
+            timeout,
+            opts.enable_networking,
+            opts.output_json,
+            opts.use_original_rustc,
+            opts.purge_build_dir,
+            opts.custom_registry,
+        )
     }
 }

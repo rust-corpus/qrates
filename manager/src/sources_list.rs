@@ -22,7 +22,7 @@ pub struct Package {
 }
 
 /// A crate source: either crates.io name or a repository URL.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Crate {
     Package(Package),
 }
@@ -143,5 +143,15 @@ impl CratesList {
 
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = &'a Crate> {
         self.crates.iter()
+    }
+
+    pub fn batched(self, batch_size: usize) -> Vec<Self> {
+        self.crates
+            .chunks(batch_size)
+            .map(|crates| Self {
+                creation_date: self.creation_date,
+                crates: crates.to_vec(),
+            })
+            .collect()
     }
 }

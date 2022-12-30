@@ -14,56 +14,77 @@ mod top_crates;
 use self::compilation::CompileManager;
 use self::database::DatabaseManager;
 use self::sources_list::CratesList;
+use log::info;
 use log_derive::logfn;
 use std::path::Path;
 use std::time::Duration;
 
 /// Initialise the list of crates with ``top_count`` most downloaded crates.
 #[logfn(Trace)]
-pub fn initialise_with_top(sources_list_path: &Path, top_count: usize, all_versions: bool) {
+pub fn initialise_with_top(crate_list_path: &Path, top_count: usize, all_versions: bool) {
     let crates_list = CratesList::top_crates_by_download_count(top_count, all_versions);
-    crates_list.save(sources_list_path);
+    crates_list.save(crate_list_path);
 }
 
-pub fn initialise_with_all(sources_list_path: &Path, all_versions: bool) {
+pub fn initialise_with_all(crate_list_path: &Path, all_versions: bool) {
     let crates_list = CratesList::all_crates(all_versions);
-    crates_list.save(sources_list_path);
+    crates_list.save(crate_list_path);
 }
 
 /// Compile the downloaded crates.
 #[logfn(Trace)]
-pub fn compile(
-    sources_list_path: &Path,
+pub fn compile(crate_list_path: &Path, workspace: &Path, settings: &CompilationSettings) {
+    let crates_list = CratesList::load(crate_list_path);
+    compile_crates_list(crates_list, workspace, settings);
+}
+
+fn compile_crates_list(crates_list: CratesList, workspace: &Path, settings: &CompilationSettings) {
+    make_manager(crates_list, workspace, settings)
+        .compile_all()
+        .unwrap();
+}
+
+fn make_manager(
+    crates_list: CratesList,
     workspace: &Path,
-    toolchain: String,
-    max_log_size: usize,
-    memory_limit: Option<usize>,
-    timeout: Option<Duration>,
-    enable_networking: bool,
-    output_json: bool,
-    use_original_rustc: bool,
-    purge_build_dir: bool,
-    custom_registry: Option<String>,
-) {
-    let crates_list = CratesList::load(sources_list_path);
-    let manager = CompileManager::new(
+    settings: &CompilationSettings,
+) -> CompileManager {
+    CompileManager::new(
         crates_list,
         workspace,
-        toolchain,
-        max_log_size,
-        memory_limit,
-        timeout,
-        enable_networking,
-        output_json,
-        use_original_rustc,
-        purge_build_dir,
-        custom_registry,
-    );
-    manager
-        .compile_all()
-        // .map_err(|e| panic!("Error: {}, {:?}", e, e.backtrace().map(|bt| bt.to_string())))
-        .map_err(|e| panic!("Error: {}", e))
-        .unwrap();
+        settings.toolchain.clone(),
+        settings.max_log_size,
+        settings.memory_limit,
+        settings.timeout,
+        settings.enable_networking,
+        settings.output_json,
+        settings.use_original_rustc,
+        settings.purge_build_dir,
+        settings.custom_registry.clone(),
+    )
+}
+
+#[logfn(Trace)]
+pub fn compile_batched(
+    batch_size: usize,
+    crate_list_path: &Path,
+    workspace: &Path,
+    database_root: &Path,
+    options: &CompilationSettings,
+) {
+    let crates_list = CratesList::load(crate_list_path);
+    let batches = crates_list.batched(batch_size);
+    let batch_count = batches.len();
+    for (index, batch) in batches.into_iter().enumerate() {
+        let prefix = format!("[Batch {} of {}]", index + 1, batch_count);
+        info!("{} Compiling", prefix);
+        let manager = make_manager(batch, workspace, options);
+        manager.compile_all().unwrap();
+        info!("{} Updating database", prefix);
+        update_database(workspace, database_root);
+        info!("{} Clearing build output", prefix);
+        manager.clear_build_output().unwrap();
+    }
 }
 
 /// Classify the compilation errors.
@@ -92,7 +113,7 @@ pub fn run_query(
     database_root: &Path,
     report_path: &Path,
     workspace_path: &Path,
-    sources_list_path: &Path,
+    crate_list_path: &Path,
 ) {
     if !report_path.exists() {
         std::fs::create_dir_all(&report_path).unwrap();
@@ -102,6 +123,45 @@ pub fn run_query(
         database_root,
         report_path,
         workspace_path,
-        sources_list_path,
+        crate_list_path,
     );
+}
+
+#[derive(Clone, Debug)]
+pub struct CompilationSettings {
+    toolchain: String,
+    max_log_size: usize,
+    memory_limit: Option<usize>,
+    timeout: Option<Duration>,
+    enable_networking: bool,
+    output_json: bool,
+    use_original_rustc: bool,
+    purge_build_dir: bool,
+    custom_registry: Option<String>,
+}
+
+impl CompilationSettings {
+    pub fn new(
+        toolchain: String,
+        max_log_size: usize,
+        memory_limit: Option<usize>,
+        timeout: Option<Duration>,
+        enable_networking: bool,
+        output_json: bool,
+        use_original_rustc: bool,
+        purge_build_dir: bool,
+        custom_registry: Option<String>,
+    ) -> Self {
+        Self {
+            toolchain,
+            max_log_size,
+            memory_limit,
+            timeout,
+            enable_networking,
+            output_json,
+            use_original_rustc,
+            purge_build_dir,
+            custom_registry,
+        }
+    }
 }
