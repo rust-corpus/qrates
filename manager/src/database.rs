@@ -102,6 +102,7 @@ impl DatabaseManager {
     }
     fn scan_crates(&self, workspace_root: &Path) -> impl Iterator<Item = PathBuf> {
         walkdir::WalkDir::new(workspace_root.canonicalize().unwrap())
+            .sort_by_file_name() // lets you estimate progress from the currently-processing crate path
             .into_iter()
             .filter_entry(|entry| entry.file_name() != "source")
             .map(|entry| entry.unwrap().into_path())
