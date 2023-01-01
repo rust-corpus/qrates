@@ -194,7 +194,13 @@ impl CompileManager {
             self.copy_extractor()?;
         }
         self.prepare_custom_registry()?;
-        for krate in self.crates_list.iter() {
+        for (index, krate) in self.crates_list.iter().enumerate() {
+            info!("");
+            info!(
+                "Compiling crate {} of {}",
+                index + 1,
+                self.crates_list.len()
+            );
             let compiler = CrateCompiler::new(
                 &toolchain,
                 &workspace,
