@@ -145,6 +145,10 @@ impl CratesList {
         self.crates.iter()
     }
 
+    pub fn len(&self) -> usize {
+        self.crates.len()
+    }
+
     pub fn batched(self, batch_size: usize) -> Vec<Self> {
         self.crates
             .chunks(batch_size)
