@@ -135,6 +135,13 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                "resolved-calls",
+                database_root,
+                report_path,
+                workspace_path,
+                sources_list_path,
+            );
+            run_query(
                 "unsafe-types",
                 database_root,
                 report_path,
