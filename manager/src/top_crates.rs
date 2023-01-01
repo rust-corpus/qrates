@@ -34,11 +34,10 @@ fn get(url: &str) -> reqwest::Result<reqwest::blocking::Response> {
 #[logfn(Trace)]
 pub fn top_crates_by_download_count(mut count: usize) -> Vec<String> {
     const PAGE_SIZE: usize = 100;
-    let page_count = count / PAGE_SIZE + 2;
+    let page_count = (count + PAGE_SIZE - 1) / PAGE_SIZE; // round up
     let mut sources = Vec::new();
-    debug!("page count: {}", page_count);
-    for page in 1..page_count {
-        info!("fetching page {} of {}", page, page_count);
+    for page in 1..=page_count {
+        info!("Fetching page {} of {}", page, page_count);
         let url = format!(
             "https://crates.io/api/v1/crates?page={}&per_page={}&sort=downloads",
             page, PAGE_SIZE
