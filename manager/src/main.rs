@@ -71,6 +71,13 @@ enum Command {
         batch_size: usize,
         #[structopt(flatten)]
         options: CompileOpts,
+        #[structopt(
+            parse(from_os_str),
+            default_value = "../extracted",
+            long = "output-folder",
+            help = "Deduplicated extracted facts are moved to this folder after each batch, defaulting to ../extracted/"
+        )]
+        output_folder: PathBuf,
     },
     #[structopt(
         name = "check-compilation",
@@ -202,12 +209,13 @@ fn main() {
         Command::CompileBatched {
             batch_size,
             options,
+            output_folder,
         } => {
             corpus_manager::compile_batched(
                 batch_size,
                 &args.crate_list_path,
                 &args.workspace,
-                &args.database_root,
+                &output_folder,
                 &options.into(),
             );
         }

@@ -69,7 +69,7 @@ pub fn compile_batched(
     batch_size: usize,
     crate_list_path: &Path,
     workspace: &Path,
-    database_root: &Path,
+    output_folder: &Path,
     options: &CompilationSettings,
 ) {
     let crates_list = CratesList::load(crate_list_path);
@@ -80,8 +80,8 @@ pub fn compile_batched(
         info!("{} Compiling", prefix);
         let manager = make_manager(batch, workspace, options);
         manager.compile_all().unwrap();
-        info!("{} Updating database", prefix);
-        update_database(workspace, database_root);
+        info!("{} Moving output", prefix);
+        compilation_utils::move_extracted(workspace, &output_folder);
         info!("{} Clearing build output", prefix);
         manager.clear_build_output().unwrap();
     }
