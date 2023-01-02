@@ -4,7 +4,7 @@
 
 //! Helper functions for obtaining the list of most downloaded crates.
 
-use log::{debug, info};
+use log::info;
 use log_derive::logfn;
 use serde::{Deserialize, Serialize};
 use std::cmp::min;
