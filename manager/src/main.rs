@@ -65,10 +65,15 @@ enum Command {
         #[structopt(
             default_value = "1000",
             long = "batch-size",
-            short = "size",
             help = "How many crates to process in each batch. Lower values require less disk space, but more frequently rebuild commonly-reused dependencies, and perform more database updates."
         )]
         batch_size: usize,
+        #[structopt(
+            default_value = "0",
+            long = "batch-skip",
+            help = "If provided, the given number of batches will be skipped. Lets you resume a large compilation process after it's interrupted."
+        )]
+        batches_to_skip: usize,
         #[structopt(flatten)]
         options: CompileOpts,
         #[structopt(
@@ -208,11 +213,13 @@ fn main() {
         }
         Command::CompileBatched {
             batch_size,
+            batches_to_skip,
             options,
             output_folder,
         } => {
             corpus_manager::compile_batched(
                 batch_size,
+                batches_to_skip,
                 &args.crate_list_path,
                 &args.workspace,
                 &output_folder,

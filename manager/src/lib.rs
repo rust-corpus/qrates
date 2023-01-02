@@ -67,15 +67,26 @@ fn make_manager(
 #[logfn(Trace)]
 pub fn compile_batched(
     batch_size: usize,
+    batches_to_skip: usize,
     crate_list_path: &Path,
     workspace: &Path,
     output_folder: &Path,
     options: &CompilationSettings,
 ) {
     let crates_list = CratesList::load(crate_list_path);
+    let batch_progress_path = crate_list_path.with_file_name("current_batch.txt");
     let batches = crates_list.batched(batch_size);
     let batch_count = batches.len();
-    for (index, batch) in batches.into_iter().enumerate() {
+    for (index, batch) in batches.into_iter().enumerate().skip(batches_to_skip) {
+        std::fs::write(
+            &batch_progress_path,
+            format!("processing batch {} of {}\n", index + 1, batch_count),
+        )
+        .expect(&format!(
+            "Could not write batch progress to {}",
+            batch_progress_path.display(),
+        ));
+
         let prefix = format!("[Batch {} of {}]", index + 1, batch_count);
         info!("{} Compiling", prefix);
         let manager = make_manager(batch, workspace, options);
@@ -84,6 +95,10 @@ pub fn compile_batched(
         compilation_utils::move_extracted(workspace, &output_folder);
         info!("{} Clearing build output", prefix);
         manager.clear_build_output().unwrap();
+    }
+    if batch_progress_path.exists() {
+        std::fs::remove_file(&batch_progress_path)
+            .expect("Could not remove batch progress file after finishing.");
     }
 }
 
