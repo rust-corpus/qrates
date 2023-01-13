@@ -87,13 +87,16 @@ pub fn compile_batched(
             batch_progress_path.display(),
         ));
 
-        let prefix = format!("[Batch {} of {}]", index + 1, batch_count);
-        info!("{} Compiling", prefix);
+        let log_prefix = format!("[Batch {} of {}]", index + 1, batch_count);
+
+        info!("{} Compiling", log_prefix);
         let manager = make_manager(batch, workspace, options);
         manager.compile_all().unwrap();
-        info!("{} Moving output", prefix);
+
+        info!("{} Moving output", log_prefix);
         compilation_utils::move_extracted(workspace, &output_folder);
-        info!("{} Clearing build output", prefix);
+
+        info!("{} Clearing build output", log_prefix);
         manager.clear_build_output().unwrap();
     }
     if batch_progress_path.exists() {
