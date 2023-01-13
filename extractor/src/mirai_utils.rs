@@ -173,16 +173,6 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 append_mangled_type(str, ty, tcx)
             }
         }
-        TyKind::Opaque(def_id, subs) => {
-            str.push_str("impl_");
-            str.push_str(qualified_type_name(tcx, *def_id).as_str());
-            for sub in *subs {
-                if let GenericArgKind::Type(ty) = sub.unpack() {
-                    str.push('_');
-                    append_mangled_type(str, ty, tcx);
-                }
-            }
-        }
         TyKind::Str => str.push_str("str"),
         TyKind::Array(ty, _) => {
             str.push_str("array_");
@@ -232,11 +222,23 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 append_mangled_type(str, pty, tcx);
             }
         }
-        TyKind::Projection(projection_ty) => {
-            append_mangled_type(str, projection_ty.self_ty(), tcx);
-            str.push_str("_as_");
-            str.push_str(qualified_type_name(tcx, projection_ty.item_def_id).as_str());
-        }
+        ty::TyKind::Alias(alias_kind, alias_type) => match alias_kind {
+            ty::AliasKind::Projection => {
+                append_mangled_type(str, alias_type.self_ty(), tcx);
+                str.push_str("_as_");
+                str.push_str(qualified_type_name(tcx, alias_type.def_id).as_str());
+            }
+            ty::AliasKind::Opaque => {
+                str.push_str("impl_");
+                str.push_str(qualified_type_name(tcx, alias_type.def_id).as_str());
+                for sub in alias_type.substs {
+                    if let GenericArgKind::Type(ty) = sub.unpack() {
+                        str.push('_');
+                        append_mangled_type(str, ty, tcx);
+                    }
+                }
+            }
+        },
         _ => {
             //todo: add cases as the need arises, meanwhile make the need obvious.
             debug!("{:?}", ty);
