@@ -6,8 +6,7 @@ use crate::converters::ConvertInto;
 use crate::mirai_utils;
 use crate::utils::pretty_description;
 use corpus_database::{tables::Tables, types};
-use rustc_hir::{self as hir, HirId};
-use rustc_middle::hir::map::Map as HirMap;
+use rustc_hir::{self as hir};
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_session::Session;
 use rustc_span::hygiene::ExpnKind;
@@ -17,7 +16,6 @@ use std::collections::HashMap;
 /// A wrapper around `Tables` that keeps some local state.
 pub(crate) struct TableFiller<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
-    hir_map: &'a HirMap<'tcx>,
     session: &'a Session,
     pub(crate) tables: Tables,
     span_registry: HashMap<Span, types::Span>,
@@ -25,24 +23,14 @@ pub(crate) struct TableFiller<'a, 'tcx> {
 }
 
 impl<'a, 'tcx> TableFiller<'a, 'tcx> {
-    pub fn new(
-        tcx: TyCtxt<'tcx>,
-        hir_map: &'a HirMap<'tcx>,
-        session: &'a Session,
-        tables: Tables,
-    ) -> Self {
+    pub fn new(tcx: TyCtxt<'tcx>, session: &'a Session, tables: Tables) -> Self {
         Self {
             tcx,
-            hir_map,
             session,
             tables,
             span_registry: HashMap::new(),
             type_registry: HashMap::new(),
         }
-    }
-    pub fn resolve_hir_id(&mut self, id: HirId) -> types::DefPath {
-        let def_id = self.hir_map.local_def_id(id);
-        self.resolve_local_def_id(def_id)
     }
     pub fn resolve_local_def_id(
         &mut self,
@@ -279,6 +267,11 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 }
                 ty::TyKind::GeneratorWitness(_binder) => {
                     let interned_type = self.insert_new_type_into_table("GeneratorWitness", typ);
+                    self.tables.register_types_generator_witness(interned_type);
+                    interned_type
+                }
+                ty::TyKind::GeneratorWitnessMIR(_def_id, _substs) => {
+                    let interned_type = self.insert_new_type_into_table("GeneratorWitnessMIR", typ);
                     self.tables.register_types_generator_witness(interned_type);
                     interned_type
                 }

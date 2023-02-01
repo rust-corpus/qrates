@@ -315,6 +315,9 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
             mir::StatementKind::Intrinsic(..) => {
                 (self.filler.tables.get_fresh_statement(), "Intrinsic")
             }
+            mir::StatementKind::ConstEvalCounter => {
+                (self.filler.tables.get_fresh_statement(), "ConstEvalCounter")
+            }
         };
         (stmt, kind.to_string())
     }
