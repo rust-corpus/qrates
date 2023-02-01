@@ -6,6 +6,7 @@ use crate::converters::ConvertInto;
 use crate::mir_visitor::MirVisitor;
 use crate::table_filler::TableFiller;
 use corpus_database::{tables::Tables, types};
+use hir::def_id::LocalDefId;
 use rustc_hir::def::DefKind;
 use rustc_hir::{
     self as hir,
@@ -36,7 +37,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         tcx: TyCtxt<'tcx>,
     ) -> Self {
         let (root_module,) = tables.register_root_modules(build);
-        let filler = TableFiller::new(tcx, hir_map, session, tables);
+        let filler = TableFiller::new(tcx, session, tables);
         Self {
             tcx,
             hir_map,
@@ -142,8 +143,10 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         self.current_item = old_item;
     }
     /// Retrieves the parameter types and the return type for the function with `def_id`.
-    fn get_fn_param_and_return_types(&mut self, id: HirId) -> (Vec<types::Type>, types::Type) {
-        let def_id = self.hir_map.local_def_id(id);
+    fn get_fn_param_and_return_types(
+        &mut self,
+        def_id: LocalDefId,
+    ) -> (Vec<types::Type>, types::Type) {
         let mir = self.tcx.optimized_mir(def_id);
         let return_type = self.filler.register_type(mir.return_ty());
         let local_decls = mir.local_decls();
@@ -162,8 +165,8 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         let name: &str = &item.ident.name.as_str();
         let visibility = self.tcx.visibility(item.owner_id.def_id);
         let visibility: types::TyVisibility = visibility.convert_into();
-        let def_path = self.filler.resolve_hir_id(item.hir_id());
-        let def_id = self.hir_map.local_def_id(item.hir_id());
+        let def_path = self.filler.resolve_local_def_id(item.owner_id.def_id);
+        let def_id = item.owner_id.def_id;
         match &item.kind {
             hir::ItemKind::Mod(ref module) => {
                 // This avoids visiting the root module.
@@ -287,12 +290,14 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     unsafety.convert_into(),
                 );
                 for trait_item in *trait_items {
-                    let trait_item_def_path = self.filler.resolve_hir_id(trait_item.id.hir_id());
+                    let trait_item_def_path = self
+                        .filler
+                        .resolve_local_def_id(trait_item.id.owner_id.def_id);
                     self.filler.tables.register_trait_items(
                         item_id,
                         trait_item_def_path,
                         self.tcx
-                            .impl_defaultness(self.hir_map.local_def_id(trait_item.id.hir_id()))
+                            .impl_defaultness(trait_item.id.owner_id.def_id)
                             .convert_into(),
                     )
                 }
@@ -323,12 +328,11 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         fn_def: &'tcx hir::FnDecl,
         body_id: hir::BodyId,
         _span: Span,
-        id: HirId,
+        def_id: LocalDefId,
     ) {
-        let def_id = self.hir_map.local_def_id(id);
         let visibility = self.tcx.visibility(def_id);
-        let def_path = self.filler.resolve_hir_id(id);
-        let (param_types, return_type) = self.get_fn_param_and_return_types(id);
+        let def_path = self.filler.resolve_local_def_id(def_id);
+        let (param_types, return_type) = self.get_fn_param_and_return_types(def_id);
         let (function,) = match fn_kind {
             intravisit::FnKind::Method(_name, method_sig) => {
                 self.filler.tables.register_function_definitions(
@@ -360,7 +364,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
             ),
         };
         let old_item = mem::replace(&mut self.current_item, Some(function));
-        intravisit::walk_fn(self, fn_kind, fn_def, body_id, id);
+        intravisit::walk_fn(self, fn_kind, fn_def, body_id, def_id);
         self.current_item = old_item;
         for (i, param_type) in param_types.into_iter().enumerate() {
             self.filler
@@ -369,16 +373,15 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         }
     }
     fn visit_foreign_item(&mut self, item: &'tcx hir::ForeignItem) {
-        let def_path = self.filler.resolve_hir_id(item.hir_id());
-        let def_id = self.hir_map.local_def_id(item.hir_id());
+        let def_path = self.filler.resolve_local_def_id(item.owner_id.def_id);
+        let def_id = item.owner_id.def_id;
         let visibility = self.tcx.visibility(def_id);
         let visibility = visibility.convert_into();
         let item_id = match item.kind {
             hir::ForeignItemKind::Fn(..) => {
-                let def_id = self.hir_map.local_def_id(item.hir_id());
                 let fn_sig = self.tcx.fn_sig(def_id);
                 let fn_sig = fn_sig.skip_binder();
-                let return_type = self.filler.register_type(fn_sig.output());
+                let return_type = self.filler.register_type(fn_sig.skip_binder().output());
                 let (function,) = self.filler.tables.register_function_definitions(
                     def_path,
                     self.current_module,
@@ -388,7 +391,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     return_type,
                 );
                 for (i, input) in fn_sig.inputs().iter().enumerate() {
-                    let param_type = self.filler.register_type(*input);
+                    let param_type = self.filler.register_type(*input.skip_binder());
                     self.filler.tables.register_function_parameter_types(
                         function,
                         i.into(),

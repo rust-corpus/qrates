@@ -178,17 +178,13 @@ fn analyse_with_tcx(name: String, tcx: TyCtxt, session: &Session) {
 }
 
 pub fn analyse<'tcx>(compiler: &Compiler, queries: &'tcx Queries<'tcx>) {
-    let name = (**queries.crate_name().unwrap())
-        .borrow()
-        .clone()
-        .to_string();
-    assert!(
-        name != "rust_out",
-        "Why this crate has such a strange name?"
-    );
     let session = compiler.session();
-
     queries.global_ctxt().unwrap().enter(|tcx| {
+        let name = tcx.crate_name(rustc_hir::def_id::LOCAL_CRATE).to_string();
+        assert!(
+            name != "rust_out",
+            "Why this crate has such a strange name?"
+        );
         analyse_with_tcx(name, tcx, session);
     });
 }
