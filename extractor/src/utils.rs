@@ -23,16 +23,19 @@ pub fn pretty_type_description<'t>(tcx: TyCtxt<'t>, ty: &ty::Ty<'t>) -> String {
                 desc.path
             }
         }
-        ty::Slice(element) | ty::Array(element, _) => {
-            format!("&[{}]", pretty_type_description(tcx, element))
+        ty::Slice(element) => {
+            format!("[{}]", pretty_type_description(tcx, element))
+        }
+        ty::Array(element, _) => {
+            format!("[{}; N]", pretty_type_description(tcx, element))
         }
         ty::Tuple(elements) => {
             format!(
                 "({})",
                 elements
                     .iter()
-                    .map(|element| pretty_type_description(tcx, &element))
-                    .join(", ")
+                    .map(|element| format!("{},", pretty_type_description(tcx, &element)))
+                    .join(" ")
             )
         }
         ty::Ref(_, ty, _) => {
