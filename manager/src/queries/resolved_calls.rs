@@ -99,7 +99,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     // sort for much better gzip compression
     let all_calls: Vec<_> = all_calls
-        .sorted_by_key(|(_, _, target, ..)| target.clone())
+        .sorted_by_key(|(_, _, target, ..)| *target)
         .collect();
 
     let cross_crate_calls = all_calls
