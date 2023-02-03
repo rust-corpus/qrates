@@ -91,14 +91,12 @@ impl CompileManager {
                 [source.crates-io]
                 registry = "TODO"
             };
-            match &mut cargo_config {
-                toml::Value::Table(section) => match &mut section["source"] {
-                    toml::Value::Table(source) => match &mut source["crates-io"] {
-                        toml::Value::Table(crates_io) => {
-                            crates_io["registry"] = toml::Value::String(registry_url.to_string());
-                        }
-                        _ => unreachable!(),
-                    },
+            let section = cargo_config.get_mut("source").unwrap();
+            match section {
+                toml::Value::Table(source) => match &mut source["crates-io"] {
+                    toml::Value::Table(crates_io) => {
+                        crates_io["registry"] = toml::Value::String(registry_url.to_string());
+                    }
                     _ => unreachable!(),
                 },
                 _ => unreachable!(),
