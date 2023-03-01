@@ -130,7 +130,9 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         visibility: types::TyVisibility,
         kind: types::TyDefKind,
     ) {
-        let typ = self.filler.register_type(self.tcx.type_of(def_id));
+        let typ = self
+            .filler
+            .register_type(self.tcx.type_of(def_id).skip_binder());
         let (item_id,) = self.filler.tables.register_type_defs(
             typ,
             def_path,
@@ -205,7 +207,9 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                 of_trait,
                 ..
             }) => {
-                let interned_type = self.filler.register_type(self.tcx.type_of(def_id));
+                let interned_type = self
+                    .filler
+                    .register_type(self.tcx.type_of(def_id).skip_binder());
                 let (item_id,) = self.filler.tables.register_impl_definitions(
                     def_path,
                     self.current_module,
