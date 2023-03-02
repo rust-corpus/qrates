@@ -305,7 +305,11 @@ pub fn summary_key_str(tcx: TyCtxt<'_>, def_id: DefId) -> Rc<String> {
                     if type_ns == "num"
                         && (def_kind == Struct || def_kind == Union || def_kind == Enum)
                     {
-                        append_mangled_type(&mut name, tcx.type_of(parent_def_id), tcx);
+                        append_mangled_type(
+                            &mut name,
+                            tcx.type_of(parent_def_id).skip_binder(),
+                            tcx,
+                        );
                         continue;
                     }
                 }
@@ -351,5 +355,6 @@ pub fn component_name(component_data: &DefPathData) -> &str {
         Ctor => "ctor",
         AnonConst => "constant",
         ImplTrait => "implement_trait",
+        ImplTraitAssocTy => "implement_trait_associated_type",
     }
 }
