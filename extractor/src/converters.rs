@@ -55,6 +55,7 @@ impl ConvertInto<types::SpanExpansionKind> for rustc_span::hygiene::ExpnKind {
             Desugaring(DesugaringKind::ForLoop) => types::SpanExpansionKind::DesugaringForLoop,
             Desugaring(DesugaringKind::WhileLoop) => types::SpanExpansionKind::DesugaringWhileLoop,
             Desugaring(DesugaringKind::YeetExpr) => types::SpanExpansionKind::DesugaringYeetExpr,
+            Desugaring(DesugaringKind::Replace) => types::SpanExpansionKind::DesugaringReplace,
             Inlined => types::SpanExpansionKind::Inlined,
         }
     }
