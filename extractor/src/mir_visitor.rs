@@ -318,6 +318,9 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
             mir::StatementKind::ConstEvalCounter => {
                 (self.filler.tables.get_fresh_statement(), "ConstEvalCounter")
             }
+            mir::StatementKind::PlaceMention(..) => {
+                (self.filler.tables.get_fresh_statement(), "PlaceMention")
+            }
         };
         (stmt, kind.to_string())
     }
@@ -386,24 +389,6 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                     unwind_block,
                 );
                 "Drop"
-            }
-            mir::TerminatorKind::DropAndReplace {
-                place,
-                value,
-                target,
-                unwind,
-            } => {
-                let place_type = self.filler.register_type(place.ty(self.body, self.tcx).ty);
-                let unwind_block = get_maybe_block(unwind);
-                let interned_operand = self.visit_operand(value);
-                self.filler.tables.register_terminators_drop_and_replace(
-                    block,
-                    place_type,
-                    interned_operand,
-                    basic_blocks[target],
-                    unwind_block,
-                );
-                "DropAndReplace"
             }
             mir::TerminatorKind::Call {
                 func,
