@@ -74,7 +74,7 @@ fn build_pretty_description<'t>(
 
         use DefPathData::*;
         match def_key.disambiguated_data.data {
-            Impl => match tcx.impl_subject(def_id) {
+            Impl => match tcx.impl_subject(def_id).skip_binder() {
                 ty::ImplSubject::Inherent(ty) => {
                     let ty_desc = pretty_type_description(tcx, &ty);
                     desc.path.push_str(&ty_desc);
