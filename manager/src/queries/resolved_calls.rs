@@ -55,7 +55,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let all_calls = loader.load_terminators_call();
     let all_calls = all_calls.iter().filter_map(
-        |&(block, call, _func, _unsafety, _abi, _return_ty, _destination, _cleanup, _span)| {
+        |&(block, call, _func, _unsafety, _abi, _return_ty, _destination, _span)| {
             let target = call_target.get(&call)?; // none for function pointers
             let (target_desc, function_generics, type_generics) = call_target_desc[&call];
 

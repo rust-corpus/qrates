@@ -350,6 +350,36 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 no_block
             }
         };
+        let register_unwind_action = |this: &mut Self, action: &mir::UnwindAction| match action {
+            mir::UnwindAction::Continue => {
+                this.filler.tables.register_terminators_unwind_action(
+                    block,
+                    types::UnwindAction::Continue,
+                    no_block,
+                );
+            }
+            mir::UnwindAction::Unreachable => {
+                this.filler.tables.register_terminators_unwind_action(
+                    block,
+                    types::UnwindAction::Unreachable,
+                    no_block,
+                );
+            }
+            mir::UnwindAction::Terminate => {
+                this.filler.tables.register_terminators_unwind_action(
+                    block,
+                    types::UnwindAction::Terminate,
+                    no_block,
+                );
+            }
+            mir::UnwindAction::Cleanup(cleanup_block) => {
+                this.filler.tables.register_terminators_unwind_action(
+                    block,
+                    types::UnwindAction::Cleanup,
+                    basic_blocks[&cleanup_block],
+                );
+            }
+        };
         let kind = match &terminator.kind {
             mir::TerminatorKind::Goto { target } => {
                 self.filler
@@ -372,22 +402,22 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 "SwitchInt"
             }
             mir::TerminatorKind::Resume => "Resume",
-            mir::TerminatorKind::Abort => "Abort",
             mir::TerminatorKind::Return => "Return",
             mir::TerminatorKind::Unreachable => "Unreachable",
+            mir::TerminatorKind::Terminate => "Terminate",
             mir::TerminatorKind::Drop {
                 place,
                 target,
                 unwind,
             } => {
                 let place_type = self.filler.register_type(place.ty(self.body, self.tcx).ty);
-                let unwind_block = get_maybe_block(unwind);
+                register_unwind_action(self, unwind);
                 self.filler.tables.register_terminators_drop(
                     block,
                     place_type,
                     basic_blocks[target],
-                    unwind_block,
                 );
+
                 "Drop"
             }
             mir::TerminatorKind::Call {
@@ -395,7 +425,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 args,
                 destination,
                 target,
-                cleanup,
+                unwind,
                 from_hir_call: _,
                 fn_span,
             } => {
@@ -414,6 +444,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 let unsafety = sig.unsafety().convert_into();
                 let abi = sig.abi().name().to_string();
                 let span = self.filler.register_span(*fn_span);
+                register_unwind_action(self, unwind);
                 let (function_call,) = self.filler.tables.register_terminators_call(
                     block,
                     interned_func,
@@ -421,7 +452,6 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                     abi,
                     interned_return_ty,
                     destination_block,
-                    get_maybe_block(cleanup),
                     span,
                 );
                 for (i, arg) in args.iter().enumerate() {
@@ -494,15 +524,15 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 expected,
                 msg: _,
                 target,
-                cleanup,
+                unwind,
             } => {
                 let interned_cond = self.visit_operand(cond);
+                register_unwind_action(self, unwind);
                 self.filler.tables.register_terminators_assert(
                     block,
                     interned_cond,
                     *expected,
                     basic_blocks[target],
-                    get_maybe_block(cleanup),
                 );
                 "Assert"
             }
@@ -537,11 +567,10 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 real_target,
                 unwind,
             } => {
-                self.filler.tables.register_terminators_false_unwind(
-                    block,
-                    basic_blocks[real_target],
-                    get_maybe_block(unwind),
-                );
+                register_unwind_action(self, unwind);
+                self.filler
+                    .tables
+                    .register_terminators_false_unwind(block, basic_blocks[real_target]);
                 "FalseUnwind"
             }
             mir::TerminatorKind::InlineAsm {
@@ -550,7 +579,7 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
                 options: _,
                 line_spans: _,
                 destination: _,
-                cleanup: _,
+                unwind: _,
             } => {
                 self.filler.tables.register_terminators_inline_asm(block);
                 "InlineAsm"

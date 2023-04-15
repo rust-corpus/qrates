@@ -135,6 +135,7 @@ impl ConvertInto<types::CastKind> for mir::CastKind {
             mir::CastKind::FloatToFloat => types::CastKind::FloatToFloat,
             mir::CastKind::PtrToPtr => types::CastKind::PtrToPtr,
             mir::CastKind::FnPtrToPtr => types::CastKind::FnPtrToPtr,
+            mir::CastKind::Transmute => types::CastKind::Transmute,
         }
     }
 }

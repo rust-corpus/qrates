@@ -240,6 +240,7 @@ enum CastKind {
     FloatToFloat,
     PtrToPtr,
     FnPtrToPtr,
+    Transmute,
 }
 
 /// The kind of a MIR borrow statement.
@@ -323,6 +324,16 @@ enum BlockCheckMode {
     PushUnsafeBlockUserProvided,
     PopUnsafeBlockCompilerGenerated,
     PopUnsafeBlockUserProvided,
+}
+
+/// rustc_middle::mir::UnwindAction
+enum UnwindAction {
+    #[default]
+    Unknown,
+    Continue,
+    Unreachable,
+    Terminate,
+    Cleanup,
 }
 
 // Interning tables.
@@ -494,9 +505,9 @@ relation terminators(block: BasicBlock, kind: TerminatorKind, scope: Scope);
 relation terminators_goto(block: BasicBlock, target: BasicBlock);
 relation terminators_switch_int(block: BasicBlock, discriminant: Operand);
 relation terminators_switch_int_targets(block: BasicBlock, condition_value: u128, target: BasicBlock);
-relation terminators_drop(block: BasicBlock, location: Type, target: BasicBlock, unwind: BasicBlock);
+relation terminators_drop(block: BasicBlock, location: Type, target: BasicBlock);
 relation terminators_drop_and_replace(block: BasicBlock, location: Type, value: Operand, target: BasicBlock, unwind: BasicBlock);
-relation terminators_call(block: BasicBlock, call: auto FunctionCall, func: Operand, unsafety: Unsafety, abi: Abi, return_ty: Type, destination: BasicBlock, cleanup: BasicBlock, span: Span);
+relation terminators_call(block: BasicBlock, call: auto FunctionCall, func: Operand, unsafety: Unsafety, abi: Abi, return_ty: Type, destination: BasicBlock, span: Span);
 relation terminators_call_arg(call: FunctionCall, index: CallArgIndex, arg: Operand);
 /// The called function or trait method.
 relation terminators_call_const_target(call: FunctionCall, def_path: DefPath);
@@ -505,8 +516,10 @@ relation terminators_call_const_target_desc(call: FunctionCall, target: Interned
 relation terminators_call_const_target_self(call: FunctionCall, typ: Type);
 /// For calls originating from a macro, the path of the top macro in the backtrace that's from a different crate than the call site.
 relation terminators_call_macro_backtrace(call: FunctionCall, macro_path: InternedString);
-relation terminators_assert(block: BasicBlock, cond: Operand, expected: bool, target: BasicBlock, cleanup: BasicBlock);
+relation terminators_assert(block: BasicBlock, cond: Operand, expected: bool, target: BasicBlock);
 relation terminators_yield(block: BasicBlock, value: Operand, resume: BasicBlock, drop: BasicBlock);
 relation terminators_false_edges(block: BasicBlock, real_target: BasicBlock, imaginary_target: BasicBlock);
-relation terminators_false_unwind(block: BasicBlock, real_target: BasicBlock, unwind: BasicBlock);
+relation terminators_false_unwind(block: BasicBlock, real_target: BasicBlock);
 relation terminators_inline_asm(block: BasicBlock);
+/// `cleanup` is defined only if action is `Cleanup`.
+relation terminators_unwind_action(block: BasicBlock, action: UnwindAction, cleanup: BasicBlock);
