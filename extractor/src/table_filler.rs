@@ -43,7 +43,10 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
         let crate_name = self.tcx.crate_name(crate_num).as_str().to_string();
         let crate_hash = self.tcx.crate_hash(crate_num).as_u64().into();
         let def_path_str = self.tcx.def_path_debug_str(def_id);
-        let def_path_hash = self.tcx.def_path_hash(def_id).0.as_value().into();
+        let def_path_hash = {
+            let (f, s) = self.tcx.def_path_hash(def_id).0.split();
+            (f.as_u64(), s.as_u64()).into()
+        };
         let summary_key_str = mirai_utils::summary_key_str(self.tcx, def_id);
         let summary_key_str_value = std::rc::Rc::try_unwrap(summary_key_str).unwrap();
         let def_path = self.tables.register_def_paths(

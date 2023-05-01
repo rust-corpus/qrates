@@ -15,7 +15,7 @@ use rustc_hir::{
 };
 use rustc_middle::hir::map::Map as HirMap;
 use rustc_middle::mir::{self, HasLocalDecls};
-use rustc_middle::ty::{TyCtxt, WithOptConstParam};
+use rustc_middle::ty::TyCtxt;
 use rustc_session::Session;
 use rustc_span::source_map::Span;
 use std::mem;
@@ -429,7 +429,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
         intravisit::walk_body(self, body);
         let id = body.id();
         let def_id = self.hir_map.body_owner_def_id(id);
-        let def = WithOptConstParam::unknown(def_id.to_def_id());
+        // let def = WithOptConstParam::unknown(def_id.to_def_id());
         let def_kind = self.tcx.def_kind(def_id);
         let mir_body = match def_kind {
             DefKind::Const
@@ -437,8 +437,8 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
             | DefKind::AssocConst
             | DefKind::Ctor(..)
             | DefKind::AnonConst
-            | DefKind::InlineConst => self.tcx.mir_for_ctfe_opt_const_arg(def),
-            _ => self.tcx.optimized_mir(def.did),
+            | DefKind::InlineConst => self.tcx.mir_for_ctfe(def_id.to_def_id()),
+            _ => self.tcx.optimized_mir(def_id),
         };
 
         self.visit_mir(def_id, mir_body);
