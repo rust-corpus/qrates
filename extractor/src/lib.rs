@@ -31,7 +31,6 @@ use rustc_hir::def_id::DefId;
 use rustc_interface::interface::Compiler;
 use rustc_interface::Queries;
 use rustc_middle::ty::{
-    self,
     query::{ExternProviders, Providers},
     TyCtxt,
 };
@@ -195,7 +194,7 @@ pub fn override_queries(
     _providers_extern: &mut ExternProviders,
 ) {
     providers.unsafety_check_result = unsafety_check_result;
-    providers.unsafety_check_result_for_const_arg = unsafety_check_result_for_const_arg;
+    // providers.unsafety_check_result_for_const_arg = unsafety_check_result_for_const_arg;
 }
 
 fn unsafety_check_result<'tcx>(
@@ -205,44 +204,44 @@ fn unsafety_check_result<'tcx>(
     let mut providers = Providers::default();
     rustc_mir_transform::provide(&mut providers);
     let original_unsafety_check_result = providers.unsafety_check_result;
-    if let None = ty::WithOptConstParam::try_lookup(local_def_id, tcx) {
-        // FIXME: check_unsafety changed too much and needs to be written from scratch.
-        // let (result, reasons) = check_unsafety::unsafety_check_result(
-        //     tcx,
-        //     ty::WithOptConstParam::unknown(local_def_id),
-        // );
-        // let def_id = local_def_id.to_def_id();
-        // let mut state = SHARED_STATE.lock().unwrap();
-        // state.function_unsafe_use.insert(def_id, result);
-        // state.function_unsafe_reasons.insert(def_id, reasons);
-    }
+    // if let None = ty::WithOptConstParam::try_lookup(local_def_id, tcx) {
+    // FIXME: check_unsafety changed too much and needs to be written from scratch.
+    // let (result, reasons) = check_unsafety::unsafety_check_result(
+    //     tcx,
+    //     ty::WithOptConstParam::unknown(local_def_id),
+    // );
+    // let def_id = local_def_id.to_def_id();
+    // let mut state = SHARED_STATE.lock().unwrap();
+    // state.function_unsafe_use.insert(def_id, result);
+    // state.function_unsafe_reasons.insert(def_id, reasons);
+    // }
     original_unsafety_check_result(tcx, local_def_id)
 }
 
-fn unsafety_check_result_for_const_arg<'tcx>(
-    tcx: TyCtxt<'tcx>,
-    (local_def_id, param_did): (LocalDefId, DefId),
-) -> &'tcx rustc_middle::mir::UnsafetyCheckResult {
-    let mut providers = Providers::default();
-    rustc_mir_transform::provide(&mut providers);
-    let original_unsafety_check_result_for_const_arg =
-        providers.unsafety_check_result_for_const_arg;
-    {
-        // FIXME: check_unsafety changed too much and needs to be written from scratch.
-        // let (result, reasons) = check_unsafety::unsafety_check_result(
-        //     tcx,
-        //     ty::WithOptConstParam {
-        //         did: local_def_id,
-        //         const_param_did: Some(param_did),
-        //     },
-        // );
-        // let def_id = local_def_id.to_def_id();
-        // let mut state = SHARED_STATE.lock().unwrap();
-        // state.function_unsafe_use.insert(def_id, result);
-        // state.function_unsafe_reasons.insert(def_id, reasons);
-    }
-    original_unsafety_check_result_for_const_arg(tcx, (local_def_id, param_did))
-}
+// fn unsafety_check_result_for_const_arg<'tcx>(
+//     tcx: TyCtxt<'tcx>,
+//     (local_def_id, param_did): (LocalDefId, DefId),
+// ) -> &'tcx rustc_middle::mir::UnsafetyCheckResult {
+//     let mut providers = Providers::default();
+//     rustc_mir_transform::provide(&mut providers);
+//     let original_unsafety_check_result_for_const_arg =
+//         providers.unsafety_check_result_for_const_arg;
+//     {
+//         // FIXME: check_unsafety changed too much and needs to be written from scratch.
+//         // let (result, reasons) = check_unsafety::unsafety_check_result(
+//         //     tcx,
+//         //     ty::WithOptConstParam {
+//         //         did: local_def_id,
+//         //         const_param_did: Some(param_did),
+//         //     },
+//         // );
+//         // let def_id = local_def_id.to_def_id();
+//         // let mut state = SHARED_STATE.lock().unwrap();
+//         // state.function_unsafe_use.insert(def_id, result);
+//         // state.function_unsafe_reasons.insert(def_id, reasons);
+//     }
+//     original_unsafety_check_result_for_const_arg(tcx, (local_def_id, param_did))
+// }
 
 /// Save `cfg!` configuration.
 pub fn save_cfg_configuration(set: &FxHashSet<(String, Option<String>)>) {
