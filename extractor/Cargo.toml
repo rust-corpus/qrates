@@ -21,7 +21,7 @@ corpus-database = { path = "../database" }
 log = "0.4"
 log-derive = "0.4"
 lazy_static = "1.4"
-toml = "0.7.1"
+toml = "0.7.4"
 itertools = "0.10.5"
 
 [package.metadata.rust-analyzer]
