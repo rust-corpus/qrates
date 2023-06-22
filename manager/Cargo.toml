@@ -39,7 +39,7 @@ rustwide = "0.15.2"
 crates-index = "0.18"
 datafrog = "2"
 csv = "1.1"
-itertools = "0.10"
+itertools = "0.11"
 tempfile = "3.3.0"
 
 [dependencies.chrono]
