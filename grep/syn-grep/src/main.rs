@@ -2,10 +2,24 @@ use rayon::prelude::*; // Import necessary traits and functions from the 'rayon'
 
 mod visitors;
 
+#[derive(Debug, serde::Serialize)]
+enum Status {
+    Success,
+    FileReadError(String),
+    SynParseError(String),
+}
+
 #[derive(Debug)]
 struct Report {
     file_path: String,
+    status: Status,
     function_reports: Vec<visitors::FunctionReport>,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct StatusRow<'a> {
+    file_path: &'a str,
+    status: &'a Status,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -19,21 +33,38 @@ struct Row<'a> {
 }
 
 fn analyse_file(file_path: &str) -> Report {
-    let file_contents = std::fs::read_to_string(file_path).unwrap();
-    let ast = syn::parse_file(&file_contents).unwrap();
+    let mut report = Report {
+        file_path: file_path.to_string(),
+        status: Status::Success,
+        function_reports: Vec::new(),
+    };
+    let file_contents = match std::fs::read_to_string(file_path) {
+        Ok(contents) => contents,
+        Err(error) => {
+            report.status = Status::FileReadError(error.to_string());
+            return report;
+        }
+    };
+    let ast = match syn::parse_file(&file_contents) {
+        Ok(ast) => ast,
+        Err(error) => {
+            report.status = Status::SynParseError(error.to_string());
+            return report;
+        }
+    };
     let mut visitor = visitors::FunctionVisitor::default();
     syn::visit::visit_file(&mut visitor, &ast);
     assert!(visitor.unsafe_blocks.is_empty());
-    Report {
-        file_path: file_path.to_string(),
-        function_reports: visitor.functions,
-    }
+    report.function_reports = visitor.functions;
+    report
 }
 
 fn main() {
     let file_list_path = std::env::args().nth(1).unwrap();
     let reports_list_path = std::env::args().nth(2).unwrap();
+    let status_path = std::env::args().nth(3).unwrap();
     let mut writer = csv::Writer::from_path(reports_list_path).unwrap();
+    let mut status_writer = csv::Writer::from_path(status_path).unwrap();
 
     // Read the list of files stored in the file passed as a first argument.
     let file_list_contents = std::fs::read_to_string(file_list_path).unwrap();
@@ -45,6 +76,11 @@ fn main() {
         .collect();
     // Write the reports into the CSV file passed as a second argument.
     for report in &reports {
+        let status_row = StatusRow {
+            file_path: &report.file_path,
+            status: &report.status,
+        };
+        status_writer.serialize(status_row).unwrap();
         for function_report in &report.function_reports {
             for unsafe_block in &function_report.unsafe_blocks {
                 let row = Row {

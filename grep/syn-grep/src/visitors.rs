@@ -23,7 +23,7 @@ impl FunctionVisitor {
         if !self.unsafe_blocks.is_empty() {
             let unsafe_blocks = std::mem::take(&mut self.unsafe_blocks);
             let function = FunctionReport {
-                function_name: function_name,
+                function_name,
                 is_unsafe,
                 expression_count,
                 unsafe_blocks,
