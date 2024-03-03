@@ -25,3 +25,15 @@ Find all files that mention `unsafe `:
 ```bash
 rg --files-with-matches 'unsafe ' extracted-crates/ > unsafe-files.csv
 ```
+
+Analyse these files using the syn-based analysis:
+
+```bash
+qrates/grep/syn-grep/target/release/syn-grep unsafe-files.csv unsafe-report 
+```
+
+This command produces the following files:
+
+* `unsafe-report-functions.csv` – unsafe blocks inside functions.
+* `unsafe-report-global-blocks.csv` – global unsafe blocks.
+* `unsafe-report-run-status.csv` – whether analysing a file was successful or led to an error.
