@@ -99,7 +99,8 @@ fn main() {
     let file_list: Vec<&str> = file_list_contents.lines().collect();
     // Analyse the list of files in parallel.
     let reports: Vec<Report> = file_list
-        .par_iter() // Use 'par_iter' from the 'rayon' crate to iterate in parallel.
+        .par_iter()
+        .filter(|file_path| file_path.ends_with(".rs"))
         .map(|file_path| analyse_file(file_path))
         .collect();
     // Write the reports into the CSV file passed as a second argument.
