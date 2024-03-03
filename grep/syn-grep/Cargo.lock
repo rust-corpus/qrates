@@ -146,6 +146,7 @@ name = "syn-grep"
 version = "0.1.0"
 dependencies = [
  "csv",
+ "proc-macro2",
  "rayon",
  "serde",
  "syn",

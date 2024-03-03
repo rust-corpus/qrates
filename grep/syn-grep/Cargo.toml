@@ -7,4 +7,5 @@ edition = "2021"
 csv = "1.3.0"
 rayon = "1.9.0"
 serde = { version = "1.0.197", features = ["derive"] }
+proc-macro2 = { version = "1.0.78", features = ["span-locations"] }
 syn = { version="2.0.52", features=["full", "visit"]}

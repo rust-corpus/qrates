@@ -1,12 +1,30 @@
-use rayon::prelude::*; // Import necessary traits and functions from the 'rayon' crate.
+use rayon::prelude::*;
+use serde::ser::{Serialize, Serializer};
 
 mod visitors;
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug)]
 enum Status {
     Success,
     FileReadError(String),
     SynParseError(String),
+}
+
+impl Serialize for Status {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match *self {
+            Status::Success => serializer.serialize_str("Success"),
+            Status::FileReadError(ref s) => {
+                serializer.serialize_str(&format!("FileReadError: {}", s))
+            }
+            Status::SynParseError(ref s) => {
+                serializer.serialize_str(&format!("SynParseError: {}", s))
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -48,7 +66,17 @@ fn analyse_file(file_path: &str) -> Report {
     let ast = match syn::parse_file(&file_contents) {
         Ok(ast) => ast,
         Err(error) => {
-            report.status = Status::SynParseError(error.to_string());
+            let span = error.span();
+            let start = span.start();
+            let end = span.end();
+            report.status = Status::SynParseError(format!(
+                "{} ({}:{}-{}:{})",
+                error.to_string(),
+                start.line,
+                start.column,
+                end.line,
+                end.column
+            ));
             return report;
         }
     };
