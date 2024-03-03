@@ -7,11 +7,11 @@ def main(input_root, output_root):
             if file.endswith('.crate'):
                 path = os.path.join(root, file)
                 output_path = os.path.join(output_root, file)
-                print(f'Extracting {path} to {output_path}')
+                command = f"tar -xzf {path} --wildcards '*.rs' -C {output_path}"
                 # Create output directory.
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 # Extract all *.rs files from the crate.
-                os.system(f"tar -xzf {path} --wildcards '*.rs' -C {output_path}")
+                os.system(command)
 
 
 if __name__ == '__main__':
