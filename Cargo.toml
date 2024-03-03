@@ -9,6 +9,7 @@ members = [
 ]
 exclude = [
     "extractor-test",
+    "grep/syn-grep",
 ]
 
 [profile.release]
