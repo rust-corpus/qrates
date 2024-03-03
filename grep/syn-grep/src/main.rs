@@ -8,7 +8,6 @@ enum Status {
     Success,
     FileReadError(String),
     SynParseError(String),
-    InternalErrorNonZeroUnsafeBlocks,
 }
 
 impl Serialize for Status {
@@ -24,9 +23,6 @@ impl Serialize for Status {
             Status::SynParseError(ref s) => {
                 serializer.serialize_str(&format!("SynParseError: {}", s))
             }
-            Status::InternalErrorNonZeroUnsafeBlocks => {
-                serializer.serialize_str("InternalErrorNonZeroUnsafeBlocks")
-            }
         }
     }
 }
@@ -35,13 +31,20 @@ impl Serialize for Status {
 struct Report {
     file_path: String,
     status: Status,
-    function_reports: Vec<visitors::FunctionReport>,
+    functions: Vec<visitors::FunctionReport>,
+    global_unsafe_blocks: Vec<visitors::UnsafeBlockReport>,
 }
 
 #[derive(Debug, serde::Serialize)]
 struct StatusRow<'a> {
     file_path: &'a str,
     status: &'a Status,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct GlobalUnsafeRow<'a> {
+    file_path: &'a str,
+    expression_count: u64,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -58,7 +61,8 @@ fn analyse_file(file_path: &str) -> Report {
     let mut report = Report {
         file_path: file_path.to_string(),
         status: Status::Success,
-        function_reports: Vec::new(),
+        functions: Vec::new(),
+        global_unsafe_blocks: Vec::new(),
     };
     let file_contents = match std::fs::read_to_string(file_path) {
         Ok(contents) => contents,
@@ -86,20 +90,20 @@ fn analyse_file(file_path: &str) -> Report {
     };
     let mut visitor = visitors::FunctionVisitor::default();
     syn::visit::visit_file(&mut visitor, &ast);
-    report.function_reports = visitor.functions;
-    if !visitor.unsafe_blocks.is_empty() {
-        report.status = Status::InternalErrorNonZeroUnsafeBlocks;
-        return report;
-    }
+    report.functions = visitor.functions;
+    report.global_unsafe_blocks = visitor.unsafe_blocks;
     report
 }
 
 fn main() {
     let file_list_path = std::env::args().nth(1).unwrap();
-    let reports_list_path = std::env::args().nth(2).unwrap();
-    let status_path = std::env::args().nth(3).unwrap();
-    let mut writer = csv::Writer::from_path(reports_list_path).unwrap();
+    let output_prefix = std::env::args().nth(2).unwrap();
+    let reports_list_path = format!("{}-functions.csv", output_prefix);
+    let status_path = format!("{}-run-status.csv", output_prefix);
+    let global_unsafe_path = format!("{}-global-blocks.csv", output_prefix);
+    let mut functions_writer = csv::Writer::from_path(reports_list_path).unwrap();
     let mut status_writer = csv::Writer::from_path(status_path).unwrap();
+    let mut global_unsafe_writer = csv::Writer::from_path(global_unsafe_path).unwrap();
 
     // Read the list of files stored in the file passed as a first argument.
     let file_list_contents = std::fs::read_to_string(file_list_path).unwrap();
@@ -117,7 +121,14 @@ fn main() {
             status: &report.status,
         };
         status_writer.serialize(status_row).unwrap();
-        for function_report in &report.function_reports {
+        for unsafe_block in &report.global_unsafe_blocks {
+            let row = GlobalUnsafeRow {
+                file_path: &report.file_path,
+                expression_count: unsafe_block.expression_count,
+            };
+            global_unsafe_writer.serialize(row).unwrap();
+        }
+        for function_report in &report.functions {
             for unsafe_block in &function_report.unsafe_blocks {
                 let row = Row {
                     file_path: &report.file_path,
@@ -127,7 +138,7 @@ fn main() {
                     unsafe_blocks_count: function_report.unsafe_blocks.len(),
                     unsafe_block_expression_count: unsafe_block.expression_count,
                 };
-                writer.serialize(row).unwrap();
+                functions_writer.serialize(row).unwrap();
             }
         }
     }
