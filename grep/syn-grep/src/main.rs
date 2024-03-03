@@ -8,6 +8,7 @@ enum Status {
     Success,
     FileReadError(String),
     SynParseError(String),
+    InternalErrorNonZeroUnsafeBlocks,
 }
 
 impl Serialize for Status {
@@ -22,6 +23,9 @@ impl Serialize for Status {
             }
             Status::SynParseError(ref s) => {
                 serializer.serialize_str(&format!("SynParseError: {}", s))
+            }
+            Status::InternalErrorNonZeroUnsafeBlocks => {
+                serializer.serialize_str("InternalErrorNonZeroUnsafeBlocks")
             }
         }
     }
@@ -82,8 +86,11 @@ fn analyse_file(file_path: &str) -> Report {
     };
     let mut visitor = visitors::FunctionVisitor::default();
     syn::visit::visit_file(&mut visitor, &ast);
-    assert!(visitor.unsafe_blocks.is_empty());
     report.function_reports = visitor.functions;
+    if !visitor.unsafe_blocks.is_empty() {
+        report.status = Status::InternalErrorNonZeroUnsafeBlocks;
+        return report;
+    }
     report
 }
 
