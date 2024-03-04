@@ -6,6 +6,8 @@ pub(super) struct UnsafeBlockReport {
 #[derive(Debug, Default)]
 pub(super) struct FunctionReport {
     pub(super) function_name: String,
+    /// Unique function identifier within a file.
+    pub(super) function_id: u64,
     pub(super) is_unsafe: bool,
     pub(super) expression_count: u64,
     pub(super) unsafe_blocks: Vec<UnsafeBlockReport>,
@@ -16,14 +18,18 @@ pub(super) struct FunctionVisitor {
     expression_count: u64,
     pub(super) unsafe_blocks: Vec<UnsafeBlockReport>,
     pub(super) functions: Vec<FunctionReport>,
+    pub(super) function_id_counter: u64,
 }
 
 impl FunctionVisitor {
     fn after_visit_fn(&mut self, function_name: String, is_unsafe: bool, expression_count: u64) {
         if !self.unsafe_blocks.is_empty() {
             let unsafe_blocks = std::mem::take(&mut self.unsafe_blocks);
+            let function_id = self.function_id_counter;
+            self.function_id_counter = self.function_id_counter.checked_add(1).unwrap();
             let function = FunctionReport {
                 function_name,
+                function_id,
                 is_unsafe,
                 expression_count,
                 unsafe_blocks,

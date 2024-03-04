@@ -51,6 +51,7 @@ struct GlobalUnsafeRow<'a> {
 struct Row<'a> {
     file_path: &'a str,
     function_name: &'a str,
+    function_id: u64,
     is_unsafe: bool,
     function_expression_count: u64,
     unsafe_blocks_count: usize,
@@ -79,11 +80,7 @@ fn analyse_file(file_path: &str) -> Report {
             let end = span.end();
             report.status = Status::SynParseError(format!(
                 "{} ({}:{}-{}:{})",
-                error.to_string(),
-                start.line,
-                start.column,
-                end.line,
-                end.column
+                error, start.line, start.column, end.line, end.column
             ));
             return report;
         }
@@ -133,6 +130,7 @@ fn main() {
                 let row = Row {
                     file_path: &report.file_path,
                     function_name: &function_report.function_name,
+                    function_id: function_report.function_id,
                     is_unsafe: function_report.is_unsafe,
                     function_expression_count: function_report.expression_count,
                     unsafe_blocks_count: function_report.unsafe_blocks.len(),
