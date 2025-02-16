@@ -40,3 +40,7 @@ def get_unchecked_function_names(all_function_names):
         for def_path in all_function_names
         if "unchecked" in def_path.split('::')[-1]
     ])
+
+# Set this to True if analyzing the entire crates.io dataset.
+# Enables additional checks based on absolute sizes.
+FULL_RUN = False
