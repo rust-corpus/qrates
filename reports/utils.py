@@ -383,7 +383,7 @@ def load_unsafe_thir_block_calls_extended():
             "build",
             "package_name", "package_version", "crate_name", "build_crate_hash", "edition",
             "block",
-            "unsafe_scope_span", "unsafe_scope_expansion_kind", "unsafe_scope_expansion_kind_descr", "file_name", "line", "col",
+            "unsafe_block_span", "unsafe_block_expansion_kind", "unsafe_block_expansion_kind_descr", "file_name", "line", "col",
             "check_mode", "call", "unsafety", "abi",
             "target_crate", "target_crate_hash", "call_target_def_path", "call_target_summary_key", "is_target_trait_item",
         ],
