@@ -284,8 +284,10 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                 ty::TyKind::CoroutineClosure(def_id, _args) => {
                     let interned_type = self.insert_new_type_into_table("CoroutineClosure", typ);
                     let coroutine_closure_def_path = self.resolve_def_id(*def_id);
-                    self.tables
-                        .register_types_coroutine_closure(interned_type, coroutine_closure_def_path);
+                    self.tables.register_types_coroutine_closure(
+                        interned_type,
+                        coroutine_closure_def_path,
+                    );
                     interned_type
                 }
                 ty::TyKind::Pat(..) => {
