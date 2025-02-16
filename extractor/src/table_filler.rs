@@ -269,37 +269,28 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                         .register_types_closure(interned_type, closure_def_path);
                     interned_type
                 }
-                // TODO - skius: Rename to 'Coroutine'?
                 ty::TyKind::Coroutine(def_id, _substs) => {
-                    let interned_type = self.insert_new_type_into_table("Generator", typ);
+                    let interned_type = self.insert_new_type_into_table("Coroutine", typ);
                     let generator_def_path = self.resolve_def_id(*def_id);
                     self.tables
-                        .register_types_generator(interned_type, generator_def_path);
+                        .register_types_coroutine(interned_type, generator_def_path);
                     interned_type
                 }
-                // TODO - skius: Double check that the successor of MIR is really the default.
-                // ty::TyKind::GeneratorWitness(_binder) => {
-                //     let interned_type = self.insert_new_type_into_table("GeneratorWitness", typ);
-                //     self.tables.register_types_generator_witness(interned_type);
-                //     interned_type
-                // }
-                // TODO - skius: Rename to 'CoroutineWitness'?
                 ty::TyKind::CoroutineWitness(_def_id, _substs) => {
-                    let interned_type = self.insert_new_type_into_table("GeneratorWitnessMIR", typ);
-                    self.tables.register_types_generator_witness(interned_type);
+                    let interned_type = self.insert_new_type_into_table("CoroutineWitness", typ);
+                    self.tables.register_types_coroutine_witness(interned_type);
                     interned_type
                 }
-                // TODO - skius(2): Add downstream support for CoroutineClosure
                 ty::TyKind::CoroutineClosure(def_id, _args) => {
                     let interned_type = self.insert_new_type_into_table("CoroutineClosure", typ);
                     let coroutine_closure_def_path = self.resolve_def_id(*def_id);
-                    // self.tables
-                    //     .register_types_coroutine_closure(interned_type, coroutine_closure_def_path);
+                    self.tables
+                        .register_types_coroutine_closure(interned_type, coroutine_closure_def_path);
                     interned_type
                 }
-                // TODO - skius(2): Add downstream support for Pat
                 ty::TyKind::Pat(..) => {
                     let interned_type = self.insert_new_type_into_table("Pat", typ);
+                    self.tables.register_types_pat(interned_type);
                     interned_type
                 }
                 ty::TyKind::Tuple(_substs) => {
@@ -334,13 +325,16 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                         self.tables.register_types_opaque(interned_type, def_path);
                         interned_type
                     }
-                    // TODO - skius: Properly handle Inherent and Weak. Needs 'register_types_' functions!
                     ty::AliasTyKind::Inherent => {
                         let interned_type = self.insert_new_type_into_table("Inherent", typ);
+                        let def_path = self.resolve_def_id(alias_type.def_id);
+                        self.tables.register_types_inherent(interned_type, def_path);
                         interned_type
                     }
                     ty::AliasTyKind::Weak => {
                         let interned_type = self.insert_new_type_into_table("Weak", typ);
+                        let def_path = self.resolve_def_id(alias_type.def_id);
+                        self.tables.register_types_weak(interned_type, def_path);
                         interned_type
                     }
                 },

@@ -626,12 +626,16 @@ relation types_fn_ptr(typ: Type);
 relation types_dynamic(typ: Type);
 relation types_dynamic_trait(typ: Type, def_path: DefPath, is_auto: bool);
 relation types_closure(typ: Type, def_path: DefPath);
-relation types_generator(typ: Type, def_path: DefPath);
-relation types_generator_witness(typ: Type);
+relation types_coroutine(typ: Type, def_path: DefPath);
+relation types_coroutine_witness(typ: Type);
+relation types_coroutine_closure(typ: Type, def_path: DefPath);
+relation types_pat(typ: Type);
 relation types_tuple(typ: Type);
 relation types_tuple_element(tuple_type: Type, index: TupleFieldIndex, typ: Type);
 relation types_projection(typ: Type, trait_def_path: DefPath, trait_item: DefPath);
 relation types_opaque(typ: Type, def_path: DefPath);
+relation types_inherent(typ: Type, def_path: DefPath);
+relation types_weak(typ: Type, def_path: DefPath);
 relation types_param(typ: Type, index: u32, name: InternedString);
 
 /// Traits.
