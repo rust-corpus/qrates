@@ -27,8 +27,34 @@ inc_id BasicBlock: u64 {
 }
 /// A statement.
 inc_id Statement: u64 {}
+
+// thir types
+/// A THIR-level block
+inc_id ThirBlock: u64 {
+    /// A value to encode `None` of `Option<ThirBlock>`.
+    NO_THIR_BLOCK = 0u64,
+}
+inc_id ThirExpr: u64 {
+    /// A value to encode `None` of `Option<ThirExpr>`.
+    NO_THIR_EXPR = 0u64,
+}
+inc_id ThirPat: u64 {
+    /// A value to encode `None` of `Option<ThirPat>`.
+    NO_THIR_PAT = 0u64,
+}
+inc_id ThirStmt: u64 {
+    /// A value to encode `None` of `Option<ThirStmt>`.
+    NO_THIR_STMT = 0u64,
+}
+
 /// The hash of the crate as reported by the compiler.
-custom_id CrateHash: u64 {
+custom_id CrateHash: u128 {
+    impl From<u128> for CrateHash {
+        fn from(value: u128) -> Self {
+            Self(value)
+        }
+    }
+
     impl std::fmt::LowerHex for CrateHash {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(f, "{:x}", self.0)
@@ -55,6 +81,9 @@ custom_id FnParamIndex: u16 {}
 custom_id OperandIndex: u16 {}
 custom_id StatementIndex: u16 {}
 custom_id CallArgIndex: u16 {}
+custom_id ThirCallArgIndex: u16 {}
+custom_id MatchArmIdx: u16 {}
+custom_id FieldIndex: u16 {}
 
 /// Mutability of an item. Having a const variant allows merging statics with constants.
 enum Mutability {
@@ -102,10 +131,10 @@ enum TyVisibility {
     Unknown,
 }
 
-/// The unsafety of an item.
-enum Unsafety {
+/// The safety of an item.
+enum Safety {
     Unsafe,
-    Normal,
+    Safe,
     /// Failed to obtain unsafety information from the compiler.
     ///
     /// TODO: For closures we could check if that closure is declared inside an unsafe block.
@@ -168,8 +197,10 @@ enum TyPrimitive {
     U32,
     U64,
     U128,
+    F16,
     F32,
     F64,
+    F128,
     Str,
     Never,
 }
@@ -180,7 +211,6 @@ enum TyDefKind {
     #[default]
     Unknown,
     TyAlias,
-    OpaqueTy,
     Enum,
     Struct,
     Union,
@@ -215,7 +245,9 @@ enum AggregateKind {
     Tuple,
     Adt,
     Closure,
-    Generator,
+    Coroutine,
+    CoroutineClosure,
+    RawPtr,
 }
 
 /// The kind of a cast operation.
@@ -227,12 +259,12 @@ enum CastKind {
     ReifyFnPointer,
     UnsafeFnPointer,
     UnsafeClosureFnPointer,
-    NormalClosureFnPointer,
+    SafeClosureFnPointer,
     MutToConstPointer,
     ArrayToPointer,
     UnsizePointer,
-    PointerExposeAddress,
-    PointerFromExposedAddress,
+    PointerExposeProvenance,
+    PointerWithExposedProvenance,
     DynStar,
     IntToInt,
     FloatToInt,
@@ -250,7 +282,8 @@ enum BorrowKind {
     Unknown,
     Shared,
     Shallow,
-    Unique,
+    Deep,
+    ClosureCapture,
     Mut,
     MutTwoPhase,
 }
@@ -309,7 +342,7 @@ enum SpanExpansionKind {
     /// Desugaring done by the compiler during HIR lowering.
     DesugaringYeetExpr,
     /// Desugaring done by the compiler during HIR lowering.
-    DesugaringReplace,
+    DesugaringBoundModifier,
     /// Inlined MIR.
     Inlined,
 }
@@ -334,6 +367,52 @@ enum UnwindAction {
     Unreachable,
     Terminate,
     Cleanup,
+}
+/// rustc_middle::ty::adjustment::PointerCoercion
+enum PointerCoercion {
+    #[default]
+    Unknown,
+    ReifyFnPointer,
+    UnsafeFnPointer,
+    ClosreFnPointer,
+    MutToConstPointer,
+    ArrayToPointer,
+    Unsize,
+    DynStar,
+}
+/// rustc_hir::hir::MatchSource
+enum MatchSource {
+    #[default]
+    Unknown,
+    Normal,
+    Postfix,
+    ForLoopDesugar,
+    TryDesugar,
+    AwaitDesugar,
+    FormatArgs,
+}
+/// rustc_hir::hir::Movability
+enum Movability {
+    #[default]
+    Unknown,
+    /// Encodes Option<Movability>::None
+    None,
+    Movable,
+    Static,
+}
+/// rustc_ast::ast::LitKind
+enum LitKind {
+    #[default]
+    Unknown,
+    Str,
+    ByteStr,
+    CStr,
+    Byte,
+    Char,
+    Int,
+    Float,
+    Bool,
+    Err,
 }
 
 // Interning tables.
@@ -378,6 +457,12 @@ intern nullary_op_kind<InternedString as NullOp<u8>>;
 intern unary_op_kind<InternedString as UnOp<u8>>;
 /// Interned terminator kinds.
 intern terminator_kinds<InternedString as TerminatorKind<u8>>;
+/// Interned ThirBinaryOpKind
+intern thir_binary_op_kind<InternedString as ThirBinOp<u8>>;
+/// Interned ThirLogicalOpKind
+intern thir_logical_op_kind<InternedString as ThirLogicalOp<u8>>;
+/// Interned ThirUnaryOpKind
+intern thir_unary_op_kind<InternedString as ThirUnOp<u8>>;
 
 // Relations.
 
@@ -392,16 +477,94 @@ relation root_modules(build: Build, root_module: auto Module);
 /// If `abi` is not `NONE`, the `child` module is foreign.
 relation submodules(def_path: DefPath, parent: Module, child: auto Module, name: Name, visibility: TyVisibility, abi: Abi);
 /// An item that is a function definition.
-relation function_definitions(item: auto Item, def_path: DefPath, module: Module, visibility: TyVisibility, unsafety: Unsafety, abi: Abi, return_ty: Type);
+relation function_definitions(item: auto Item, def_path: DefPath, module: Module, visibility: TyVisibility, unsafety: Safety, abi: Abi, return_ty: Type);
 relation function_parameter_types(function: Item, index: FnParamIndex, typ: Type);
 /// Marks whether a function uses unsafe operations directly in its body.
 /// Only functions marked as `unsafe` can do that.
 relation function_unsafe_use(def_path: DefPath, uses_unsafe: bool);
 relation function_unsafe_reasons(def_path: DefPath, index: u32, reason: InternedString);
+
+/// THIR body expressions
+relation thir_bodies(item: Item, def_path: DefPath, body: auto ThirBlock);
+/// THIR-level block information
+relation thir_blocks(parent: ThirBlock, block: auto ThirBlock, safety: ScopeSafety, check_mode: BlockCheckMode, span: Span);
+
+// thir stmts
+// The closest unsafe block is the closest outer block that is unsafe. This should be used to
+// compute metrics such as "the average size of an unsafe block".
+relation thir_stmts(stmt: ThirStmt, block: ThirBlock, closest_unsafe_block: ThirBlock, index: StatementIndex);
+relation thir_stmts_expr(stmt: auto ThirStmt, expr: ThirExpr);
+relation thir_stmts_let(stmt: auto ThirStmt, initializer: ThirExpr, else_block: ThirBlock, span: Span);
+
+// link a block's expression to its parent block
+relation thir_block_expr(block: ThirBlock, expr: ThirExpr);
+
+// thir expressions
+relation thir_exprs(expr: ThirExpr, block: ThirBlock, closest_unsafe_block: ThirBlock, ty: Type, span: Span);
+relation thir_exprs_scope(expr: auto ThirExpr, inner: ThirExpr);
+relation thir_exprs_box(expr: auto ThirExpr, inner: ThirExpr);
+relation thir_exprs_if(expr: auto ThirExpr, cond: ThirExpr, then_expr: ThirExpr, else_expr: ThirExpr);
+
+relation thir_exprs_call(expr: auto ThirExpr, ty: Type, fun: ThirExpr, unsafety: Safety, abi: Abi, return_ty: Type);
+relation thir_exprs_call_arg(call: ThirExpr, index: ThirCallArgIndex, arg: ThirExpr);
+relation thir_exprs_call_const_target(fun: ThirExpr, def_id: DefPath);
+relation thir_exprs_call_const_target_desc(fun: ThirExpr, target: InternedString, function_generics: InternedString, type_generics: InternedString);
+relation thir_exprs_call_const_target_self(fun: ThirExpr, typ: Type);
+
+relation thir_exprs_deref(expr: auto ThirExpr, inner: ThirExpr);
+relation thir_exprs_binary(expr: auto ThirExpr, op: ThirBinOp, lhs: ThirExpr, rhs: ThirExpr);
+relation thir_exprs_logical_op(expr: auto ThirExpr, op: ThirLogicalOp, lhs: ThirExpr, rhs: ThirExpr);
+relation thir_exprs_unary(expr: auto ThirExpr, op: ThirUnOp, arg: ThirExpr);
+relation thir_exprs_cast(expr: auto ThirExpr, source: ThirExpr);
+relation thir_exprs_use(expr: auto ThirExpr, source: ThirExpr);
+relation thir_exprs_never_to_any(expr: auto ThirExpr, source: ThirExpr);
+relation thir_exprs_pointer_coercion(expr: auto ThirExpr, cast: PointerCoercion, source: ThirExpr, is_from_as_cast: bool);
+relation thir_exprs_loop(expr: auto ThirExpr, body: ThirExpr);
+relation thir_exprs_let(expr: auto ThirExpr, inner: ThirExpr, pat: ThirPat);
+relation thir_pats(pat: auto ThirPat, ty: Type, span: Span);
+relation thir_exprs_match(expr: auto ThirExpr, scrutinee: ThirExpr, match_source: MatchSource);
+relation thir_match_arms(match_expr: ThirExpr, arm_idx: MatchArmIdx, guard: ThirExpr, body: ThirExpr);
+relation thir_exprs_block(expr: auto ThirExpr, block: ThirBlock);
+relation thir_exprs_assign(expr: auto ThirExpr, lhs: ThirExpr, rhs: ThirExpr);
+relation thir_exprs_assign_op(expr: auto ThirExpr, op: ThirBinOp, lhs: ThirExpr, rhs: ThirExpr);
+relation thir_exprs_field(expr: auto ThirExpr, lhs: ThirExpr, variant_idx: AdtVariantIndex);
+relation thir_exprs_index(expr: auto ThirExpr, lhs: ThirExpr, index: ThirExpr);
+relation thir_exprs_var_ref(expr: auto ThirExpr);
+relation thir_exprs_upvar_ref(expr: auto ThirExpr, closure_def_id: DefPath);
+relation thir_exprs_borrow(expr: auto ThirExpr, borrow_kind: BorrowKind, arg: ThirExpr);
+relation thir_exprs_raw_borrow(expr: auto ThirExpr, mutability: Mutability, arg: ThirExpr);
+relation thir_exprs_break(expr: auto ThirExpr, value: ThirExpr);
+relation thir_exprs_continue(expr: auto ThirExpr);
+relation thir_exprs_return(expr: auto ThirExpr, value: ThirExpr);
+relation thir_exprs_become(expr: auto ThirExpr, value: ThirExpr);
+relation thir_exprs_const_block(expr: auto ThirExpr, did: DefPath);
+relation thir_exprs_repeat(expr: auto ThirExpr, value: ThirExpr);
+relation thir_exprs_array(expr: auto ThirExpr);
+relation thir_array_elements(array_expr: ThirExpr, index: u64, element: ThirExpr);
+relation thir_exprs_tuple(expr: auto ThirExpr);
+relation thir_tuple_elements(tuple_expr: ThirExpr, index: TupleFieldIndex, element: ThirExpr);
+relation thir_exprs_adt(expr: auto ThirExpr, base: ThirExpr, variant_idx: AdtVariantIndex);
+relation thir_adt_field_expr(adt: ThirExpr, field_idx: FieldIndex, expr: ThirExpr);
+relation thir_exprs_place_type_ascription(expr: auto ThirExpr, source: ThirExpr, user_ty_span: Span);
+relation thir_exprs_value_type_ascription(expr: auto ThirExpr, source: ThirExpr, user_ty_span: Span);
+relation thir_exprs_closure(expr: auto ThirExpr, closure_id: DefPath, movability: Movability);
+relation thir_closure_upvars(closure_expr: ThirExpr, index: u32, upvar: ThirExpr);
+relation thir_exprs_literal(expr: auto ThirExpr, lit: LitKind, neg: bool);
+relation thir_exprs_non_hir_literal(expr: auto ThirExpr, scalar: u128);
+relation thir_exprs_zst_literal(expr: auto ThirExpr);
+relation thir_exprs_named_const(expr: auto ThirExpr, def_id: DefPath);
+relation thir_exprs_const_param(expr: auto ThirExpr/*, param: ParamConst*/, def_id: DefPath);
+relation thir_exprs_static_ref(expr: auto ThirExpr, ty: Type, def_id: DefPath);
+relation thir_exprs_inline_asm(expr: auto ThirExpr, ); 
+relation thir_exprs_offset_of(expr: auto ThirExpr, container: Type);
+relation thir_exprs_thread_local_ref(expr: auto ThirExpr, def_id: DefPath);
+relation thir_exprs_yield(expr: auto ThirExpr, value: ThirExpr);
+
+
 /// An item that is either a constant or a static.
 relation static_definitions(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: TyVisibility, mutability: Mutability);
 /// An impl item.
-relation impl_definitions(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: TyVisibility, unsafety: Unsafety, polarity: ImplPolarity, defaultness: Defaultness, constness: Constness, typ: Type);
+relation impl_definitions(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: TyVisibility, unsafety: Safety, polarity: ImplPolarity, defaultness: Defaultness, constness: Constness, typ: Type);
 /// An impl item that implements a trait for a type.
 relation trait_impls(item: Item, typ: Type, trait_def_path: DefPath);
 /// An item that is a global assembly block.
@@ -463,16 +626,20 @@ relation types_fn_ptr(typ: Type);
 relation types_dynamic(typ: Type);
 relation types_dynamic_trait(typ: Type, def_path: DefPath, is_auto: bool);
 relation types_closure(typ: Type, def_path: DefPath);
-relation types_generator(typ: Type, def_path: DefPath);
-relation types_generator_witness(typ: Type);
+relation types_coroutine(typ: Type, def_path: DefPath);
+relation types_coroutine_witness(typ: Type);
+relation types_coroutine_closure(typ: Type, def_path: DefPath);
+relation types_pat(typ: Type);
 relation types_tuple(typ: Type);
 relation types_tuple_element(tuple_type: Type, index: TupleFieldIndex, typ: Type);
 relation types_projection(typ: Type, trait_def_path: DefPath, trait_item: DefPath);
 relation types_opaque(typ: Type, def_path: DefPath);
+relation types_inherent(typ: Type, def_path: DefPath);
+relation types_weak(typ: Type, def_path: DefPath);
 relation types_param(typ: Type, index: u32, name: InternedString);
 
 /// Traits.
-relation traits(item: auto Item, def_path: DefPath, name: InternedString, visibility: TyVisibility, is_auto: bool, is_marker: bool, unsafety: Unsafety);
+relation traits(item: auto Item, def_path: DefPath, name: InternedString, visibility: TyVisibility, is_auto: bool, is_marker: bool, unsafety: Safety);
 /// Items mentioned inside the trait.
 relation trait_items(trait_id: Item, def_path: DefPath, defaultness: Defaultness);
 
@@ -507,7 +674,7 @@ relation terminators_switch_int(block: BasicBlock, discriminant: Operand);
 relation terminators_switch_int_targets(block: BasicBlock, condition_value: u128, target: BasicBlock);
 relation terminators_drop(block: BasicBlock, location: Type, target: BasicBlock);
 relation terminators_drop_and_replace(block: BasicBlock, location: Type, value: Operand, target: BasicBlock, unwind: BasicBlock);
-relation terminators_call(block: BasicBlock, call: auto FunctionCall, func: Operand, unsafety: Unsafety, abi: Abi, return_ty: Type, destination: BasicBlock, span: Span);
+relation terminators_call(block: BasicBlock, call: auto FunctionCall, func: Operand, unsafety: Safety, abi: Abi, return_ty: Type, destination: BasicBlock, span: Span);
 relation terminators_call_arg(call: FunctionCall, index: CallArgIndex, arg: Operand);
 /// The called function or trait method.
 relation terminators_call_const_target(call: FunctionCall, def_path: DefPath);

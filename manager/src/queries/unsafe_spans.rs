@@ -20,7 +20,7 @@ fn report_unsafe_function_spans(loader: &Loader, report_path: &Path) {
     let selected_function_definitions = loader.load_selected_function_definitions();
     let unsafe_function_spans = selected_function_definitions.iter().flat_map(
         |&(build, _item, def_path, _module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
-            if unsafety == types::Unsafety::Unsafe {
+            if unsafety == types::Safety::Unsafe {
                 Some((
                     build,
                     build_resolver.resolve(build),

@@ -22,7 +22,15 @@ fn report_types_foreign(loader: &Loader, report_path: &Path) {
 fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
     let def_paths = loader.load_def_paths();
     let strings = loader.load_strings();
-    let unsafe_cell_summary_key = strings.lookup_str("core.cell.UnsafeCell").unwrap();
+    let Some(unsafe_cell_summary_key) = strings.lookup_str("core.cell.UnsafeCell") else {
+        // Provide empty csv and relation
+        let unsafe_cell_types: Vec<(types::Type, types::DefPath)> = Vec::new();
+        let unsafe_cell_types_relation: Vec<(types::Type, types::DefPath)> = Vec::new();
+        write_csv!(report_path, unsafe_cell_types);
+
+        loader.store_types_unsafe_cell(unsafe_cell_types_relation);
+        return;
+    };
     let unsafe_cell_summary_id = loader
         .load_summary_keys()
         .lookup(&unsafe_cell_summary_key)

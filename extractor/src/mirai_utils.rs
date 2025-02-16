@@ -13,8 +13,8 @@ use log_derive::{logfn, logfn_inputs};
 use rustc_hir::def_id::DefId;
 use rustc_hir::definitions::{DefPathData, DisambiguatedDefPathData};
 use rustc_hir::{ItemKind, Node};
-use rustc_middle::ty::subst::{GenericArgKind, SubstsRef};
 use rustc_middle::ty::{self, Ty, TyCtxt, TyKind};
+use rustc_middle::ty::{GenericArgKind, GenericArgsRef};
 use std::rc::Rc;
 
 /// Returns the location of the rust system binaries that are associated with this build of Mirai.
@@ -79,7 +79,7 @@ pub fn is_public(def_id: DefId, tcx: TyCtxt<'_>) -> bool {
 #[logfn(TRACE)]
 pub fn argument_types_key_str<'tcx>(
     tcx: TyCtxt<'tcx>,
-    generic_args: SubstsRef<'tcx>,
+    generic_args: GenericArgsRef<'tcx>,
 ) -> Rc<String> {
     let mut result = "_".to_string();
     for generic_ty_arg in generic_args.types() {
@@ -94,6 +94,12 @@ pub fn argument_types_key_str<'tcx>(
 /// generic trait methods).
 #[logfn(TRACE)]
 fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) {
+    let mut default_format = || {
+        debug!("Uncaught type in `append_mangled_type`: {:?}", ty);
+        debug!("{:?}", ty.kind());
+        str.push_str(&format!("default formatted {:?}", ty))
+    };
+
     match ty.kind() {
         TyKind::Bool => str.push_str("bool"),
         TyKind::Char => str.push_str("char"),
@@ -119,8 +125,10 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
         }
         TyKind::Float(float_ty) => {
             str.push_str(match float_ty {
+                ty::FloatTy::F16 => "f16",
                 ty::FloatTy::F32 => "f32",
                 ty::FloatTy::F64 => "f64",
+                ty::FloatTy::F128 => "f128",
             });
         }
         TyKind::Adt(def, subs) => {
@@ -135,7 +143,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
         TyKind::Closure(def_id, subs) => {
             str.push_str("closure_");
             str.push_str(qualified_type_name(tcx, *def_id).as_str());
-            for sub in subs.as_closure().substs {
+            for sub in subs.as_closure().args {
                 if let GenericArgKind::Type(ty) = sub.unpack() {
                     str.push('_');
                     append_mangled_type(str, ty, tcx);
@@ -157,20 +165,14 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 }
             }
         }
-        TyKind::Generator(def_id, subs, ..) => {
-            str.push_str("generator_");
+        TyKind::Coroutine(def_id, subs, ..) => {
+            str.push_str("coroutine_");
             str.push_str(qualified_type_name(tcx, *def_id).as_str());
-            for sub in subs.as_generator().substs {
+            for sub in subs.as_coroutine().args {
                 if let GenericArgKind::Type(ty) = sub.unpack() {
                     str.push('_');
                     append_mangled_type(str, ty, tcx);
                 }
-            }
-        }
-        TyKind::GeneratorWitness(binder) => {
-            for ty in binder.skip_binder().iter() {
-                str.push('_');
-                append_mangled_type(str, ty, tcx)
             }
         }
         TyKind::Str => str.push_str("str"),
@@ -182,13 +184,13 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
             str.push_str("slice_");
             append_mangled_type(str, *ty, tcx);
         }
-        TyKind::RawPtr(ty_and_mut) => {
+        TyKind::RawPtr(ty, mutbl) => {
             str.push_str("pointer_");
-            match ty_and_mut.mutbl {
+            match mutbl {
                 rustc_hir::Mutability::Mut => str.push_str("mut_"),
                 rustc_hir::Mutability::Not => str.push_str("const_"),
             }
-            append_mangled_type(str, ty_and_mut.ty, tcx);
+            append_mangled_type(str, *ty, tcx);
         }
         TyKind::Ref(_, ty, mutability) => {
             str.push_str("ref_");
@@ -197,7 +199,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
             }
             append_mangled_type(str, *ty, tcx);
         }
-        TyKind::FnPtr(poly_fn_sig) => {
+        TyKind::FnPtr(poly_fn_sig, _header) => {
             let fn_sig = poly_fn_sig.skip_binder();
             str.push_str("fn_ptr_");
             for arg_type in fn_sig.inputs() {
@@ -223,27 +225,28 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
             }
         }
         ty::TyKind::Alias(alias_kind, alias_type) => match alias_kind {
-            ty::AliasKind::Projection => {
+            ty::AliasTyKind::Projection => {
                 append_mangled_type(str, alias_type.self_ty(), tcx);
                 str.push_str("_as_");
                 str.push_str(qualified_type_name(tcx, alias_type.def_id).as_str());
             }
-            ty::AliasKind::Opaque => {
+            ty::AliasTyKind::Opaque => {
                 str.push_str("impl_");
                 str.push_str(qualified_type_name(tcx, alias_type.def_id).as_str());
-                for sub in alias_type.substs {
+                for sub in alias_type.args {
                     if let GenericArgKind::Type(ty) = sub.unpack() {
                         str.push('_');
                         append_mangled_type(str, ty, tcx);
                     }
                 }
             }
+            ty::AliasTyKind::Inherent | ty::AliasTyKind::Weak => {
+                default_format();
+            }
         },
         _ => {
             //todo: add cases as the need arises, meanwhile make the need obvious.
-            debug!("{:?}", ty);
-            debug!("{:?}", ty.kind());
-            str.push_str(&format!("default formatted {:?}", ty))
+            default_format();
         }
     }
 }

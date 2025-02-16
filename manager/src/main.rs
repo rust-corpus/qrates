@@ -17,21 +17,24 @@ struct CorpusManagerArgs {
         parse(from_os_str),
         default_value = "CrateList.json",
         long = "crate-list-path",
-        help = "The file specifying crates and their versions."
+        help = "The file specifying crates and their versions.",
+        env = "QRATES_CRATE_LIST"
     )]
     crate_list_path: PathBuf,
     #[structopt(
         parse(from_os_str),
         default_value = "../workspace/database",
         long = "database",
-        help = "The directory in which the database is stored."
+        help = "The directory in which the database is stored.",
+        env = "QRATES_DATABASE"
     )]
     database_root: PathBuf,
     #[structopt(
         parse(from_os_str),
         default_value = "../workspace",
         long = "workspace",
-        help = "The directory in which all crates are compiled."
+        help = "The directory in which all crates are compiled.",
+        env = "QRATES_WORKSPACE"
     )]
     workspace: PathBuf,
     #[structopt(subcommand)]
@@ -130,7 +133,8 @@ enum Command {
             parse(from_os_str),
             default_value = "../workspace/reports",
             long = "reports-path",
-            help = "The directory in which the reports are saved."
+            help = "The directory in which the reports are saved.",
+            env = "QRATES_REPORTS"
         )]
         report_path: PathBuf,
     },

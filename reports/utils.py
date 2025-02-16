@@ -52,6 +52,19 @@ def load_selected_builds():
         ],
     )
 
+def load_thir_blocks():
+    # Added
+    return load(
+        'q-counters/selected_thir_blocks.csv',
+        [
+            "build",
+            "package_name", "package_version", "crate_name", "build_crate_hash", "edition",
+            "block", 
+            "crate", "crate_hash", "def_path", "def_path_hash", "summary_key",
+            "safety"
+        ],
+    )
+
 # Builds
 
 def load_original_crates_list():
@@ -297,3 +310,117 @@ def load_non_tree_adts():
             "is_phantom",
         ],
     )
+
+
+################
+# New with THIR
+################
+
+def load_unsafe_thir_blocks():
+    return load(
+        'q-counters/unsafe_thir_blocks.csv',
+        [
+            "build", # build
+            "crate", "crate_hash", "def_path", "def_path_hash", "summary_key", # resolved def path
+            "block", "check_mode", 
+            "span", "expansion_kind", "expansion_kind_descr", "file_name", "line", "col" # resolved span
+        ],
+    )
+
+
+def load_selected_function_definitions_thir_counts():
+    return load(
+        'q-counters/selected_function_definitions_thir_counts.csv',
+        [
+            "build",
+            "crate", "crate_hash", "def_path", "def_path_hash", "summary_key", # resolved def path
+            "item", "def_path_id", "module", "visibility", "unsafety", "abi",
+            "uses_unsafe", "unsafe_block_count", "user_unsafe_block_count",
+            "is_trait_item"
+        ],
+    )
+
+def load_selected_build_thir_sizes():
+    return load(
+        'function-size/selected_build_thir_sizes.csv',
+        [
+            "package_name", "package_version", "crate_name", "build_crate_hash", "edition", # resolved build
+            "statement_count",
+            "unsafe_statement_count",
+            "user_unsafe_statement_count",
+        ],
+    )
+
+def load_selected_function_thir_sizes():
+    return load(
+        'function-size/selected_function_thir_sizes.csv',
+        [
+            "package_name", "package_version", "crate_name", "build_crate_hash", "edition",
+            "item",
+            "crate", "crate_hash", "def_path", "def_path_hash", "summary_key",
+            "visibility", "unsafety", "abi",
+            "uses_unsafe",
+            "statement_count",
+            "unsafe_statement_count",
+            "user_unsafe_statement_count",
+        ],
+    )
+
+def load_unsafe_thir_block_sizes():
+    return load(
+        'q-size/unsafe_thir_block_sizes.csv',
+        [
+            "build",
+            "package_name", "package_version", "crate_name", "crate_hash", "edition",
+            "block", "check_mode", "statement_count", "call_expr_count", "trailing_expr_count"
+        ],
+    )
+
+def load_unsafe_thir_block_calls_extended():
+    return load(
+        'unsafe-block-calls/unsafe_thir_block_calls.csv',
+        [
+            "build",
+            "package_name", "package_version", "crate_name", "build_crate_hash", "edition",
+            "block",
+            "unsafe_block_span", "unsafe_block_expansion_kind", "unsafe_block_expansion_kind_descr", "file_name", "line", "col",
+            "check_mode", "call", "unsafety", "abi",
+            "target_crate", "target_crate_hash", "call_target_def_path", "call_target_summary_key", "is_target_trait_item",
+        ],
+    )
+
+def load_all_thir_calls():
+    return load(
+        'unsafe-block-calls/all_thir_calls.csv',
+        [
+            "call",
+            "function",
+            "unsafety",
+            "abi",
+            "call_target_summary_key",
+            "is_target_trait_item",
+        ],
+    )
+
+def load_const_thir_calls():
+    return load(
+        'unsafe-block-groups/const_thir_calls.csv',
+        [
+            "build",
+            "package_name", "package_version", "crate_name", "build_crate_hash", "edition",
+            "crate", "crate_hash", "def_path", "def_path_hash", "summary_key",
+            "block", "check_mode", "call", "function", "unsafety", "abi",
+       ],
+    )
+
+def load_unsafe_block_calls():
+    return load(
+        'unsafe-block-groups/unsafe_thir_block_calls.csv',
+        [
+            "build",
+            "package_name", "package_version", "crate_name", "build_crate_hash", "edition",
+            "block", "check_mode", "call", "fun", "unsafety", "abi",
+        ],
+    )
+
+

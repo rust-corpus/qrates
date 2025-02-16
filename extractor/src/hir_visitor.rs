@@ -5,6 +5,9 @@
 use crate::converters::ConvertInto;
 use crate::mir_visitor::MirVisitor;
 use crate::table_filler::TableFiller;
+use crate::thir_storage;
+use crate::thir_visitor::ThirVisitor;
+use corpus_database::types::ThirBlock;
 use corpus_database::{tables::Tables, types};
 use hir::def_id::LocalDefId;
 use rustc_hir::def::DefKind;
@@ -15,10 +18,14 @@ use rustc_hir::{
 };
 use rustc_middle::hir::map::Map as HirMap;
 use rustc_middle::mir::{self, HasLocalDecls};
+use rustc_middle::thir::{BlockSafety, ExprId, Thir};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::Session;
-use rustc_span::source_map::Span;
+use rustc_span::Span;
+use std::collections::HashMap;
 use std::mem;
+
+extern crate rustc_ast_ir;
 
 pub(crate) struct HirVisitor<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
@@ -88,7 +95,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         );
         self.current_module = new_module;
         self.visit_id(id);
-        rustc_ast::walk_list!(self, visit_foreign_item_ref, items);
+        rustc_ast_ir::walk_list!(self, visit_foreign_item_ref, items);
         self.current_module = parent_module;
     }
     fn visit_static(
@@ -120,6 +127,15 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         let item = self.current_item.expect(&error);
         let mut mir_visitor = MirVisitor::new(self.tcx, item, body_id, body, &mut self.filler);
         mir_visitor.visit();
+    }
+    /// Extract information from THIR.
+    fn visit_thir(&mut self, thir: Thir<'tcx>, body_id: ExprId, def_path: types::DefPath) {
+        let error = format!("THIR outside of an item: {:?}", body_id);
+        let item = self.current_item.expect(&error);
+        let (root_block,) = self.filler.tables.register_thir_bodies(item, def_path);
+        let mut thir_visitor =
+            ThirVisitor::new(self.tcx, &thir, body_id, root_block, &mut self.filler);
+        thir_visitor.visit();
     }
     fn visit_type(
         &mut self,
@@ -188,7 +204,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     *body_id,
                 );
             }
-            hir::ItemKind::Const(ref typ, body_id) => {
+            hir::ItemKind::Const(ref typ, _generics, body_id) => {
                 self.visit_static(
                     def_path,
                     name,
@@ -200,7 +216,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                 );
             }
             hir::ItemKind::Impl(hir::Impl {
-                unsafety,
+                safety,
                 polarity,
                 defaultness,
                 constness,
@@ -215,7 +231,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     self.current_module,
                     name.to_string(),
                     visibility,
-                    unsafety.convert_into(),
+                    safety.convert_into(),
                     polarity.convert_into(),
                     defaultness.convert_into(),
                     constness.convert_into(),
@@ -250,14 +266,6 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                 name,
                 visibility,
                 types::TyDefKind::TyAlias,
-            ),
-            hir::ItemKind::OpaqueTy(..) => self.visit_type(
-                item,
-                def_path,
-                def_id,
-                name,
-                visibility,
-                types::TyDefKind::OpaqueTy,
             ),
             hir::ItemKind::Enum(..) => self.visit_type(
                 item,
@@ -297,12 +305,11 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     let trait_item_def_path = self
                         .filler
                         .resolve_local_def_id(trait_item.id.owner_id.def_id);
+                    let defaultness = self.tcx.hir().trait_item(trait_item.id).defaultness;
                     self.filler.tables.register_trait_items(
                         item_id,
                         trait_item_def_path,
-                        self.tcx
-                            .impl_defaultness(trait_item.id.owner_id.def_id)
-                            .convert_into(),
+                        defaultness.convert_into(),
                     )
                 }
                 let old_item = mem::replace(&mut self.current_item, Some(item_id));
@@ -343,7 +350,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     def_path,
                     self.current_module,
                     visibility.convert_into(),
-                    method_sig.header.unsafety.convert_into(),
+                    method_sig.header.safety.convert_into(),
                     method_sig.header.abi.name().to_string(),
                     return_type,
                 )
@@ -353,7 +360,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     def_path,
                     self.current_module,
                     visibility.convert_into(),
-                    header.unsafety.convert_into(),
+                    header.safety.convert_into(),
                     header.abi.name().to_string(),
                     return_type,
                 )
@@ -362,7 +369,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                 def_path,
                 self.current_module,
                 types::TyVisibility::Unknown,
-                types::Unsafety::Unknown,
+                types::Safety::Unknown,
                 "Closure".to_string(),
                 return_type,
             ),
@@ -390,7 +397,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     def_path,
                     self.current_module,
                     visibility,
-                    types::Unsafety::Unsafe,
+                    types::Safety::Unsafe,
                     "ForeignItem".to_string(),
                     return_type,
                 );
@@ -404,7 +411,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                 }
                 Some(function)
             }
-            hir::ForeignItemKind::Static(_, mutability) => {
+            hir::ForeignItemKind::Static(_, mutability, _safety) => {
                 let name: &str = &item.ident.name.as_str();
                 let (item,) = self.filler.tables.register_static_definitions(
                     def_path,
@@ -425,23 +432,29 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
             intravisit::walk_foreign_item(self, item);
         }
     }
-    fn visit_body(&mut self, body: &'tcx hir::Body) {
+    fn visit_body(&mut self, body: &hir::Body<'tcx>) {
         intravisit::walk_body(self, body);
         let id = body.id();
         let def_id = self.hir_map.body_owner_def_id(id);
-        // let def = WithOptConstParam::unknown(def_id.to_def_id());
         let def_kind = self.tcx.def_kind(def_id);
         let mir_body = match def_kind {
             DefKind::Const
-            | DefKind::Static(_)
+            | DefKind::Static { .. }
             | DefKind::AssocConst
             | DefKind::Ctor(..)
             | DefKind::AnonConst
             | DefKind::InlineConst => self.tcx.mir_for_ctfe(def_id.to_def_id()),
             _ => self.tcx.optimized_mir(def_id),
         };
-
         self.visit_mir(def_id, mir_body);
+
+        // run the query to ensure our hook has received the body if for some reason it has not been run yet
+        let _ = self.tcx.thir_body(def_id);
+        let thir_body = unsafe { thir_storage::retrieve_thir_body(self.tcx, def_id) };
+        let def_path = self.filler.resolve_local_def_id(def_id);
+        let (thir_body, expr_id) =
+            thir_body.expect(&format!("No THIR body found for {:?}", def_id));
+        self.visit_thir(thir_body, expr_id, def_path);
     }
     fn nested_visit_map<'this>(&'this mut self) -> Self::Map {
         self.tcx.hir()

@@ -1,7 +1,11 @@
 //! Report information about custom build files (`build.rs`).
 
 use crate::write_csv;
-use corpus_database::tables::Loader;
+use cargo::core::Package;
+use corpus_database::{
+    tables::Loader,
+    types::{Build, InternedString, PackageVersion},
+};
 use corpus_queries_derive::datapond_query;
 use std::path::Path;
 
@@ -12,7 +16,18 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let package_names = loader.load_package_names();
     let package_versions = loader.load_package_versions();
 
-    let crate_name = strings.lookup_str("build_script_build").unwrap();
+    let Some(crate_name) = strings.lookup_str("build_script_build") else {
+        // Provide empty csv
+        let build_script_crates: Vec<(
+            Build,
+            InternedString,
+            InternedString,
+            InternedString,
+            String,
+        )> = Vec::new();
+        write_csv!(report_path, build_script_crates);
+        return;
+    };
     let krate = crate_names.lookup(&crate_name).unwrap();
 
     let build_script_builds: Vec<_> = builds

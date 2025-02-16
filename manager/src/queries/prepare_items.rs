@@ -49,6 +49,23 @@ fn compute_selected_functions_and_mir_cfgs(loader: &Loader) {
     );
     info!("selected_mir_cfgs.len = {}", selected_mir_cfgs.len());
     loader.store_selected_mir_cfgs(selected_mir_cfgs);
+
+    // additionally compute selected thir bodies
+    let selected_thir_bodies: Vec<(
+        corpus_database::types::Build,
+        corpus_database::types::Item,
+        corpus_database::types::DefPath,
+        corpus_database::types::ThirBlock,
+    )> = super::utils::filter_selected(
+        loader.load_thir_bodies().iter(),
+        &selected_builds,
+        &def_paths,
+        |&(_item, body_def_path, _root_block)| body_def_path,
+        |build, &(item, body_def_path, root_block)| (build, item, body_def_path, root_block),
+    );
+    info!("selected_thir_bodies.len = {}", selected_thir_bodies.len());
+    loader.store_selected_thir_bodies(selected_thir_bodies);
+
     let function_unsafe_use: HashMap<_, _> =
         loader.load_function_unsafe_use().iter().cloned().collect();
 

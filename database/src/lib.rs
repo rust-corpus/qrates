@@ -91,7 +91,7 @@ mod tests {
             String::from("package1"),
             String::from("version1"),
             String::from("crate1"),
-            1usize.into(),
+            1u128.into(),
             String::from("edition1"),
         );
         assert_eq!(tables1.interning_tables.builds.len(), 1);
@@ -106,7 +106,7 @@ mod tests {
             String::from("package2"),
             String::from("version2"),
             String::from("crate2"),
-            2usize.into(),
+            2u128.into(),
             String::from("edition2"),
         );
         assert_ne!(build_1_1, build_1_2);
@@ -119,7 +119,7 @@ mod tests {
             String::from("package1"),
             String::from("version2"),
             String::from("crate1"),
-            2usize.into(),
+            2u128.into(),
             String::from("edition1"),
         );
         assert_ne!(build_1_1, build_1_3);
@@ -139,7 +139,7 @@ mod tests {
             String::from("package1"),
             String::from("version1"),
             String::from("crate1"),
-            1usize.into(),
+            1u128.into(),
             String::from("edition1"),
         );
         assert_eq!(tables2.interning_tables.builds.len(), 1);
@@ -154,7 +154,7 @@ mod tests {
             String::from("package1"),
             String::from("version1"),
             String::from("crate1"),
-            1usize.into(),
+            1u128.into(),
             String::from("edition1"),
         );
         assert_eq!(build_2_1, build_2_2);
@@ -170,7 +170,7 @@ mod tests {
             String::from("package1"),
             String::from("version2"),
             String::from("crate1"),
-            2usize.into(),
+            2u128.into(),
             String::from("edition1"),
         );
         assert_ne!(build_2_1, build_2_3);
@@ -190,7 +190,7 @@ mod tests {
             String::from("package4"),
             String::from("version4"),
             String::from("crate4"),
-            4usize.into(),
+            4u128.into(),
             String::from("edition2"),
         );
         assert_eq!(tables3.interning_tables.builds.len(), 1);
@@ -205,7 +205,7 @@ mod tests {
             String::from("package2"),
             String::from("version2"),
             String::from("crate2"),
-            2usize.into(),
+            2u128.into(),
             String::from("edition2"),
         );
         assert_ne!(build_3_1, build_3_2);
@@ -228,9 +228,9 @@ mod tests {
         assert_eq!(merger1.tables.interning_tables.editions.len(), 2);
         assert_eq!(merger1.tables.relations.build_crate_types.len(), 5);
         let expected = [
-            ("package1", "version1", "crate1", 1usize.into(), "edition1"),
-            ("package2", "version2", "crate2", 2usize.into(), "edition2"),
-            ("package1", "version2", "crate1", 2usize.into(), "edition1"),
+            ("package1", "version1", "crate1", 1u128.into(), "edition1"),
+            ("package2", "version2", "crate2", 2u128.into(), "edition2"),
+            ("package1", "version2", "crate1", 2u128.into(), "edition1"),
         ];
         for (build, expected_uild) in merger1
             .tables
@@ -262,10 +262,10 @@ mod tests {
         assert_eq!(merger1.tables.interning_tables.editions.len(), 2);
         assert_eq!(merger1.tables.relations.build_crate_types.len(), 7);
         let expected = [
-            ("package1", "version1", "crate1", 1usize.into(), "edition1"),
-            ("package2", "version2", "crate2", 2usize.into(), "edition2"),
-            ("package1", "version2", "crate1", 2usize.into(), "edition1"),
-            ("package4", "version4", "crate4", 4usize.into(), "edition2"),
+            ("package1", "version1", "crate1", 1u128.into(), "edition1"),
+            ("package2", "version2", "crate2", 2u128.into(), "edition2"),
+            ("package1", "version2", "crate1", 2u128.into(), "edition1"),
+            ("package4", "version4", "crate4", 4u128.into(), "edition2"),
         ];
         for (build, expected_uild) in merger1
             .tables
@@ -296,7 +296,7 @@ mod tests {
                 String::from("package1"),
                 String::from("version1"),
                 String::from("crate1"),
-                1usize.into(),
+                1u128.into(),
                 String::from("edition1"),
             );
             assert_eq!(tables1.interning_tables.builds.len(), 1);
@@ -309,7 +309,7 @@ mod tests {
             assert_eq!(tables1.relations.root_modules.len(), 1);
             let def_path_1_1 = tables1.register_def_paths(
                 String::from("crate1"),
-                1usize.into(),
+                1u128.into(),
                 String::from("relative_def_id1"),
                 (1u64, 2u64).into(),
                 String::from("summary_1"),
@@ -320,7 +320,7 @@ mod tests {
             assert_eq!(tables1.interning_tables.strings.len(), 6);
             let def_path_1_2 = tables1.register_def_paths(
                 String::from("crate1"),
-                1usize.into(),
+                1u128.into(),
                 String::from("relative_def_id2"),
                 (3u64, 4u64).into(),
                 String::from("summary_2"),
@@ -363,7 +363,7 @@ mod tests {
                 String::from("package2"),
                 String::from("version1"),
                 String::from("crate2"),
-                1usize.into(),
+                1u128.into(),
                 String::from("edition1"),
             );
             assert_eq!(tables2.interning_tables.builds.len(), 1);
@@ -376,7 +376,7 @@ mod tests {
             assert_eq!(tables2.relations.root_modules.len(), 1);
             let def_path_2_1 = tables2.register_def_paths(
                 String::from("crate2"),
-                1usize.into(),
+                1u128.into(),
                 String::from("relative_def_id1"),
                 (1u64, 2u64).into(),
                 String::from("summary_1"),
@@ -387,7 +387,7 @@ mod tests {
             assert_eq!(tables2.interning_tables.strings.len(), 6);
             let def_path_2_2 = tables2.register_def_paths(
                 String::from("crate2"),
-                1usize.into(),
+                1u128.into(),
                 String::from("relative_def_id2"),
                 (3u64, 4u64).into(),
                 String::from("summary_2"),
@@ -451,7 +451,7 @@ mod tests {
         let expected = [
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
                 (1u64, 2u64).into(),
                 "summary_1",
@@ -463,7 +463,7 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
                 (3u64, 4u64).into(),
                 "summary_2",
@@ -475,7 +475,7 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
                 (1u64, 2u64).into(),
                 "summary_1",
@@ -487,7 +487,7 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
                 (3u64, 4u64).into(),
                 "summary_2",
@@ -563,7 +563,7 @@ mod tests {
         let expected = [
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
                 (1u64, 2u64).into(),
                 "summary_1",
@@ -575,7 +575,7 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
                 (3u64, 4u64).into(),
                 "summary_2",
@@ -587,7 +587,7 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
                 (1u64, 2u64).into(),
                 "summary_1",
@@ -599,7 +599,7 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
                 (3u64, 4u64).into(),
                 "summary_2",
@@ -611,7 +611,7 @@ mod tests {
             ),
             (
                 "crate2",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
                 (1u64, 2u64).into(),
                 "summary_1",
@@ -623,7 +623,7 @@ mod tests {
             ),
             (
                 "crate2",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
                 (3u64, 4u64).into(),
                 "summary_2",
@@ -957,7 +957,7 @@ mod tests {
     fn create_def_path(tables: &mut tables::Tables, counter: u32) -> types::DefPath {
         tables.register_def_paths(
             String::from("crate1"),
-            (counter as usize).into(),
+            (counter as u128).into(),
             format!("relative_def_id_{}", counter),
             (counter as u64, 0u64).into(),
             format!("summary_{}", counter),
