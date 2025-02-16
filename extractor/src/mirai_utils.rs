@@ -94,6 +94,12 @@ pub fn argument_types_key_str<'tcx>(
 /// generic trait methods).
 #[logfn(TRACE)]
 fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) {
+    let mut default_format = || {
+        debug!("Uncaught type in `append_mangled_type`: {:?}", ty);
+        debug!("{:?}", ty.kind());
+        str.push_str(&format!("default formatted {:?}", ty))
+    };
+
     match ty.kind() {
         TyKind::Bool => str.push_str("bool"),
         TyKind::Char => str.push_str("char"),
@@ -159,9 +165,8 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 }
             }
         }
-        // TODO - skius: Rename to 'Coroutine'?
         TyKind::Coroutine(def_id, subs, ..) => {
-            str.push_str("generator_");
+            str.push_str("coroutine_");
             str.push_str(qualified_type_name(tcx, *def_id).as_str());
             for sub in subs.as_coroutine().args {
                 if let GenericArgKind::Type(ty) = sub.unpack() {
@@ -170,19 +175,6 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                 }
             }
         }
-        // TODO - skius: 2nd take: CoroutineWitness seems to be the successor for GeneratorWitnessMIR from prev version, which was
-        // caught in catch-all below. so just skip this?
-        // // TODO - skius: Double check fix here - can we just call `subs.as_coroutine`?
-        // TyKind::CoroutineWitness(def_id, subs) => {
-        //     str.push_str("coroutine_witness_");
-        //     str.push_str(qualified_type_name(tcx, *def_id).as_str());
-        //     for sub in subs.as_coroutine().args {
-        //         if let GenericArgKind::Type(ty) = sub.unpack() {
-        //             str.push('_');
-        //             append_mangled_type(str, ty, tcx);
-        //         }
-        //     }
-        // }
         TyKind::Str => str.push_str("str"),
         TyKind::Array(ty, _) => {
             str.push_str("array_");
@@ -207,8 +199,7 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
             }
             append_mangled_type(str, *ty, tcx);
         }
-        // TODO - skius(2): Use new field "header"?
-        TyKind::FnPtr(poly_fn_sig, header) => {
+        TyKind::FnPtr(poly_fn_sig, _header) => {
             let fn_sig = poly_fn_sig.skip_binder();
             str.push_str("fn_ptr_");
             for arg_type in fn_sig.inputs() {
@@ -249,21 +240,13 @@ fn append_mangled_type<'tcx>(str: &mut String, ty: Ty<'tcx>, tcx: TyCtxt<'tcx>) 
                     }
                 }
             }
-            // TODO - skius: Properly implement handling for Inherent and Weak kinds.
-            ty::AliasTyKind::Inherent => {
-                str.push_str("inherent_");
-                append_mangled_type(str, alias_type.self_ty(), tcx);
-            }
-            ty::AliasTyKind::Weak => {
-                str.push_str("weak_");
-                append_mangled_type(str, alias_type.self_ty(), tcx);
+            ty::AliasTyKind::Inherent | ty::AliasTyKind::Weak => {
+                default_format();
             }
         },
         _ => {
             //todo: add cases as the need arises, meanwhile make the need obvious.
-            debug!("{:?}", ty);
-            debug!("{:?}", ty.kind());
-            str.push_str(&format!("default formatted {:?}", ty))
+            default_format();
         }
     }
 }
