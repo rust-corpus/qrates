@@ -218,11 +218,10 @@ pub fn query(loader: &Loader, report_path: &Path) {
 fn new_collect_function_sizes(loader: &Loader) {
     // block to associated data mapping
     let function_thir_blocks: HashMap<_, _> = {
-        let selected_blocks = loader.load_selected_thir_blocks();
+        let selected_blocks = loader.load_iter_selected_thir_blocks();
         selected_blocks
-            .iter()
             .map(
-                |&(build, thir_body_def_path, _parent, block, safety, check_mode, _span)| {
+                |(build, thir_body_def_path, _parent, block, safety, check_mode, _span)| {
                     (block, (build, thir_body_def_path, safety, check_mode))
                 },
             )
@@ -230,11 +229,10 @@ fn new_collect_function_sizes(loader: &Loader) {
     };
 
     let function_definitions: HashMap<_, _> = {
-        let selected_function_definitions = loader.load_selected_function_definitions();
+        let selected_function_definitions = loader.load_iter_selected_function_definitions();
         let selected_function_definitions: HashMap<_, _> = selected_function_definitions
-            .iter()
             .map(
-                |&(
+                |(
                     build,
                     item,
                     def_path,
@@ -262,10 +260,9 @@ fn new_collect_function_sizes(loader: &Loader) {
                 },
             )
             .collect();
-        let selected_thir_bodies = loader.load_selected_thir_bodies();
+        let selected_thir_bodies = loader.load_iter_selected_thir_bodies();
         selected_thir_bodies
-            .iter()
-            .flat_map(|&(_build, item, body_def_path, _root_block)| {
+            .flat_map(|(_build, item, body_def_path, _root_block)| {
                 selected_function_definitions
                     .get(&item)
                     .map(|&def| (body_def_path, def))
@@ -315,22 +312,37 @@ fn new_collect_function_sizes(loader: &Loader) {
 
     // count a block's trailing expression as statement as well
     let no_thir_expr: ThirExpr = 0u64.into();
-    let thir_block_expr_and_closest_unsafe;
-    datapond_query! {
-        load loader {
-            relations(thir_block_expr, thir_exprs),
-        }
-        output thir_block_expr_and_closest_unsafe(
-            block: ThirBlock,
-            expr: ThirExpr,
-            closest_unsafe_block: ThirBlock,
-        )
+    // let thir_block_expr_and_closest_unsafe;
+    // datapond_query! {
+    //     load loader {
+    //         relations(thir_block_expr, thir_exprs),
+    //     }
+    //     output thir_block_expr_and_closest_unsafe(
+    //         block: ThirBlock,
+    //         expr: ThirExpr,
+    //         closest_unsafe_block: ThirBlock,
+    //     )
 
-        thir_block_expr_and_closest_unsafe(block, expr, closest_unsafe_block) :-
-            thir_block_expr(block, expr),
-            thir_exprs(.expr=expr, .closest_unsafe_block=closest_unsafe_block).
-    }
-    for &(block, expr, closest_unsafe_block) in thir_block_expr_and_closest_unsafe.elements.iter() {
+    //     thir_block_expr_and_closest_unsafe(block, expr, closest_unsafe_block) :-
+    //         thir_block_expr(block, expr),
+    //         thir_exprs(.expr=expr, .closest_unsafe_block=closest_unsafe_block).
+    // }
+
+    let thir_trailing_expr_to_block: HashMap<_, _> = loader.load_iter_thir_block_expr().flat_map(
+        |(block, expr)| {
+            if expr == no_thir_expr {
+                None
+            } else {
+                Some((expr, block))
+            }
+        },
+    ).collect();
+
+    for (expr, _, closest_unsafe_block, _, _,) in loader.load_iter_thir_exprs() {
+        let Some(&block) = thir_trailing_expr_to_block.get(&expr) else {
+            continue;
+        };
+
         if expr == no_thir_expr {
             continue;
         }
@@ -370,14 +382,52 @@ fn new_collect_function_sizes(loader: &Loader) {
         }
     }
 
+    // for &(block, expr, closest_unsafe_block) in thir_block_expr_and_closest_unsafe.elements.iter() {
+    //     if expr == no_thir_expr {
+    //         continue;
+    //     }
+
+    //     if let Some(&(build, thir_body_def_path, safety, check_mode)) = function_thir_blocks
+    //         .get(&closest_unsafe_block)
+    //         .or(function_thir_blocks.get(&block))
+    //     {
+    //         {
+    //             let (build_stmt, build_unsafe_stmt, build_user_unsafe_stmt) =
+    //                 selected_build_thir_sizes_map.entry(build).or_default();
+    //             *build_stmt += 1;
+    //             if safety != types::ScopeSafety::Safe {
+    //                 *build_unsafe_stmt += 1;
+    //             }
+    //             if safety == types::ScopeSafety::FnUnsafe
+    //                 || check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
+    //             {
+    //                 *build_user_unsafe_stmt += 1;
+    //             }
+    //         }
+    //         {
+    //             let (build_stmt, build_unsafe_stmt, build_user_unsafe_stmt) =
+    //                 selected_function_thir_sizes_map
+    //                     .entry(thir_body_def_path)
+    //                     .or_default();
+    //             *build_stmt += 1;
+    //             if safety != types::ScopeSafety::Safe {
+    //                 *build_unsafe_stmt += 1;
+    //             }
+    //             if safety == types::ScopeSafety::FnUnsafe
+    //                 || check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
+    //             {
+    //                 *build_user_unsafe_stmt += 1;
+    //             }
+    //         }
+    //     }
+    // }
+
     let selected_build_thir_sizes = selected_build_thir_sizes_map
         .into_iter()
         .map(|(build, (stmt, unsafe_stmt, user_unsafe_stmt))| {
             (build, stmt, unsafe_stmt, user_unsafe_stmt)
-        })
-        .collect();
-
-    loader.store_selected_build_thir_sizes(selected_build_thir_sizes);
+        });
+    loader.store_iter_selected_build_thir_sizes(selected_build_thir_sizes);
 
     let selected_function_thir_sizes = selected_function_thir_sizes_map
         .into_iter()
@@ -410,10 +460,9 @@ fn new_collect_function_sizes(loader: &Loader) {
                     },
                 )
             },
-        )
-        .collect();
+        );
 
-    loader.store_selected_function_thir_sizes(selected_function_thir_sizes);
+    loader.store_iter_selected_function_thir_sizes(selected_function_thir_sizes);
 }
 
 fn new_report_function_sizes(loader: &Loader, report_path: &Path) {

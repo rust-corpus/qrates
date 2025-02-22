@@ -17,7 +17,9 @@ pub(super) fn generate_loader_functions(
         let relation_hash = relation.get_hash();
         let file_name = format!("relations/{}", name);
         let load_fn_name = syn::Ident::new(&format!("load_{}", name), Span::call_site());
+        let load_iter_fn_name = syn::Ident::new(&format!("load_iter_{}", name), Span::call_site());
         let store_fn_name = syn::Ident::new(&format!("store_{}", name), Span::call_site());
+        let store_iter_fn_name = syn::Ident::new(&format!("store_iter_{}", name), Span::call_site());
         let mut types = TokenStream::new();
         for ast::RelationParameter { typ, .. } in parameters {
             types.extend(quote! {#typ,});
@@ -26,6 +28,14 @@ pub(super) fn generate_loader_functions(
             #name: std::cell::RefCell<Option<Vec<(#types)>>>,
         });
         function_tokens.extend(quote! {
+            pub fn #load_iter_fn_name(&self) -> impl Iterator<Item = (#types)> {
+                unsafe {
+                    load_elts_relation::<(#types)>(
+                        #relation_hash,
+                        self.database_root.join(#file_name)
+                    )
+                }.unwrap()
+            }
             pub fn #load_fn_name(&self) -> std::cell::Ref<Vec<(#types)>> {
                 if self.#name.borrow().is_none() {
                     // let relation: Relation<(#types)> = unsafe { Relation::load(
@@ -46,6 +56,20 @@ pub(super) fn generate_loader_functions(
             }
             // pub fn #store_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
             pub fn #store_fn_name(&self, facts: Vec<(#types)>) {
+                //assert!(self.#name.borrow().is_none());
+                //let relation: Relation<(#types)> = facts.into();
+                //unsafe { relation.save(#relation_hash, self.database_root.join(#file_name)); }
+                //*self.#name.borrow_mut() = Some(relation.into());
+
+                unsafe { 
+                    save_elts_relation::<(#types)>(
+                        facts,
+                        #relation_hash,
+                        self.database_root.join(#file_name)
+                    );
+                }
+            }
+            pub fn #store_iter_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
                 //assert!(self.#name.borrow().is_none());
                 //let relation: Relation<(#types)> = facts.into();
                 //unsafe { relation.save(#relation_hash, self.database_root.join(#file_name)); }
