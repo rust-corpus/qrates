@@ -190,6 +190,7 @@ impl<'b> SpanResolver<'b> {
 }
 
 /// From relation `iter` filters the facts that belong only to `selected_builds`.
+// TODO: can we make this return an iterator? would it help if we streamed this?
 pub fn filter_selected<F1, F2, I, O>(
     iter: impl Iterator<Item = I>,
     selected_builds: &[(

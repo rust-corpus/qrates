@@ -74,10 +74,10 @@ pub fn query(loader: &Loader, report_path: &Path) {
     write_csv!(report_path, selected_traits);
 
     let selected_impl_definitions_relation = super::utils::filter_selected(
-        loader.load_impl_definitions().iter(),
+        loader.load_iter_impl_definitions(),
         &selected_builds,
         &def_paths,
-        |&(
+        |(
             def_path,
             _item,
             _module,
@@ -90,7 +90,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
             _typ,
         )| def_path,
         |build,
-         &(
+         (
             def_path,
             item,
             module,

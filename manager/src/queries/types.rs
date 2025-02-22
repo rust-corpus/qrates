@@ -15,7 +15,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let strings = loader.load_strings();
     let type_defs = loader.load_type_defs();
     let type_kinds = loader.load_type_kinds();
-    let types: HashMap<_, _> = loader.load_types().iter().cloned().collect();
+    let types: HashMap<_, _> = loader.load_iter_types().collect();
 
     info!(
         "Number of all type definitions (type_defs): {}",

@@ -273,10 +273,10 @@ fn new_collect_function_sizes(loader: &Loader) {
     let mut selected_function_thir_sizes_map: HashMap<_, (u64, u64, u64)> = HashMap::new();
     let mut selected_build_thir_sizes_map: HashMap<_, (u64, u64, u64)> = HashMap::new();
 
-    for (_stmt, block, closest_unsafe_block, _index) in loader.load_thir_stmts().iter() {
+    for (_stmt, block, closest_unsafe_block, _index) in loader.load_iter_thir_stmts() {
         if let Some(&(build, thir_body_def_path, safety, check_mode)) = function_thir_blocks
-            .get(closest_unsafe_block)
-            .or(function_thir_blocks.get(block))
+            .get(&closest_unsafe_block)
+            .or(function_thir_blocks.get(&block))
         // For sizes of safe blocks
         {
             {
