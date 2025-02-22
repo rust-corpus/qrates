@@ -34,6 +34,9 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
             use anyhow::Result;
             use serde_derive::{Deserialize, Serialize};
             use super::types::*;
+            use crate::storage::save_elts_relation;
+            use crate::storage::load_elts_relation;
+            use crate::storage::load_elts_relation_into_relation;
             #tables
             #relations
             #counters

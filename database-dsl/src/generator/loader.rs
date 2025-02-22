@@ -28,19 +28,36 @@ pub(super) fn generate_loader_functions(
         function_tokens.extend(quote! {
             pub fn #load_fn_name(&self) -> std::cell::Ref<Vec<(#types)>> {
                 if self.#name.borrow().is_none() {
-                    let relation: Relation<(#types)> = unsafe { Relation::load(
-                        #relation_hash,
-                        self.database_root.join(#file_name)
-                    ) }.unwrap();
+                    // let relation: Relation<(#types)> = unsafe { Relation::load(
+                    //     #relation_hash,
+                    //     self.database_root.join(#file_name)
+                    // ) }.unwrap();
+
+                    let relation = unsafe {
+                        load_elts_relation_into_relation::<(#types)>(
+                            #relation_hash,
+                            self.database_root.join(#file_name)
+                        )
+                    }.unwrap();
+
                     *self.#name.borrow_mut() = Some(relation.into());
                 }
                 std::cell::Ref::map(self.#name.borrow(), |option| option.as_ref().unwrap())
             }
+            // pub fn #store_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
             pub fn #store_fn_name(&self, facts: Vec<(#types)>) {
-                assert!(self.#name.borrow().is_none());
-                let relation: Relation<(#types)> = facts.into();
-                unsafe { relation.save(#relation_hash, self.database_root.join(#file_name)); }
-                *self.#name.borrow_mut() = Some(relation.into());
+                //assert!(self.#name.borrow().is_none());
+                //let relation: Relation<(#types)> = facts.into();
+                //unsafe { relation.save(#relation_hash, self.database_root.join(#file_name)); }
+                //*self.#name.borrow_mut() = Some(relation.into());
+
+                unsafe { 
+                    save_elts_relation::<(#types)>(
+                        facts,
+                        #relation_hash,
+                        self.database_root.join(#file_name)
+                    );
+                }
             }
         });
 

@@ -8,6 +8,7 @@ use crate::data_structures::{InterningTable, InterningTableKey, InterningTableVa
 use crate::tables::Tables;
 use anyhow::{Context, Result};
 use log::trace;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read, Write};
 use std::path::Path;
@@ -125,14 +126,91 @@ impl<T: Copy> Relation<T> {
     /// loading relations that were saved with a different schema.
     /// ``path`` – the path **without** the extension.
     pub unsafe fn save(&self, relation_hash: u64, path: std::path::PathBuf) {
-        unsafe_save_vec(&self.facts, relation_hash, path);
+
+        unsafe { save_elts_relation(self.facts.iter().cloned(), relation_hash, path) };
+
+        // unsafe_save_vec(&self.facts, relation_hash, path);
     }
     /// This function is safe only when T does not contain references or pointers.
     /// Also, ``relation_hash`` must be correctly initialized.
     pub unsafe fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
-        unsafe { unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into()) }
+        let iter = unsafe { load_elts_relation(expected_relation_hash, path)? };
+        let facts = iter.collect::<Vec<T>>();
+        Ok(facts.into())
+
+
+        // unsafe { unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into()) }
     }
 }
+
+
+// TODO: rename to _stream
+pub unsafe fn save_elts_relation<T: Copy>(elts: impl IntoIterator<Item = T>, relation_hash: u64, mut path: std::path::PathBuf) {
+    path.set_extension("stream.rc");
+    trace!("[enter] save_elts_relation({:?})", path);
+    let mut file = std::fs::File::create(&path)
+        .unwrap_or_else(|e| panic!("Unable to create {:?}: {}", path, e));
+    if cfg!(target_endian = "big") {
+        unreachable!("We assume little endian machines");
+    }
+    // do a streaming write.
+    let element_size = std::mem::size_of::<T>();
+    // we don't know length, since we receive an iterator. will just have to read until EOF.
+    // let mut len = 
+    file.write_all(&(relation_hash as u64).to_le_bytes()).unwrap();
+    file.write_all(&(element_size as u64).to_le_bytes())
+        .unwrap();
+    for elt in elts {
+        // save the raw data, so we don't need T: Serialize
+        let buf = unsafe {
+            std::slice::from_raw_parts(&elt as *const T as *const u8, element_size)
+        };
+        file.write_all(buf).unwrap();
+
+        // bincode::serialize_into(&mut file, &elt).unwrap();
+    }
+}
+
+pub unsafe fn load_elts_relation<T: Copy>(expected_relation_hash: u64, mut path: std::path::PathBuf) -> Result<impl Iterator<Item = T>> {
+    path.set_extension("stream.rc");
+    trace!("[enter] load_elts_relation({:?})", path);
+
+    let file =
+        std::fs::File::open(&path).with_context(|| format!("Failed to open file: {:?}", path))?;
+    let mut buf_reader = BufReader::new(file);
+    if cfg!(target_endian = "big") {
+        unreachable!("We assume little endian machines");
+    }
+    let mut buf: [u8; 8] = [0u8; 8];
+    assert_eq!(buf_reader.read(&mut buf)?, 8);
+    let actual_relation_hash = u64::from_le_bytes(buf);
+    assert_eq!(actual_relation_hash, expected_relation_hash);
+    let expected_fact_size = std::mem::size_of::<T>();
+    assert_eq!(buf_reader.read(&mut buf)?, 8);
+    let actual_fact_size = u64::from_le_bytes(buf);
+    assert_eq!(expected_fact_size, (actual_fact_size as usize));
+    
+    Ok(std::iter::from_fn(move || {
+        // read a T from the file
+        let mut buf = vec![0u8; expected_fact_size];
+        match buf_reader.read_exact(&mut buf) {
+            Ok(()) => {
+                let elt = unsafe {
+                    std::ptr::read(buf.as_ptr() as *const T)
+                };
+                Some(elt)
+            },
+            Err(_) => None,
+        }
+    }))
+
+}
+
+pub unsafe fn load_elts_relation_into_relation<T: Copy>(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Relation<T>> {
+    let iter = unsafe { load_elts_relation(expected_relation_hash, path)? };
+    Ok(iter.collect::<Vec<T>>().into())
+}
+
 
 impl<K, V> InterningTable<K, V>
 where
@@ -144,12 +222,18 @@ where
     /// loading an interning table that was saved with a different schema.
     /// ``path`` – the path **without** the extension.
     pub unsafe fn save(&self, table_hash: u64, path: std::path::PathBuf) {
-        unsafe_save_vec(&self.contents, table_hash, path);
+        unsafe { save_elts_relation(self.contents.iter().cloned(), table_hash, path) };
+
+        // unsafe_save_vec(&self.contents, table_hash, path);
     }
     /// This function is safe only when T does not contain references or pointers.
     /// Also, ``relation_hash`` must be correctly initialized.
     pub unsafe fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
-        unsafe { unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into()) }
+        let iter = unsafe { load_elts_relation(expected_relation_hash, path)? };
+        let contents = iter.collect::<Vec<V>>();
+        Ok(contents.into())
+
+        // unsafe { unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into()) }
     }
 }
 
