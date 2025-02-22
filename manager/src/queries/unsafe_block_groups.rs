@@ -6,7 +6,7 @@ use crate::write_csv;
 use corpus_database::tables::Loader;
 use corpus_queries_derive::datapond_query;
 use log::info;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::path::Path;
 
@@ -221,6 +221,9 @@ pub fn query(loader: &Loader, report_path: &Path) {
 /// Count how many functions are called from each unsafe thir block.
 fn new_count_called_functions(loader: &Loader) {
     // We join on `closest_unsafe_block`, because we don't want `unsafe { { foo(); } }` to be counted as a safe call.
+
+    // too inefficient.
+    /*
     let unsafe_thir_block_calls;
     datapond_query! {
         load loader {
@@ -258,14 +261,53 @@ fn new_count_called_functions(loader: &Loader) {
             (build, block, check_mode, group.count().try_into().unwrap())
         })
         .collect();
+    
     info!(
         "Number of unsafe thir blocks with calls: {}",
         unsafe_thir_block_call_counts_relation.len()
     );
+    */
 
-    let unsafe_blocks_with_calls: HashSet<_> = unsafe_thir_block_call_counts_relation
+    let mut unsafe_blocks_to_data = HashMap::new();
+    for (build, _, block, _, check_mode, _) in loader.load_iter_unsafe_thir_blocks() {
+        unsafe_blocks_to_data.insert(block, (build, check_mode));
+    }
+    let mut expr_to_call_data = HashMap::new();
+    for (call, ty, fun, unsafety, abi, return_ty) in loader.load_iter_thir_exprs_call() {
+        expr_to_call_data.insert(call, (fun, unsafety, abi, return_ty));
+    }
+
+
+    let mut unsafe_thir_block_call_counts_map = HashMap::new();
+    for (expr, _, closest_unsafe_block, _, _) in loader.load_iter_thir_exprs() {
+        let Some((fun, unsafety, abi, return_ty)) = expr_to_call_data.get(&expr) else {
+            continue;
+        };
+        let Some((build, check_mode)) = unsafe_blocks_to_data.get(&closest_unsafe_block) else {
+            continue;
+        };
+
+
+        let count = unsafe_thir_block_call_counts_map.entry((*build, closest_unsafe_block, *check_mode)).or_insert(0);
+        *count += 1;
+    }
+
+    // same as above, but for storing
+    let iter_version = loader.load_iter_thir_exprs().flat_map(|(expr, _, closest_unsafe_block, _, _)| {
+        let (fun, unsafety, abi, return_ty) = expr_to_call_data.get(&expr)?;
+        let (build, check_mode) = unsafe_blocks_to_data.get(&closest_unsafe_block)?;
+        Some((*build, closest_unsafe_block, *check_mode, expr, *fun, *unsafety, *abi, *return_ty))
+    });
+
+
+    info!(
+        "Number of unsafe thir blocks with calls: {}",
+        unsafe_thir_block_call_counts_map.len()
+    );
+
+    let unsafe_blocks_with_calls: HashSet<_> = unsafe_thir_block_call_counts_map
         .iter()
-        .map(|&(_build, block, _check_mode, _call_count)| block)
+        .map(|(&(_build, block, _check_mode), _call_count)| block)
         .collect();
 
     let unsafe_thir_block_no_calls_relation: Vec<_> = loader
@@ -283,8 +325,8 @@ fn new_count_called_functions(loader: &Loader) {
         unsafe_thir_block_no_calls_relation.len()
     );
 
-    loader.store_unsafe_thir_block_calls(unsafe_thir_block_calls_relation);
-    loader.store_unsafe_thir_block_call_counts(unsafe_thir_block_call_counts_relation);
+    loader.store_iter_unsafe_thir_block_calls(iter_version);
+    loader.store_iter_unsafe_thir_block_call_counts(unsafe_thir_block_call_counts_map.into_iter().map(|((build, block, check_mode), count)| (build, block, check_mode, count)));
     loader.store_unsafe_thir_block_no_calls(unsafe_thir_block_no_calls_relation);
 }
 
