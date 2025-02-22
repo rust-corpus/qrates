@@ -148,10 +148,9 @@ pub struct SpanResolver<'b> {
 impl<'b> SpanResolver<'b> {
     pub fn new(loader: &'b Loader) -> Self {
         let spans = loader
-            .load_spans()
-            .iter()
+            .load_iter_spans()
             .map(
-                |&(
+                |(
                     span,
                     _call_site_span,
                     expansion_kind,
