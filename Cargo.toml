@@ -10,3 +10,6 @@ members = [
 exclude = [
     "extractor-test",
 ]
+
+[profile.release]
+debug = true
