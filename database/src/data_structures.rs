@@ -4,6 +4,7 @@
 
 //! The implementation of interning tables and relations.
 
+use log::info;
 use redb::{ReadableTable, TableDefinition};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -95,6 +96,7 @@ where
     V: InterningTableValue,
 {
     fn from(contents: Vec<V>) -> Self {
+        // info!("From<Vec<V>>");
         let inv_contents = contents
             .iter()
             .enumerate()
@@ -208,6 +210,8 @@ where
     V: InterningTableValue,
 {
     fn into(self) -> Vec<(K, V)> {
+        // info!("Into<Vec<(K, V)>>");
+
         // load all key value pairs
         let rot = self.read_only_table.unwrap();
         let mut result = Vec::new();

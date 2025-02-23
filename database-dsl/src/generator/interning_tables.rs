@@ -41,8 +41,9 @@ pub(super) fn generate_interning_tables(schema: &ast::DatabaseSchema) -> TokenSt
                     #type_constraints
             {
                 fn into(self) -> Vec<(K, #type_args)> {
-                    self.contents.into_iter().enumerate().map(|(i, (#args))| {
-                        (i.into(), #args)
+                    let contents: Vec<(K, (#type_args))> = self.into();
+                    contents.into_iter().map(|(i, (#args))| {
+                        (i, #args)
                     }).collect()
                 }
             }
