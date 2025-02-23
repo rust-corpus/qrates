@@ -41,20 +41,20 @@ fn report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
                 is_trait_item,
             ) = if let Some(target) = terminators_call_const_target.get(&call) {
                 let (crate_name, crate_hash, relative_def_path, _def_path_hash, summary_key) =
-                    def_paths[*target];
+                    def_paths.r(*target);
                 (
-                    strings[crate_names[crate_name]].as_ref(),
+                    strings.r(crate_names.r(crate_name)),
                     format!("{:x}", crate_hash),
-                    strings[relative_def_paths[relative_def_path]].as_ref(),
-                    strings[summary_keys[summary_key]].as_ref(),
+                    strings.r(relative_def_paths.r(relative_def_path)),
+                    strings.r(summary_keys.r(summary_key)),
                     trait_items.contains(target),
                 )
             } else {
                 (
-                    "non-const",
                     "non-const".into(),
-                    "non-const",
-                    "non-const",
+                    "non-const".into(),
+                    "non-const".into(),
+                    "non-const".into(),
                     false,
                 )
             };
@@ -68,7 +68,7 @@ fn report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
                 check_mode.to_string(),
                 call,
                 unsafety.to_string(),
-                strings[abis[abi]].to_string(),
+                strings.r(abis.r(abi)),
                 target_crate_name,
                 target_crate_hash,
                 call_target_def_path,
@@ -100,19 +100,19 @@ fn report_all_calls(loader: &Loader, report_path: &Path) {
                 terminators_call_const_target.get(&call)
             {
                 let (_crate_name, _crate_hash, _relative_def_path, _def_path_hash, summary_key) =
-                    def_paths[*target];
+                    def_paths.r(*target);
                 (
-                    strings[summary_keys[summary_key]].as_ref(),
+                    strings.r(summary_keys.r(summary_key)),
                     trait_items.contains(target),
                 )
             } else {
-                ("non-const", false)
+                ("non-const".into(), false)
             };
             (
                 call,
                 func,
                 unsafety.to_string(),
-                strings[abis[abi]].to_string(),
+                strings.r(abis.r(abi)),
                 call_target,
                 is_trait_item,
             )
@@ -161,20 +161,20 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
                 is_trait_item,
             ) = if let Some(target) = fun_to_const_target_map.get(&fun) {
                 let (crate_name, crate_hash, relative_def_path, _def_path_hash, summary_key) =
-                    def_paths[*target];
+                    def_paths.r(*target);
                 (
-                    strings[crate_names[crate_name]].as_ref(),
+                    strings.r(crate_names.r(crate_name)),
                     format!("{:x}", crate_hash),
-                    strings[relative_def_paths[relative_def_path]].as_ref(),
-                    strings[summary_keys[summary_key]].as_ref(),
+                    strings.r(relative_def_paths.r(relative_def_path)),
+                    strings.r(summary_keys.r(summary_key)),
                     trait_items.contains(target),
                 )
             } else {
                 (
-                    "non-const",
                     "non-const".into(),
-                    "non-const",
-                    "non-const",
+                    "non-const".into(),
+                    "non-const".into(),
+                    "non-const".into(),
                     false,
                 )
             };
@@ -186,7 +186,7 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
                 check_mode.to_string(),
                 call,
                 unsafety.to_string(),
-                strings[abis[abi]].to_string(),
+                strings.r(abis.r(abi)),
                 target_crate_name,
                 target_crate_hash,
                 call_target_def_path,
@@ -218,19 +218,19 @@ fn new_report_all_calls(loader: &Loader, report_path: &Path) {
                 fun_to_const_target_map.get(&fun)
             {
                 let (_crate_name, _crate_hash, _relative_def_path, _def_path_hash, summary_key) =
-                    def_paths[*target];
+                    def_paths.r(*target);
                 (
-                    strings[summary_keys[summary_key]].as_ref(),
+                    strings.r(summary_keys.r(summary_key)),
                     trait_items.contains(target),
                 )
             } else {
-                ("non-const", false)
+                ("non-const".into(), false)
             };
             (
                 call,
                 fun,
                 unsafety.to_string(),
-                strings[abis[abi]].to_string(),
+                strings.r(abis.r(abi)).to_string(),
                 call_target,
                 is_trait_item,
             )

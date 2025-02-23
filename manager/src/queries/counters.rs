@@ -237,7 +237,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 module,
                 visibility.to_string(),
                 unsafety.to_string(),
-                &strings[abis[abi]],
+                strings.r(abis.r(abi)),
                 uses_unsafe,
                 function_unsafe_block_counts
                     .get(&item)
@@ -420,7 +420,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
                 module,
                 visibility.to_string(),
                 unsafety.to_string(),
-                &strings[abis[abi]],
+                strings.r(abis.r(abi)),
                 uses_unsafe,
                 function_unsafe_thir_block_counts
                     .get(&item)

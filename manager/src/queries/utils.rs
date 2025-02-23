@@ -71,14 +71,14 @@ impl<'b> BuildResolver<'b> {
             strings: loader.load_strings(),
         }
     }
-    pub fn resolve(&self, build: types::Build) -> (&str, &str, &str, String, &str) {
-        let (package_name, package_version, crate_name, crate_hash, edition) = self.builds[build];
+    pub fn resolve(&self, build: types::Build) -> (String, String, String, String, String) {
+        let (package_name, package_version, crate_name, crate_hash, edition) = self.builds.r(build);
         (
-            &self.strings[self.package_names[package_name]],
-            &self.strings[self.package_versions[package_version]],
-            &self.strings[self.crate_names[crate_name]],
+            self.strings.r(self.package_names.r(package_name)),
+            self.strings.r(self.package_versions.r(package_version)),
+            self.strings.r(self.crate_names.r(crate_name)),
             format!("{:x}", crate_hash),
-            &self.strings[self.editions[edition]],
+            self.strings.r(self.editions.r(edition)),
         )
     }
 }
@@ -115,15 +115,18 @@ impl<'b> DefPathResolver<'b> {
             strings: loader.load_strings(),
         }
     }
-    pub fn resolve(&self, def_path: types::DefPath) -> (&str, String, &str, String, &str) {
+    pub fn resolve(&self, def_path: types::DefPath) -> (String, String, String, String, String) {
         let (crate_name, crate_hash, relative_def_path, def_path_hash, summary_key) =
-            self.def_paths[def_path];
+            self.def_paths.r(def_path);
+        let crate_name = self.crate_names.get_redb(crate_name).unwrap();
+        // TODO: Strings are not loaded/saved via our hooked functions, but rather serde.
+        // let first_str = self.strings.get_redb(crate_name).unwrap();
         (
-            &self.strings[self.crate_names[crate_name]],
+            self.strings.r(crate_name),
             format!("{:x}", crate_hash),
-            &self.strings[self.relative_def_paths[relative_def_path]],
+            self.strings.r(self.relative_def_paths.r(relative_def_path)),
             format!("{:x}", def_path_hash),
-            &self.strings[self.summary_keys[summary_key]],
+            self.strings.r(self.summary_keys.r(summary_key)),
         )
     }
 }
@@ -172,13 +175,13 @@ impl<'b> SpanResolver<'b> {
             strings: loader.load_strings(),
         }
     }
-    pub fn resolve(&self, span: types::Span) -> (types::Span, String, &str, &str, u16, u16) {
+    pub fn resolve(&self, span: types::Span) -> (types::Span, String, String, String, u16, u16) {
         let (expansion_kind, expansion_kind_descr, file_name, line, col) = self.spans[&span];
         (
             span,
             format!("{:?}", expansion_kind),
-            &self.strings[expansion_kind_descr],
-            &self.strings[self.span_file_names[file_name]],
+            self.strings.r(expansion_kind_descr),
+            self.strings.r(self.span_file_names.r(file_name)),
             line,
             col,
         )
@@ -229,7 +232,7 @@ where
         .collect();
     iter.flat_map(|element| {
         let def_path = extract_def_path(element.clone());
-        let (krate, crate_hash, _, _, _) = def_paths[def_path];
+        let (krate, crate_hash, _, _, _) = def_paths.r(def_path);
         selected_builds_set
             .get(&(krate, crate_hash))
             .map(|build| construct_result(*build, element))

@@ -39,7 +39,7 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
         .load_types_adt_def()
         .iter()
         .flat_map(|&(typ, def_path, _, _, _)| {
-            let (_, _, _, _, def_path_summary) = def_paths[def_path];
+            let (_, _, _, _, def_path_summary) = def_paths.r(def_path);
             if def_path_summary == unsafe_cell_summary_id {
                 Some((typ, def_path))
             } else {
@@ -137,9 +137,9 @@ fn report_unsafe_type_defs(loader: &Loader, report_path: &Path) {
                     item,
                     typ,
                     def_path_resolver.resolve(def_path),
-                    &strings[name],
+                    strings.r(name),
                     visibility.to_string(),
-                    &strings[type_kinds[type_kind]],
+                    strings.r(type_kinds.r(type_kind)),
                     def_kind.to_string(),
                 ))
             } else {
@@ -208,9 +208,9 @@ fn report_safe_wrapper_type_defs(loader: &Loader, report_path: &Path) {
                     item,
                     typ,
                     def_path_resolver.resolve(def_path),
-                    &strings[name],
+                    strings.r(name),
                     visibility.to_string(),
-                    &strings[type_kinds[type_kind]],
+                    strings.r(type_kinds.r(type_kind)),
                     def_kind.to_string(),
                 ))
             } else {

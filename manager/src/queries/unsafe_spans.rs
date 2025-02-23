@@ -26,7 +26,7 @@ fn report_unsafe_function_spans(loader: &Loader, report_path: &Path) {
                     build_resolver.resolve(build),
                     def_path_resolver.resolve(def_path),
                     visibility.to_string(),
-                    &strings[abis[abi]],
+                    strings.r(abis.r(abi)),
                     uses_unsafe,
                     span_resolver.resolve(def_path_spans[&def_path]),
                 ))

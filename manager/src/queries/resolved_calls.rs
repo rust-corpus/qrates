@@ -59,29 +59,29 @@ pub fn query(loader: &Loader, report_path: &Path) {
             let target = call_target.get(&call)?; // none for function pointers
             let (target_desc, function_generics, type_generics) = call_target_desc[&call];
 
-            let (caller_crate, _, _, _, _) = def_paths[basic_block_def_paths[&block]];
-            let caller_crate_name = &strings[crate_names[caller_crate]];
-            let (target_crate, _, _, _, _) = def_paths[*target];
-            let target_crate_name = &strings[crate_names[target_crate]];
+            let (caller_crate, _, _, _, _) = def_paths.r(basic_block_def_paths[&block]);
+            let caller_crate_name = strings.r(crate_names.r(caller_crate));
+            let (target_crate, _, _, _, _) = def_paths.r(*target);
+            let target_crate_name = strings.r(crate_names.r(target_crate));
 
             let (receiver_name, receiver_generics) = call_target_self.get(&call).map_or_else(
-                || ("", ""),
+                || ("".to_string(), "".to_string()),
                 |typ| {
                     let (desc, generics) = type_descriptions[typ];
-                    (&strings[desc], &strings[generics])
+                    (strings.r(desc), strings.r(generics))
                 },
             );
 
             let macro_path = call_target_macro
                 .get(&call)
-                .map_or("", |path| &strings[*path]);
+                .map_or("".to_string(), |path| strings.r(*path));
 
             Some((
                 receiver_name,
                 receiver_generics,
-                &strings[target_desc],
-                &strings[type_generics],
-                &strings[function_generics],
+                strings.r(target_desc),
+                strings.r(type_generics),
+                strings.r(function_generics),
                 caller_crate_name,
                 target_crate_name,
                 macro_path,

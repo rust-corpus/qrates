@@ -112,18 +112,19 @@ fn load_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStream
     let mut load_fields = TokenStream::new();
     for table in &schema.interning_tables {
         let ast::InterningTable { name, value, .. } = table;
-        if is_copy_type(value, schema) {
+        // if is_copy_type(value, schema) {
             let table_hash = table.get_hash();
             let file_name = name.to_string();
             load_fields.extend(quote! {
                 #name: unsafe { InterningTable::load(#table_hash, path.join(#file_name))? },
             });
-        } else {
-            let file_name = format!("{}.bincode", name);
-            load_fields.extend(quote! {
-                #name: crate::storage::load(&path.join(#file_name))?,
-            });
-        }
+        // } 
+        // else {
+        //     let file_name = format!("{}.bincode", name);
+        //     load_fields.extend(quote! {
+        //         #name: crate::storage::load(&path.join(#file_name))?,
+        //     });
+        // }
     }
     quote! {
         fn load_interning_tables(path: &Path) -> Result<InterningTables> {
@@ -138,18 +139,18 @@ fn store_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStrea
     let mut store_fields = TokenStream::new();
     for table in &schema.interning_tables {
         let ast::InterningTable { name, value, .. } = table;
-        if is_copy_type(value, schema) {
+        // if is_copy_type(value, schema) {
             let table_hash = table.get_hash();
             let file_name = name.to_string();
             store_fields.extend(quote! {
                 unsafe { interning_tables.#name.save(#table_hash, path.join(#file_name)); }
             });
-        } else {
-            let file_name = format!("{}.bincode", name);
-            store_fields.extend(quote! {
-                crate::storage::save(&interning_tables.#name, &path.join(#file_name));
-            });
-        }
+        // } else {
+        //     let file_name = format!("{}.bincode", name);
+        //     store_fields.extend(quote! {
+        //         crate::storage::save(&interning_tables.#name, &path.join(#file_name));
+        //     });
+        // }
     }
     quote! {
         fn store_multifile_interning_tables(

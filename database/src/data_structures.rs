@@ -4,7 +4,7 @@
 
 //! The implementation of interning tables and relations.
 
-use redb::TableDefinition;
+use redb::{ReadableTable, TableDefinition};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -143,11 +143,11 @@ impl<K> InterningTable<K, String>
 where
     K: InterningTableKey,
 {
-    pub fn lookup_str(&self, value: &str) -> Option<K> {
-        self.inv_contents.get(value).cloned()
-    }
+    // pub fn lookup_str(&self, value: &str) -> Option<K> {
+    //     self.inv_contents.get(value).cloned()
+    // }
 
-    pub fn lookup_str_redb(&self, value: &str) -> Option<K> {
+    pub fn lookup_str(&self, value: &str) -> Option<K> {
         if let Some(table) = &self.read_only_inv_table {
             // TODO: to_string() is unfortunate.
             return Some((table.get(&value.to_string()).ok()??.value() as usize).into());
@@ -161,11 +161,11 @@ where
     K: InterningTableKey,
     V: InterningTableValue,
 {
-    pub fn lookup(&self, value: &V) -> Option<K> {
-        self.inv_contents.get(value).cloned()
-    }
+    // pub fn lookup(&self, value: &V) -> Option<K> {
+    //     self.inv_contents.get(value).cloned()
+    // }
 
-    pub fn lookup_redb(&self, value: &V) -> Option<K> {
+    pub fn lookup(&self, value: &V) -> Option<K> {
         if let Some(table) = &self.read_only_inv_table {
             return Some((table.get(value).ok()??.value() as usize).into());
         }
@@ -179,24 +179,28 @@ where
         }
         None
     }
-}
 
-impl<K, V> std::ops::Index<K> for InterningTable<K, V>
-where
-    K: InterningTableKey,
-    V: InterningTableValue,
-{
-    type Output = V;
-    fn index(&self, key: K) -> &Self::Output {
-        let index: usize = key.into();
-
-        // if let Some(table) = &self.read_only_table {
-        //     return &table.get(index as u64).unwrap().unwrap().value();
-        // }
-
-        &self.contents[index]
+    pub fn r(&self, key: K) -> V {
+        self.get_redb(key).unwrap()
     }
 }
+
+// impl<K, V> std::ops::Index<K> for InterningTable<K, V>
+// where
+//     K: InterningTableKey,
+//     V: InterningTableValue,
+// {
+//     type Output = V;
+//     fn index(&self, key: K) -> &Self::Output {
+//         let index: usize = key.into();
+
+//         // if let Some(table) = &self.read_only_table {
+//         //     return &table.get(index as u64).unwrap().unwrap().value();
+//         // }
+
+//         &self.contents[index]
+//     }
+// }
 
 impl<K, V> Into<Vec<(K, V)>> for InterningTable<K, V>
 where
@@ -204,10 +208,15 @@ where
     V: InterningTableValue,
 {
     fn into(self) -> Vec<(K, V)> {
-        self.contents
-            .into_iter()
-            .enumerate()
-            .map(|(i, v)| (i.into(), v))
-            .collect()
+        // load all key value pairs
+        let rot = self.read_only_table.unwrap();
+        let mut result = Vec::new();
+        for res  in rot.iter().unwrap() {
+            let (k, v) = res.unwrap();
+            // let k = k as usize as K;
+            // let v = v.value();
+            result.push(((k.value() as usize).into(), v.value()));
+        }
+        result
     }
 }

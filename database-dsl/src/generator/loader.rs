@@ -114,7 +114,7 @@ pub(super) fn generate_loader_functions(
                 types.extend(quote! {#value,});
             }
         }
-        let load = if is_copy_type(value, schema) {
+        let load = {
             let table_hash = table.get_hash();
             let file_name = format!("interning/{}", name);
             quote! {
@@ -125,14 +125,26 @@ pub(super) fn generate_loader_functions(
                     ).unwrap()
                 }
             }
-        } else {
-            let file_name = format!("interning/{}.bincode", name);
-            quote! {
-                crate::storage::load(
-                    &self.database_root.join(#file_name)
-                ).unwrap()
-            }
         };
+        // let load = if is_copy_type(value, schema) {
+        //     let table_hash = table.get_hash();
+        //     let file_name = format!("interning/{}", name);
+        //     quote! {
+        //         unsafe {
+        //             InterningTable::load(
+        //                 #table_hash,
+        //                 self.database_root.join(#file_name)
+        //             ).unwrap()
+        //         }
+        //     }
+        // } else {
+        //     let file_name = format!("interning/{}.bincode", name);
+        //     quote! {
+        //         crate::storage::load(
+        //             &self.database_root.join(#file_name)
+        //         ).unwrap()
+        //     }
+        // };
         cache_field_tokens.extend(quote! {
             #name: std::cell::RefCell<Option<InterningTable<#key_type, #value>>>,
         });

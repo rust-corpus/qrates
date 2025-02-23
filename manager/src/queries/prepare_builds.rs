@@ -95,10 +95,10 @@ pub fn query(loader: &Loader, report_path: &Path, workspace_path: &Path, sources
     info!("Number of builds in total: {}", builds.len());
 
     for &(build, package, version, krate, crate_hash, edition) in builds.iter() {
-        let krate_str = strings[crate_names[krate]].to_string();
-        let package_str = strings[package_names[package]].clone();
-        let version_str = strings[package_versions[version]].clone();
-        let edition_str = strings[editions[edition]].to_string();
+        let krate_str = strings.r(crate_names.r(krate)).to_string();
+        let package_str = strings.r(package_names.r(package)).clone();
+        let version_str = strings.r(package_versions.r(version)).clone();
+        let edition_str = strings.r(editions.r(edition)).to_string();
         all_builds.push((
             build,
             package_str.clone(),
@@ -122,7 +122,7 @@ pub fn query(loader: &Loader, report_path: &Path, workspace_path: &Path, sources
             let crate_types = if let Some(types) = crate_types.get(&build) {
                 types
                     .iter()
-                    .map(|&crate_type| &strings[crate_type])
+                    .map(|&crate_type| strings.r(crate_type))
                     .sorted()
                     .join(", ")
             } else {

@@ -102,7 +102,7 @@ fn report_called_functions(loader: &Loader, report_path: &Path) {
                 check_mode.to_string(),
                 call,
                 unsafety.to_string(),
-                strings[abis[abi]].to_string(),
+                strings.r(abis.r(abi)),
             )
         },
     );
@@ -167,7 +167,7 @@ fn report_non_const_call_targets(loader: &Loader, report_path: &Path) {
                     check_mode.to_string(),
                     call,
                     unsafety.to_string(),
-                    strings[abis[*abi]].to_string(),
+                    strings.r(abis.r(*abi)),
                 ))
             }
         },
@@ -202,7 +202,7 @@ fn report_const_call_targets(loader: &Loader, report_path: &Path) {
                     check_mode.to_string(),
                     call,
                     unsafety.to_string(),
-                    strings[abis[*abi]].to_string(),
+                    strings.r(abis.r(*abi)),
                 ))
             })
         },
@@ -348,7 +348,7 @@ fn new_report_called_functions(loader: &Loader, report_path: &Path) {
                 call,
                 fun,
                 unsafety.to_string(),
-                strings[abis[abi]].to_string(),
+                strings.r(abis.r(abi)),
             )
         },
     );
@@ -413,7 +413,7 @@ fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
                     call,
                     fun,
                     unsafety.to_string(),
-                    strings[abis[*abi]].to_string(),
+                    strings.r(abis.r(*abi)),
                 ))
             }
         },
@@ -447,7 +447,7 @@ fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
                     call,
                     fun,
                     unsafety.to_string(),
-                    strings[abis[*abi]].to_string(),
+                    strings.r(abis.r(*abi)),
                 ))
             })
         },

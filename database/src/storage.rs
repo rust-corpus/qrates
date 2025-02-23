@@ -248,7 +248,7 @@ impl<V: InterningTableValue> redb::Value for Hack<V> {
 impl<K, V> InterningTable<K, V>
 where
     K: InterningTableKey,
-    V: InterningTableValue + Copy,
+    V: InterningTableValue,
 {
 
 
@@ -257,7 +257,7 @@ where
     /// loading an interning table that was saved with a different schema.
     /// ``path`` – the path **without** the extension.
     pub unsafe fn save(&self, table_hash: u64, path: std::path::PathBuf) {
-        unsafe { save_elts_relation(self.contents.iter().cloned(), table_hash, path.clone()) };
+        // unsafe { save_elts_relation(self.contents.iter().cloned(), table_hash, path.clone()) };
 
 
         // also save into a `redb` database
@@ -305,15 +305,16 @@ where
                 table_inv.insert(v, i as u64).unwrap();
             }
         }
+        write_txn_inv.commit().unwrap();
     }
 
 
     /// This function is safe only when T does not contain references or pointers.
     /// Also, ``relation_hash`` must be correctly initialized.
     pub unsafe fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
-        let iter = unsafe { load_elts_relation(expected_relation_hash, path.clone())? };
-        let contents = iter.collect::<Vec<V>>();
-        let mut table: InterningTable<K, V> = contents.into();
+        // let iter = unsafe { load_elts_relation(expected_relation_hash, path.clone())? };
+        // let contents = iter.collect::<Vec<V>>();
+        let mut table: InterningTable<K, V> = vec![].into();
         
 
         table.load_redb(expected_relation_hash, path);
