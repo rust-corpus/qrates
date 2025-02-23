@@ -69,6 +69,39 @@ fn generate_id_decl(name: &syn::Ident, typ: &syn::Type) -> TokenStream {
                 }
             }
 
+            impl redb::Value for #name {
+                type SelfType<'a> = Self;
+                type AsBytes<'a> = Vec<u8>;
+
+                fn fixed_width() -> Option<usize> {
+                    Some(std::mem::size_of::<#typ>())
+                }
+
+                fn from_bytes<'a>(data: &'a [u8]) -> Self::SelfType<'a>
+                where Self: 'a
+                {
+                    let value = <#typ>::qrates_from_bytes(data);
+                    Self(value)
+                }
+
+                fn as_bytes<'a, 'b: 'a>(value: &'a Self::SelfType<'b>) -> Self::AsBytes<'a> {
+                    value.0.qrates_as_bytes()
+                }
+
+                fn type_name() -> redb::TypeName {
+                    redb::TypeName::new(stringify!(#name))
+                }
+
+            }
+
+            impl redb::Key for #name {
+                fn compare(data1: &[u8], data2: &[u8]) -> std::cmp::Ordering {
+                    let value1 = <#typ>::qrates_from_bytes(data1);
+                    let value2 = <#typ>::qrates_from_bytes(data2);
+                    value1.cmp(&value2)
+                }
+            }
+
             impl #name {
                 /// Shift the id by given `offset`.
                 pub fn shift(&self, offset: #typ) -> Self {

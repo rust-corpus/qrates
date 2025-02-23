@@ -45,7 +45,10 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
         let def_path_str = self.tcx.def_path_debug_str(def_id);
         let def_path_hash = {
             let (f, s) = self.tcx.def_path_hash(def_id).0.split();
-            (f.as_u64(), s.as_u64()).into()
+            let hi = f.as_u64() as u128;
+            let lo = s.as_u64() as u128;
+            ((hi << 64) | lo).into()
+            // (f.as_u64(), s.as_u64()).into()
         };
         let summary_key_str = mirai_utils::summary_key_str(self.tcx, def_id);
         let summary_key_str_value = std::rc::Rc::try_unwrap(summary_key_str).unwrap();

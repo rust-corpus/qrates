@@ -8,6 +8,7 @@ use crate::data_structures::{InterningTable, InterningTableKey, InterningTableVa
 use crate::tables::Tables;
 use anyhow::{Context, Result};
 use log::trace;
+use redb::TableDefinition;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::io::{BufReader, Read, Write};
@@ -211,29 +212,130 @@ pub unsafe fn load_elts_relation_into_relation<T: Copy>(expected_relation_hash: 
     Ok(iter.collect::<Vec<T>>().into())
 }
 
+#[derive(Debug)]
+pub struct Hack<V: InterningTableValue>(V);
+
+impl<V: InterningTableValue> AsRef<V> for Hack<V> {
+    fn as_ref(&self) -> &V {
+        &self.0
+    }
+}
+
+impl<V: InterningTableValue> redb::Value for Hack<V> {
+    type SelfType<'a> = V;
+    type AsBytes<'a> = V::AsBytes<'a>;
+
+    fn fixed_width() -> Option<usize> {
+        V::fixed_width()
+    }
+
+    fn as_bytes<'a, 'b: 'a>(value: &'a Self::SelfType<'b>) -> Self::AsBytes<'a> {
+        V::as_bytes(&value)
+    }
+
+    fn from_bytes<'a>(data: &'a [u8]) -> Self::SelfType<'a>
+    where Self: 'a
+     {
+        V::from_bytes(data)
+    }
+
+    fn type_name() -> redb::TypeName {
+        V::type_name()
+    }
+}
+
 
 impl<K, V> InterningTable<K, V>
 where
     K: InterningTableKey,
     V: InterningTableValue + Copy,
 {
+
+
     /// This function is safe only when K and V do not contain references or pointers.
     /// ``table_hash`` – the hash of the interning table schema. It is used to prevent
     /// loading an interning table that was saved with a different schema.
     /// ``path`` – the path **without** the extension.
     pub unsafe fn save(&self, table_hash: u64, path: std::path::PathBuf) {
-        unsafe { save_elts_relation(self.contents.iter().cloned(), table_hash, path) };
+        unsafe { save_elts_relation(self.contents.iter().cloned(), table_hash, path.clone()) };
+
+
+        // also save into a `redb` database
+        self.save_to_redb(table_hash, path);
 
         // unsafe_save_vec(&self.contents, table_hash, path);
     }
+
+    fn save_to_redb(&self, table_hash: u64, mut path: std::path::PathBuf)
+    //where V: redb::Value + std::borrow::Borrow<<V as redb::Value>::SelfType<'static>> + 'static
+    {
+
+
+        // save to a `redb` database
+        path.set_extension("redb");
+
+        let table_name = table_hash.to_string();
+        let inv_table_name = format!("inv_{}", table_name);
+
+        let db = redb::Database::create(path).unwrap();
+        let mut write_txn = db.begin_write().unwrap();
+        let table_definition = TableDefinition::<u64, Hack<V>>::new(&table_name);
+
+        {
+
+
+            // impl<V: for<'a>InterningTableValue<SelfType<'a> = V> + Copy> std::borrow::Borrow<Hack<V>> for Hack<V> {
+
+            // }
+
+            let mut table = write_txn.open_table(table_definition).unwrap();
+            for (i, v) in self.contents.iter().enumerate() {
+                let v = v.clone();
+                table.insert(i as u64, v).unwrap();
+            }
+        }
+        write_txn.commit().unwrap();
+
+        let mut write_txn_inv = db.begin_write().unwrap();
+        let table_definition_inv = TableDefinition::<V, u64>::new(&inv_table_name);
+        {
+            let mut table_inv = write_txn_inv.open_table(table_definition_inv).unwrap();
+            for (i, v) in self.contents.iter().enumerate() {
+                let v = v.clone();
+                table_inv.insert(v, i as u64).unwrap();
+            }
+        }
+    }
+
+
     /// This function is safe only when T does not contain references or pointers.
     /// Also, ``relation_hash`` must be correctly initialized.
     pub unsafe fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
-        let iter = unsafe { load_elts_relation(expected_relation_hash, path)? };
+        let iter = unsafe { load_elts_relation(expected_relation_hash, path.clone())? };
         let contents = iter.collect::<Vec<V>>();
-        Ok(contents.into())
+        let mut table: InterningTable<K, V> = contents.into();
+        
+
+        table.load_redb(expected_relation_hash, path);
+
+        Ok(table)
 
         // unsafe { unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into()) }
+    }
+
+    fn load_redb(&mut self, table_hash: u64, mut path: std::path::PathBuf) {
+        path.set_extension("redb");
+        let db = redb::Database::open(path).unwrap();
+        let read_txn = db.begin_read().unwrap();
+        let table_name = table_hash.to_string();
+        let inv_table_name = format!("inv_{}", table_name);
+        let table_definition = TableDefinition::<u64, Hack<V>>::new(&table_name);
+        let inv_table_definition = TableDefinition::<V, u64>::new(&inv_table_name);
+        let table = read_txn.open_table(table_definition).unwrap();
+        let inv_table = read_txn.open_table(inv_table_definition).unwrap();
+        self.db = Some(db);
+        self.read_only_table = Some(table);
+        self.read_only_inv_table = Some(inv_table);
     }
 }
 

@@ -35,6 +35,7 @@ pub fn is_numeric_type(typ: &syn::Type) -> bool {
             || path.is_ident("u16")
             || path.is_ident("u32")
             || path.is_ident("u64")
+            || path.is_ident("u128")
             || path.is_ident("usize")
     } else {
         false

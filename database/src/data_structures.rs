@@ -4,8 +4,11 @@
 
 //! The implementation of interning tables and relations.
 
+use redb::TableDefinition;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use crate::storage::Hack;
 
 #[derive(Deserialize, Serialize)]
 /// A table that expresses a relation between elements.
@@ -46,10 +49,10 @@ impl<T> From<Vec<T>> for Relation<T> {
     }
 }
 
-pub trait InterningTableKey: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> {}
-impl<T> InterningTableKey for T where T: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> {}
-pub trait InterningTableValue: Eq + std::hash::Hash + Clone {}
-impl<T> InterningTableValue for T where T: Eq + std::hash::Hash + Clone {}
+pub trait InterningTableKey: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> + redb::Key {}
+impl<T> InterningTableKey for T where T: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> + redb::Key {}
+pub trait InterningTableValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key +  'static {}
+impl<T> InterningTableValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
 
 #[derive(Deserialize, Serialize)]
 #[serde(from = "Vec<V>")]
@@ -62,6 +65,12 @@ where
     pub(crate) contents: Vec<V>,
     #[serde(skip_serializing)]
     inv_contents: HashMap<V, K>,
+    #[serde(skip_serializing)]
+    pub(crate) db: Option<redb::Database>,
+    #[serde(skip_serializing)]
+    pub(crate) read_only_table: Option<redb::ReadOnlyTable<u64, Hack<V>>>,
+    #[serde(skip_serializing)]
+    pub(crate) read_only_inv_table: Option<redb::ReadOnlyTable<V, u64>>,
 }
 
 impl<K, V> Default for InterningTable<K, V>
@@ -73,6 +82,9 @@ where
         Self {
             contents: Vec::new(),
             inv_contents: HashMap::new(),
+            db: None,
+            read_only_table: None,
+            read_only_inv_table: None,
         }
     }
 }
@@ -91,6 +103,9 @@ where
         Self {
             contents,
             inv_contents,
+            db: None,
+            read_only_table: None,
+            read_only_inv_table: None,
         }
     }
 }
@@ -98,7 +113,7 @@ where
 impl<K, V> InterningTable<K, V>
 where
     K: InterningTableKey,
-    V: InterningTableValue,
+    V: for<'a> InterningTableValue<SelfType<'a> = V>,
 {
     pub(crate) fn intern(&mut self, value: V) -> K {
         if self.inv_contents.contains_key(&value) {
@@ -131,6 +146,14 @@ where
     pub fn lookup_str(&self, value: &str) -> Option<K> {
         self.inv_contents.get(value).cloned()
     }
+
+    pub fn lookup_str_redb(&self, value: &str) -> Option<K> {
+        if let Some(table) = &self.read_only_inv_table {
+            // TODO: to_string() is unfortunate.
+            return Some((table.get(&value.to_string()).ok()??.value() as usize).into());
+        }
+        None
+    }
 }
 
 impl<K, V> InterningTable<K, V>
@@ -140,6 +163,21 @@ where
 {
     pub fn lookup(&self, value: &V) -> Option<K> {
         self.inv_contents.get(value).cloned()
+    }
+
+    pub fn lookup_redb(&self, value: &V) -> Option<K> {
+        if let Some(table) = &self.read_only_inv_table {
+            return Some((table.get(value).ok()??.value() as usize).into());
+        }
+        None
+    }
+
+    pub fn get_redb(&self, key: K) -> Option<V> {
+        let index: usize = key.into();
+        if let Some(table) = &self.read_only_table {
+            return Some(table.get(index as u64).unwrap().unwrap().value());
+        }
+        None
     }
 }
 
@@ -151,6 +189,11 @@ where
     type Output = V;
     fn index(&self, key: K) -> &Self::Output {
         let index: usize = key.into();
+
+        // if let Some(table) = &self.read_only_table {
+        //     return &table.get(index as u64).unwrap().unwrap().value();
+        // }
+
         &self.contents[index]
     }
 }
