@@ -11,3 +11,4 @@ queries/corpus_queries.dl
 *.swp
 *.bincode
 heaptracks-top250
+heaptracks-top500
