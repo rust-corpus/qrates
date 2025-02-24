@@ -6,6 +6,7 @@ mod data_structures;
 mod storage;
 
 pub use self::data_structures::InterningTable;
+pub use self::data_structures::RelationMap;
 
 #[cfg(test)]
 mod tests {

@@ -126,6 +126,21 @@ impl Parse for ast::RelationParameter {
     }
 }
 
+impl Parse for ast::RelationInternKey {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        // parse "intern key <ident>"
+        input.parse::<kw::intern>()?;
+        input.parse::<kw::key>()?;
+        let source: syn::Ident = input.parse()?;
+
+        Ok(Self {
+            source,
+            source_idx: 0,
+        })
+
+    }
+}
+
 /// A helper struct for parsing the relation key.
 #[derive(PartialEq, Eq)]
 enum RelationKey {
@@ -198,6 +213,7 @@ impl Parse for ast::Relation {
             .into_pairs()
             .map(|pair| pair.into_value())
             .collect();
+        let intern_key = input.parse::<ast::RelationInternKey>().ok();
         input.parse::<Token![;]>()?;
         if parsed_key != RelationKey::None
             && parameters
@@ -233,10 +249,21 @@ impl Parse for ast::Relation {
                 }),
             },
         };
+        let intern_key = intern_key.map(|key| {
+            let source_idx = parameters
+                .iter()
+                .position(|parameter| parameter.name == key.source)
+                .unwrap();
+            ast::RelationInternKey {
+                source: key.source,
+                source_idx,
+            }
+        });
         Ok(Self {
             name,
             parameters,
             key,
+            intern_key,
         })
     }
 }

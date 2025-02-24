@@ -4,13 +4,15 @@
 
 //! Helper functions for serializing and deserializing.
 
-use crate::data_structures::{InterningTable, InterningTableKey, InterningTableValue, Relation};
+use crate::data_structures::{InterningTable, InterningTableKey, InterningTableValue, Relation, RelationMap, RelationMapKey, RelationMapValue};
 use crate::tables::Tables;
 use anyhow::{Context, Result};
 use log::trace;
 use redb::TableDefinition;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::borrow::Borrow;
+use std::collections::HashMap;
 use std::io::{BufReader, Read, Write};
 use std::path::Path;
 
@@ -337,6 +339,48 @@ where
         self.db = Some(db);
         self.read_only_table = Some(table);
         self.read_only_inv_table = Some(inv_table);
+    }
+}
+
+impl<K, V> RelationMap<K, V>
+where K: RelationMapKey,
+V: RelationMapValue,
+for<'a>&'a K: Borrow<<K as redb::Value>::SelfType<'a>>
+{
+    pub fn save(&self, relation_hash: u64, path: std::path::PathBuf) {
+        self.save_to_redb(relation_hash, path);
+    }
+
+    fn save_to_redb(&self, relation_hash: u64, mut path: std::path::PathBuf) {
+        path.set_extension("redb");
+        let db = redb::Database::create(path).unwrap();
+        let mut write_txn = db.begin_write().unwrap();
+        let table_name = relation_hash.to_string();
+        let table_definition = TableDefinition::<K, V>::new(&table_name);
+        {
+            let mut table = write_txn.open_table(table_definition).unwrap();
+            for (k, v) in self.contents.iter() {
+                table.insert(k, v).unwrap();
+            }
+        }
+        write_txn.commit().unwrap();
+    }
+
+    pub fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
+        let mut table: RelationMap<K, V> = HashMap::new().into();
+        table.load_redb(expected_relation_hash, path);
+        Ok(table)
+    }
+
+    fn load_redb(&mut self, relation_hash: u64, mut path: std::path::PathBuf) {
+        path.set_extension("redb");
+        let db = redb::Database::open(path).unwrap();
+        let read_txn = db.begin_read().unwrap();
+        let table_name = relation_hash.to_string();
+        let table_definition = TableDefinition::<K, V>::new(&table_name);
+        let table = read_txn.open_table(table_definition).unwrap();
+        self.db = Some(db);
+        self.read_only_table = Some(table);
     }
 }
 

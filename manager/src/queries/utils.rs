@@ -1,4 +1,4 @@
-use corpus_database::InterningTable;
+use corpus_database::{InterningTable, RelationMap};
 use corpus_database::{tables::Loader, types};
 use itertools::Itertools;
 use std::cell::Ref;
@@ -134,41 +134,50 @@ impl<'b> DefPathResolver<'b> {
 /// A helper struct for converting an interned `span` into human readable
 /// tuple of strings.
 pub struct SpanResolver<'b> {
-    spans: HashMap<
+    // spans: HashMap<
+    //     types::Span,
+    //     (
+    //         types::SpanExpansionKind,
+    //         types::InternedString,
+    //         types::SpanFileName,
+    //         u16,
+    //         u16,
+    //     ),
+    // >,
+    spans: Ref<'b, RelationMap<types::Span, (
         types::Span,
-        (
-            types::SpanExpansionKind,
-            types::InternedString,
-            types::SpanFileName,
-            u16,
-            u16,
-        ),
-    >,
+        types::SpanExpansionKind,
+        types::InternedString,
+        types::SpanFileName,
+        u16,
+        u16,)>>,
     span_file_names: Ref<'b, InterningTable<types::SpanFileName, types::InternedString>>,
     strings: Ref<'b, InterningTable<types::InternedString, String>>,
 }
 
 impl<'b> SpanResolver<'b> {
     pub fn new(loader: &'b Loader) -> Self {
-        let spans = loader
-            .load_iter_spans()
-            .map(
-                |(
-                    span,
-                    _call_site_span,
-                    expansion_kind,
-                    expansion_kind_descr,
-                    file_name,
-                    line,
-                    col,
-                )| {
-                    (
-                        span,
-                        (expansion_kind, expansion_kind_descr, file_name, line, col),
-                    )
-                },
-            )
-            .collect();
+        let spans = loader.load_spans_redb_map();
+
+        // let spans = loader
+        //     .load_iter_spans()
+        //     .map(
+        //         |(
+        //             span,
+        //             _call_site_span,
+        //             expansion_kind,
+        //             expansion_kind_descr,
+        //             file_name,
+        //             line,
+        //             col,
+        //         )| {
+        //             (
+        //                 span,
+        //                 (expansion_kind, expansion_kind_descr, file_name, line, col),
+        //             )
+        //         },
+        //     )
+        //     .collect();
         Self {
             spans,
             span_file_names: loader.load_span_file_names(),
@@ -176,7 +185,7 @@ impl<'b> SpanResolver<'b> {
         }
     }
     pub fn resolve(&self, span: types::Span) -> (types::Span, String, String, String, u16, u16) {
-        let (expansion_kind, expansion_kind_descr, file_name, line, col) = self.spans[&span];
+        let (_parent, expansion_kind, expansion_kind_descr, file_name, line, col) = self.spans.r(span);
         (
             span,
             format!("{:?}", expansion_kind),
@@ -187,7 +196,7 @@ impl<'b> SpanResolver<'b> {
         )
     }
     pub fn get_expansion_kind(&self, span: types::Span) -> types::SpanExpansionKind {
-        let (expansion_kind, _expansion_kind_descr, _file_name, _line, _col) = self.spans[&span];
+        let (_parent, expansion_kind, _expansion_kind_descr, _file_name, _line, _col) = self.spans.r(span);
         expansion_kind
     }
 }

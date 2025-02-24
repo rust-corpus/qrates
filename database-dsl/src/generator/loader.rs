@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use super::utils::is_copy_type;
 use crate::ast;
 use proc_macro2::{Span, TokenStream};
@@ -12,6 +14,7 @@ pub(super) fn generate_loader_functions(
         let ast::Relation {
             ref name,
             ref parameters,
+            ref intern_key,
             ..
         } = relation;
         let relation_hash = relation.get_hash();
@@ -61,13 +64,14 @@ pub(super) fn generate_loader_functions(
                 //unsafe { relation.save(#relation_hash, self.database_root.join(#file_name)); }
                 //*self.#name.borrow_mut() = Some(relation.into());
 
-                unsafe { 
-                    save_elts_relation::<(#types)>(
-                        facts,
-                        #relation_hash,
-                        self.database_root.join(#file_name)
-                    );
-                }
+                // unsafe { 
+                //     save_elts_relation::<(#types)>(
+                //         facts,
+                //         #relation_hash,
+                //         self.database_root.join(#file_name)
+                //     );
+                // }
+                self.#store_iter_fn_name(facts.into_iter());
             }
             pub fn #store_iter_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
                 //assert!(self.#name.borrow().is_none());
@@ -93,6 +97,59 @@ pub(super) fn generate_loader_functions(
             function_tokens.extend(quote! {
                 pub fn #load_fn_name_as_map(&self) -> std::collections::HashMap<#key, #value> {
                     self.#load_fn_name().iter().copied().collect()
+                }
+            });
+        }
+
+        // If we have an intern key specified, also generate an "RelationMap"
+        if let Some(intern_key) = intern_key {
+            let ast::RelationInternKey { source, source_idx } = intern_key;
+            let key = &parameters[*source_idx].typ;
+            let value = intern_key.get_value_type(&parameters);
+
+
+            let intern_table_name = syn::Ident::new(&format!("{}_redb_map", name), Span::call_site());
+            let intern_table_hash = relation_hash;
+            let intern_table_file_name = format!("relations/{}", name);
+            let load_intern_table_fn_name =
+                syn::Ident::new(&format!("load_{}", intern_table_name), Span::call_site());
+            cache_field_tokens.extend(quote! {
+                #intern_table_name: std::cell::RefCell<Option<RelationMap<#key, #value>>>,
+            });
+            function_tokens.extend(quote! {
+                pub fn #load_intern_table_fn_name(&self) -> std::cell::Ref<RelationMap<#key, #value>> {
+                    if self.#intern_table_name.borrow().is_none() {
+                        *self.#intern_table_name.borrow_mut() = Some(unsafe {
+                            RelationMap::load(
+                                #intern_table_hash,
+                                self.database_root.join(#intern_table_file_name)
+                            )
+                        }.unwrap());
+                    }
+                    std::cell::Ref::map(self.#intern_table_name.borrow(), |option| option.as_ref().unwrap())
+                }
+            });
+
+            let source_idx_str = TokenStream::from_str(&format!("{}", source_idx)).unwrap();
+
+            let non_source_idxs: Vec<TokenStream> = (0..parameters.len())
+                .filter(|idx| *idx != *source_idx)
+                .map(|idx| {
+                    TokenStream::from_str(&format!("{idx}")).unwrap()
+                })
+                .collect();
+
+            // also create a storer function for the intern table
+            let store_intern_table_fn_name =
+                syn::Ident::new(&format!("store_{}", intern_table_name), Span::call_site());
+            function_tokens.extend(quote! {
+                pub fn #store_intern_table_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
+                    // create an intern table and store that
+                    let facts_mapped: HashMap<#key, #value> = facts.into_iter().map(|fact| {
+                        (fact.#source_idx_str, (#(fact.#non_source_idxs),*))
+                    }).collect();
+                    let intern_table: RelationMap<#key, #value> = facts_mapped.into();
+                    intern_table.save(#intern_table_hash, self.database_root.join(#intern_table_file_name));
                 }
             });
         }

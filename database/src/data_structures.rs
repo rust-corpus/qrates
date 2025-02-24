@@ -7,7 +7,7 @@
 use log::info;
 use redb::{ReadableTable, TableDefinition};
 use serde_derive::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{borrow::Borrow, collections::HashMap};
 
 use crate::storage::Hack;
 
@@ -47,6 +47,63 @@ impl<T> Into<Vec<T>> for Relation<T> {
 impl<T> From<Vec<T>> for Relation<T> {
     fn from(facts: Vec<T>) -> Self {
         Self { facts }
+    }
+}
+
+pub trait RelationMapKey: Eq + std::hash::Hash + redb::Key + 'static {}
+impl<T> RelationMapKey for T where T: Eq + std::hash::Hash + redb::Key + 'static {}
+pub trait RelationMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
+impl<T> RelationMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
+
+pub struct RelationMap<K, V>
+where K: RelationMapKey,
+        V: RelationMapValue,
+{
+    pub(crate) contents: HashMap<K, V>,
+    pub(crate) db: Option<redb::Database>,
+    pub(crate) read_only_table: Option<redb::ReadOnlyTable<K, V>>,
+}
+
+impl<K, V> Default for RelationMap<K, V>
+where K: RelationMapKey,
+        V: RelationMapValue,
+{
+    fn default() -> Self {
+        Self {
+            contents: HashMap::new(),
+            db: None,
+            read_only_table: None,
+        }
+    }
+}
+
+impl<K, V> From<HashMap<K, V>> for RelationMap<K, V>
+where K: RelationMapKey,
+        V: RelationMapValue,
+{
+    fn from(contents: HashMap<K, V>) -> Self {
+        Self {
+            contents,
+            db: None,
+            read_only_table: None,
+        }
+    }
+}
+
+impl<K, V> RelationMap<K, V>
+where K: RelationMapKey,
+        V: RelationMapValue,
+        for<'a> &'a K: Borrow<<K as redb::Value>::SelfType<'a>>
+{
+    pub fn get_redb(&self, key: K) -> Option<V> {
+        if let Some(table) = &self.read_only_table {
+            return Some(table.get(&key).unwrap().unwrap().value());
+        }
+        None
+    }
+
+    pub fn r(&self, key: K) -> V {
+        self.get_redb(key).unwrap()
     }
 }
 

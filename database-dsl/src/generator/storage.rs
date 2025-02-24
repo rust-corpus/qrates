@@ -1,6 +1,8 @@
+use std::str::FromStr;
+
 use super::utils::is_copy_type;
 use crate::ast;
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
 
 pub(super) fn generate_load_save_functions(schema: &ast::DatabaseSchema) -> TokenStream {
@@ -81,6 +83,36 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
         store_fields.extend(quote! {
             unsafe { relations.#name.save(#relation_hash, path.join(#file_name)) }
         });
+        if let Some(intern_key@ast::RelationInternKey { source, source_idx }) = &relation.intern_key {
+            // save by into_iter the relations vec
+
+            let key = &relation.parameters[*source_idx].typ;
+            let value = intern_key.get_value_type(&relation.parameters);
+
+            let intern_table_name = syn::Ident::new(&format!("{}_redb_map", name), Span::call_site());
+            let intern_table_hash = relation_hash;
+            let intern_table_file_name = format!("{}", name);
+
+
+            let source_idx_str = TokenStream::from_str(&format!("{}", source_idx)).unwrap();
+
+            let non_source_idxs: Vec<TokenStream> = (0..relation.parameters.len())
+                .filter(|idx| *idx != *source_idx)
+                .map(|idx| {
+                    TokenStream::from_str(&format!("{idx}")).unwrap()
+                })
+                .collect();
+
+            store_fields.extend(quote! {
+                {
+                    let facts_mapped: HashMap<#key, #value> = relations.#name.iter().map(|fact| {
+                        (fact.#source_idx_str, (#(fact.#non_source_idxs),*))
+                    }).collect();
+                    let intern_table: RelationMap<#key, #value> = facts_mapped.into();
+                    intern_table.save(#intern_table_hash, path.join(#intern_table_file_name));
+                }
+            });
+        }
     }
     quote! {
         fn store_multifile_relations(

@@ -586,7 +586,7 @@ relation spans(
     file_name: SpanFileName,
     line: u16,
     col: u16,
-);
+) intern key span;
 /// Additional information about a span that was created by a macro expansion.
 relation macro_expansions(
     span: Span,
