@@ -36,6 +36,7 @@ pub fn generate_definition(dest_path: &Path, schema: ast::DatabaseSchema) {
     let mut file = File::create(dest_path).unwrap();
     
     // rustfmt first
+    // TODO: better way than this?
     let tokens = tokens.to_string();
     let mut child = std::process::Command::new("rustfmt")
         .stdin(std::process::Stdio::piped())

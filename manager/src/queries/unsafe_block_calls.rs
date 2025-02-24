@@ -132,7 +132,8 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
     let span_resolver = SpanResolver::new(loader);
 
     let def_paths = loader.load_def_paths();
-    let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_as_map();
+    let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_redb_map();
+    // let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_as_map();
     let crate_names = loader.load_crate_names();
     let relative_def_paths = loader.load_relative_def_paths();
     let strings = loader.load_strings();
@@ -143,30 +144,36 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
         .map(|(_trait_id, def_path, _defaultness)| def_path)
         .collect();
     let summary_keys = loader.load_summary_keys();
-    let unsafe_thir_block_calls = loader.load_unsafe_thir_block_calls();
+    let unsafe_thir_block_calls = loader.load_iter_unsafe_thir_block_calls();
 
-    let thir_block_to_span: HashMap<_, _> = loader
-        .load_iter_thir_blocks()
-        .map(|(_parent, block, _safety, _check_mode, span)| (block, span))
-        .collect();
+    // let thir_block_to_span: HashMap<_, _> = loader
+    //     .load_iter_thir_blocks()
+    //     .map(|(_parent, block, _safety, _check_mode, span)| (block, span))
+    //     .collect();
 
-    let unsafe_thir_block_calls = unsafe_thir_block_calls.iter().map(
-        |&(build, block, check_mode, call, fun, unsafety, abi, _return_ty)| {
+    let thir_block_map = loader.load_thir_blocks_redb_map();
+    let thir_block_to_span = |block| {
+        let (_parent, _, _, span) = thir_block_map.get_redb(block).unwrap();
+        span
+    };
+
+    let unsafe_thir_block_calls = unsafe_thir_block_calls.map(
+        |(build, block, check_mode, call, fun, unsafety, abi, _return_ty)| {
             let (
                 target_crate_name,
                 target_crate_hash,
                 call_target_def_path,
                 call_target,
                 is_trait_item,
-            ) = if let Some(target) = fun_to_const_target_map.get(&fun) {
+            ) = if let Some(target) = fun_to_const_target_map.get_redb(fun) {
                 let (crate_name, crate_hash, relative_def_path, _def_path_hash, summary_key) =
-                    def_paths.r(*target);
+                    def_paths.r(target);
                 (
                     strings.r(crate_names.r(crate_name)),
                     format!("{:x}", crate_hash),
                     strings.r(relative_def_paths.r(relative_def_path)),
                     strings.r(summary_keys.r(summary_key)),
-                    trait_items.contains(target),
+                    trait_items.contains(&target),
                 )
             } else {
                 (
@@ -181,7 +188,7 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
                 build,
                 build_resolver.resolve(build),
                 block,
-                span_resolver.resolve(thir_block_to_span[&block]),
+                span_resolver.resolve(thir_block_to_span(block)),
                 check_mode.to_string(),
                 call,
                 unsafety.to_string(),
@@ -200,7 +207,8 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
 /// Report information about all thir calls in our codebase.
 fn new_report_all_calls(loader: &Loader, report_path: &Path) {
     let def_paths = loader.load_def_paths();
-    let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_as_map();
+    let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_redb_map();
+    // let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_as_map();
     let strings = loader.load_strings();
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
@@ -210,17 +218,17 @@ fn new_report_all_calls(loader: &Loader, report_path: &Path) {
         .collect();
     let summary_keys = loader.load_summary_keys();
 
-    let all_calls = loader.load_thir_exprs_call();
-    let all_thir_calls = all_calls.iter().map(
-        |&(call, _fun_type, fun, unsafety, abi, _return_ty)| {
+    let all_calls = loader.load_iter_thir_exprs_call();
+    let all_thir_calls = all_calls.map(
+        |(call, _fun_type, fun, unsafety, abi, _return_ty)| {
             let (call_target, is_trait_item) = if let Some(target) =
-                fun_to_const_target_map.get(&fun)
+                fun_to_const_target_map.get_redb(fun)
             {
                 let (_crate_name, _crate_hash, _relative_def_path, _def_path_hash, summary_key) =
-                    def_paths.r(*target);
+                    def_paths.r(target);
                 (
                     strings.r(summary_keys.r(summary_key)),
-                    trait_items.contains(target),
+                    trait_items.contains(&target),
                 )
             } else {
                 ("non-const".into(), false)

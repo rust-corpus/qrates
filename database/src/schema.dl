@@ -466,7 +466,7 @@ intern thir_unary_op_kind<InternedString as ThirUnOp<u8>>;
 
 // Relations.
 
-relation def_path_span(def_path: DefPath, span: Span);
+relation def_path_span(def_path: DefPath, span: Span) intern key def_path;
 relation type_description(ty: Type, description: InternedString, generics: InternedString);
 /// The crate types associated with the build.
 relation build_crate_types(build: Build, crate_type: InternedString);
@@ -497,7 +497,7 @@ relation thir_stmts_expr(stmt: auto ThirStmt, expr: ThirExpr);
 relation thir_stmts_let(stmt: auto ThirStmt, initializer: ThirExpr, else_block: ThirBlock, span: Span);
 
 // link a block's expression to its parent block
-relation thir_block_expr(block: ThirBlock, expr: ThirExpr);
+relation thir_block_expr(block: ThirBlock, expr: ThirExpr) intern key expr;
 
 // thir expressions
 relation thir_exprs(expr: ThirExpr, block: ThirBlock, closest_unsafe_block: ThirBlock, ty: Type, span: Span);
@@ -609,9 +609,9 @@ relation type_defs(item: auto Item, typ: Type, def_path: DefPath, name: Interned
 ///
 /// **Note:** the fact that `typ` refers to a monomorphized type means that
 /// DefId in many cases is not a key (DefId + substitutions is a key).
-relation types(typ: auto Type, kind: TyKind);
+relation types(typ: auto Type, kind: TyKind) intern key typ;
 relation types_primitive(typ: Type, primitive_kind: TyPrimitive);
-relation types_adt_def(typ: Type, def_path: DefPath, kind: AdtKind, c_repr: bool, is_phantom: bool);
+relation types_adt_def(typ: Type, def_path: DefPath, kind: AdtKind, c_repr: bool, is_phantom: bool) intern key typ;
 relation types_adt_variant(adt: Type, index: AdtVariantIndex, def_path: DefPath, ident: InternedString);
 relation types_adt_field(field: auto Field, adt: Type, index: AdtVariantIndex, def_path: DefPath, ident: InternedString, visibility: TyVisibility, typ: Type);
 /// The given field is visible only in the given module and its children.

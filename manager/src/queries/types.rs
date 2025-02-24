@@ -15,7 +15,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let strings = loader.load_strings();
     let type_defs = loader.load_type_defs();
     let type_kinds = loader.load_type_kinds();
-    let types: HashMap<_, _> = loader.load_iter_types().collect();
+    let types = loader.load_types_redb_map();
+    // let types: HashMap<_, _> = loader.load_iter_types().collect();
 
     info!(
         "Number of all type definitions (type_defs): {}",
@@ -34,7 +35,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 def_path,
                 name,
                 visibility,
-                types[&typ],
+                types.r(typ),
                 kind,
             )
         },
@@ -60,20 +61,22 @@ pub fn query(loader: &Loader, report_path: &Path) {
     );
     write_csv!(report_path, selected_type_defs);
 
-    let adts: HashMap<_, _> = loader
-        .load_types_adt_def()
-        .iter()
-        .map(|&(typ, def_path, kind, c_repr, is_phantom)| {
-            (typ, (def_path, kind, c_repr, is_phantom))
-        })
-        .collect();
+    // let adts: HashMap<_, _> = loader
+    //     .load_types_adt_def()
+    //     .iter()
+    //     .map(|&(typ, def_path, kind, c_repr, is_phantom)| {
+    //         (typ, (def_path, kind, c_repr, is_phantom))
+    //     })
+    //     .collect();
+
+    let adts = loader.load_types_adt_def_redb_map();
 
     let selected_adts_relation: Vec<_> = selected_type_defs_relation
         .iter()
         .flat_map(
             |&(build, item, typ, def_path, name, visibility, type_kind, def_kind)| {
-                adts.get(&typ)
-                    .map(|&(resolved_def_path, kind, c_repr, is_phantom)| {
+                adts.get_redb(typ)
+                    .map(|(resolved_def_path, kind, c_repr, is_phantom)| {
                         (
                             build,
                             item,
@@ -208,7 +211,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
                             field_name,
                             field_visibility,
                             field_type,
-                            types[&field_type],
+                            types.r(field_type),
                         )
                     },
                 )

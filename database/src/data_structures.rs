@@ -95,13 +95,15 @@ where K: RelationMapKey,
         V: RelationMapValue,
         for<'a> &'a K: Borrow<<K as redb::Value>::SelfType<'a>>
 {
+    #[track_caller]
     pub fn get_redb(&self, key: K) -> Option<V> {
         if let Some(table) = &self.read_only_table {
-            return Some(table.get(&key).unwrap().unwrap().value());
+            return Some(table.get(&key).ok()??.value());
         }
         None
     }
 
+    #[track_caller]
     pub fn r(&self, key: K) -> V {
         self.get_redb(key).unwrap()
     }
@@ -234,7 +236,7 @@ where
     pub fn get_redb(&self, key: K) -> Option<V> {
         let index: usize = key.into();
         if let Some(table) = &self.read_only_table {
-            return Some(table.get(index as u64).unwrap().unwrap().value());
+            return Some(table.get(index as u64).ok()??.value());
         }
         None
     }
