@@ -35,10 +35,10 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
         .load_summary_keys()
         .lookup(&unsafe_cell_summary_key)
         .unwrap();
-    let unsafe_cell_types_relation: Vec<_> = loader
-        .load_types_adt_def()
-        .iter()
-        .flat_map(|&(typ, def_path, _, _, _)| {
+    let get_unsafe_cell_types_relation = || {
+        loader
+        .load_iter_types_adt_def()
+        .flat_map(|(typ, def_path, _, _, _)| {
             let (_, _, _, _, def_path_summary) = def_paths.r(def_path);
             if def_path_summary == unsafe_cell_summary_id {
                 Some((typ, def_path))
@@ -46,17 +46,29 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
                 None
             }
         })
-        .collect();
+    };
+
+    // let unsafe_cell_types_relation: Vec<_> = loader
+    //     .load_types_adt_def()
+    //     .iter()
+    //     .flat_map(|&(typ, def_path, _, _, _)| {
+    //         let (_, _, _, _, def_path_summary) = def_paths.r(def_path);
+    //         if def_path_summary == unsafe_cell_summary_id {
+    //             Some((typ, def_path))
+    //         } else {
+    //             None
+    //         }
+    //     }).collect();
+    // TODO: inefficient .count()
     info!(
         "Number of UnsafeCell types: {}",
-        unsafe_cell_types_relation.len()
+        get_unsafe_cell_types_relation().count()
     );
     let def_path_resolver = DefPathResolver::new(loader);
-    let unsafe_cell_types = unsafe_cell_types_relation
-        .iter()
-        .map(|&(typ, def_path)| (typ, def_path_resolver.resolve(def_path)));
+    let unsafe_cell_types = get_unsafe_cell_types_relation()
+        .map(|(typ, def_path)| (typ, def_path_resolver.resolve(def_path)));
     write_csv!(report_path, unsafe_cell_types);
-    loader.store_types_unsafe_cell(unsafe_cell_types_relation);
+    loader.store_iter_types_unsafe_cell(get_unsafe_cell_types_relation());
 }
 
 fn collect_union_types(loader: &Loader) {
@@ -77,6 +89,8 @@ fn collect_union_types(loader: &Loader) {
 
 fn collect_unsafe_types(loader: &Loader) {
     let public_visibility = vec![(types::TyVisibility::Public,)];
+
+    // TODO: rewrite without datafrog?
 
     let unsafe_types;
     datapond_query! {
