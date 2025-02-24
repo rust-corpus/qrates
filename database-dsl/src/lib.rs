@@ -34,7 +34,20 @@ pub fn parse_schema(core_schema_path: &Path, derived_relations_path: &Path) -> a
 pub fn generate_definition(dest_path: &Path, schema: ast::DatabaseSchema) {
     let tokens = generator::generate_tokens(schema);
     let mut file = File::create(dest_path).unwrap();
-    file.write_all(tokens.to_string().as_bytes()).unwrap();
+    
+    // rustfmt first
+    let tokens = tokens.to_string();
+    let mut child = std::process::Command::new("rustfmt")
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    child.stdin.as_mut().unwrap().write_all(tokens.as_bytes()).unwrap();
+    let output = child.wait_with_output().unwrap();
+    let bytes = output.stdout;
+
+    file.write_all(&bytes).unwrap();
+    // file.write_all(tokens.to_string().as_bytes()).unwrap();
 }
 
 pub fn generate_query(schema: ast::DatabaseSchema, input: TokenStream) -> TokenStream {

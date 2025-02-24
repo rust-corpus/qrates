@@ -57,6 +57,9 @@ pub(super) fn generate_loader_functions(
                 }
                 std::cell::Ref::map(self.#name.borrow(), |option| option.as_ref().unwrap())
             }
+            // TODO: when we're storing a relation that has a RelationMap, we should also store the corresponding relation map.
+            // ^^ well, if we can completely deprecate using _both_ relationmaps and relations for any given relation, then this is not an issue.
+            // ^^  also, we panic if we ever try to load a relationmap that does not exist. so we would catch this.
             // pub fn #store_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
             pub fn #store_fn_name(&self, facts: Vec<(#types)>) {
                 //assert!(self.#name.borrow().is_none());

@@ -487,7 +487,7 @@ relation function_unsafe_reasons(def_path: DefPath, index: u32, reason: Interned
 /// THIR body expressions
 relation thir_bodies(item: Item, def_path: DefPath, body: auto ThirBlock);
 /// THIR-level block information
-relation thir_blocks(parent: ThirBlock, block: auto ThirBlock, safety: ScopeSafety, check_mode: BlockCheckMode, span: Span);
+relation thir_blocks(parent: ThirBlock, block: auto ThirBlock, safety: ScopeSafety, check_mode: BlockCheckMode, span: Span) intern key block;
 
 // thir stmts
 // The closest unsafe block is the closest outer block that is unsafe. This should be used to
@@ -507,7 +507,7 @@ relation thir_exprs_if(expr: auto ThirExpr, cond: ThirExpr, then_expr: ThirExpr,
 
 relation thir_exprs_call(expr: auto ThirExpr, ty: Type, fun: ThirExpr, unsafety: Safety, abi: Abi, return_ty: Type);
 relation thir_exprs_call_arg(call: ThirExpr, index: ThirCallArgIndex, arg: ThirExpr);
-relation thir_exprs_call_const_target(fun: ThirExpr, def_id: DefPath);
+relation thir_exprs_call_const_target(fun: ThirExpr, def_id: DefPath) intern key fun;
 relation thir_exprs_call_const_target_desc(fun: ThirExpr, target: InternedString, function_generics: InternedString, type_generics: InternedString);
 relation thir_exprs_call_const_target_self(fun: ThirExpr, typ: Type);
 
