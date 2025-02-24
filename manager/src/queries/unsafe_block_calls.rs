@@ -146,9 +146,8 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
     let unsafe_thir_block_calls = loader.load_unsafe_thir_block_calls();
 
     let thir_block_to_span: HashMap<_, _> = loader
-        .load_thir_blocks()
-        .iter()
-        .map(|&(_parent, block, _safety, _check_mode, span)| (block, span))
+        .load_iter_thir_blocks()
+        .map(|(_parent, block, _safety, _check_mode, span)| (block, span))
         .collect();
 
     let unsafe_thir_block_calls = unsafe_thir_block_calls.iter().map(
