@@ -108,6 +108,7 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
         pub mod tables {
             use std::path::{Path, PathBuf};
             use std::collections::HashMap;
+            use std::ops::Deref;
             use anyhow::Result;
             use serde_derive::{Deserialize, Serialize};
             use super::types::*;

@@ -185,6 +185,15 @@ where
     pub fn r(&self, key: K) -> V {
         self.get_redb(key).unwrap()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = (K, V)> + '_ {
+        let rot = self.read_only_table.as_ref().unwrap();
+
+        rot.iter().unwrap().map(|res| {
+            let (k, v) = res.unwrap();
+            ((k.value() as usize).into(), v.value())
+        })    
+    }
 }
 
 // impl<K, V> std::ops::Index<K> for InterningTable<K, V>
@@ -204,23 +213,12 @@ where
 //     }
 // }
 
-impl<K, V> Into<Vec<(K, V)>> for InterningTable<K, V>
+impl<K, V> Into<Vec<(K, V)>> for &InterningTable<K, V>
 where
     K: InterningTableKey,
     V: InterningTableValue,
 {
     fn into(self) -> Vec<(K, V)> {
-        // info!("Into<Vec<(K, V)>>");
-
-        // load all key value pairs
-        let rot = self.read_only_table.unwrap();
-        let mut result = Vec::new();
-        for res  in rot.iter().unwrap() {
-            let (k, v) = res.unwrap();
-            // let k = k as usize as K;
-            // let v = v.value();
-            result.push(((k.value() as usize).into(), v.value()));
-        }
-        result
+        self.iter().collect()
     }
 }

@@ -156,8 +156,8 @@ pub(super) fn generate_loader_functions(
                 std::cell::Ref::map(self.#name.borrow(), |option| option.as_ref().unwrap())
             }
             pub fn #fn_name_as_vec(&self) -> Vec<(#types)> {
-                let table: InterningTable<#key_type, #value> = #load;
-                table.into()
+                let table = self.#fn_name();
+                table.deref().into()
             }
         });
     }

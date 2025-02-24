@@ -35,13 +35,13 @@ pub(super) fn generate_interning_tables(schema: &ast::DatabaseSchema) -> TokenSt
             #type_arg: crate::data_structures::InterningTableValue,
         });
         conversions.extend(quote! {
-            impl<K, #type_args> Into<Vec<(K, #type_args)>> for InterningTable<K, (#type_args)>
+            impl<K, #type_args> Into<Vec<(K, #type_args)>> for &InterningTable<K, (#type_args)>
                 where
                     K: crate::data_structures::InterningTableKey,
                     #type_constraints
             {
                 fn into(self) -> Vec<(K, #type_args)> {
-                    let contents: Vec<(K, (#type_args))> = self.into();
+                    let contents: Vec<(K, (#type_args))> = self.iter().collect();
                     contents.into_iter().map(|(i, (#args))| {
                         (i, #args)
                     }).collect()
