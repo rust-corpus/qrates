@@ -257,6 +257,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
 pub fn new_query(loader: &Loader, report_path: &Path) {
     let selected_thir_blocks;
 
+    // TODO: optimize away transitive closure somehow?
     datapond_query!(
         load loader {
             relations(selected_thir_bodies, thir_blocks),
@@ -332,39 +333,71 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
     let unsafe_thir_blocks_relation = loader.load_unsafe_thir_blocks();
 
     // unsafe thir statements
-    let thir_statements = loader.load_thir_stmts();
-    let unsafe_thir_statements: Vec<_> = thir_statements
-        .iter()
-        .flat_map(|&(stmt, _block, closest_unsafe_block, index)| {
-            unsafe_thir_blocks_relation
-                .iter()
-                .filter(
-                    move |&(
-                        build,
-                        _thir_body_def_path,
-                        unsafe_block,
-                        _expansion_kind,
-                        _check_mode,
-                        _span,
-                    )| { *unsafe_block == closest_unsafe_block },
-                )
-                .map(
-                    move |&(
-                        build,
-                        _thir_body_def_path,
-                        _unsafe_block,
-                        _expansion_kind,
-                        check_mode,
-                        span,
-                    )| {
-                        (build, stmt, closest_unsafe_block, index, check_mode)
-                    },
-                )
-        })
-        .collect();
 
-    loader.store_unsafe_thir_stmts(unsafe_thir_statements.clone());
+    let unsafe_thir_statements = || {
+        let thir_statements = loader.load_iter_thir_stmts();
+        thir_statements
+            .flat_map(|(stmt, _block, closest_unsafe_block, index)| {
+                unsafe_thir_blocks_relation
+                    .iter()
+                    .filter(
+                        move |&(
+                            build,
+                            _thir_body_def_path,
+                            unsafe_block,
+                            _expansion_kind,
+                            _check_mode,
+                            _span,
+                        )| { *unsafe_block == closest_unsafe_block },
+                    )
+                    .map(
+                        move |&(
+                            build,
+                            _thir_body_def_path,
+                            _unsafe_block,
+                            _expansion_kind,
+                            check_mode,
+                            span,
+                        )| {
+                            (build, stmt, closest_unsafe_block, index, check_mode)
+                        },
+                    )
+            })
+    };
+
+    // let thir_statements = loader.load_iter_thir_stmts();
+    // let unsafe_thir_statements: Vec<_> = thir_statements
+    //     .flat_map(|(stmt, _block, closest_unsafe_block, index)| {
+    //         unsafe_thir_blocks_relation
+    //             .iter()
+    //             .filter(
+    //                 move |&(
+    //                     build,
+    //                     _thir_body_def_path,
+    //                     unsafe_block,
+    //                     _expansion_kind,
+    //                     _check_mode,
+    //                     _span,
+    //                 )| { *unsafe_block == closest_unsafe_block },
+    //             )
+    //             .map(
+    //                 move |&(
+    //                     build,
+    //                     _thir_body_def_path,
+    //                     _unsafe_block,
+    //                     _expansion_kind,
+    //                     check_mode,
+    //                     span,
+    //                 )| {
+    //                     (build, stmt, closest_unsafe_block, index, check_mode)
+    //                 },
+    //             )
+    //     })
+    //     .collect();
+
+    loader.store_iter_unsafe_thir_stmts(unsafe_thir_statements());
     info!("Saved unsafe thir statements.");
+    let unsafe_thir_statements = unsafe_thir_statements();
     write_csv!(report_path, unsafe_thir_statements);
     info!("Saved unsafe thir statement report.");
 
