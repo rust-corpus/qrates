@@ -12,3 +12,4 @@ queries/corpus_queries.dl
 *.bincode
 heaptracks-top250
 heaptracks-top500
+heaptracks-top2000
