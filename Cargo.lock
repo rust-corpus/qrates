@@ -3956,7 +3956,7 @@ dependencies = [
 [[package]]
 name = "redb"
 version = "2.4.0"
-source = "git+https://github.com/skius/redb.git#ebdcf1452ec5da51ac5f70ebd05c67436accbdda"
+source = "git+https://github.com/skius/redb.git#349a4d9f50e7ecf83cbee5eb818bcc7cee5c6dde"
 dependencies = [
  "libc",
 ]

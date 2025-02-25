@@ -134,15 +134,16 @@ mod redb_key_value_impls {
         }};
     }
     
+    // Using TypeName's Debug impl because .name() is private.
     macro_rules! type_name_impl {
         ( $head:ty $(,$tail:ty)* ) => {
             {
                 let mut result = String::new();
                 result.push_str("qrates_RelationElement<(");
-                result.push_str(&<$head>::type_name().name());
+                result.push_str(&format!("{:?}", <$head>::type_name()));
                 $(
                     result.push(',');
-                    result.push_str(&<$tail>::type_name().name());
+                    result.push_str(&format!("{:?}", <$tail>::type_name()));
                 )*
                 result.push_str(")>");
     
