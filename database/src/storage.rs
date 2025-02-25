@@ -196,6 +196,7 @@ pub unsafe fn load_elts_relation<T: Copy>(expected_relation_hash: u64, mut path:
     
     Ok(std::iter::from_fn(move || {
         // read a T from the file
+        // TODO: obtain buf from raw parts of a Vec<T> to guarantee alignments for T
         let mut buf = vec![0u8; expected_fact_size];
         match buf_reader.read_exact(&mut buf) {
             Ok(()) => {

@@ -310,6 +310,7 @@ fn merge_relations(
                     .#name
                     .insert((#new_params));
             }
+            drop(other.relations.#name);
         });
     }
     tokens.extend(relation_with_target_remap_tokens);
