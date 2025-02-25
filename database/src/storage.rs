@@ -194,10 +194,17 @@ pub unsafe fn load_elts_relation<T: Copy>(expected_relation_hash: u64, mut path:
     let actual_fact_size = u64::from_le_bytes(buf);
     assert_eq!(expected_fact_size, (actual_fact_size as usize));
     
+    let mut donor = Vec::<T>::with_capacity(1);
+
     Ok(std::iter::from_fn(move || {
         // read a T from the file
-        // TODO: obtain buf from raw parts of a Vec<T> to guarantee alignments for T
-        let mut buf = vec![0u8; expected_fact_size];
+        // obtain buf from raw parts of a Vec<T> to guarantee alignments for T
+        let ptr = donor.as_mut_ptr() as *mut u8;
+        let mut buf = unsafe {
+            std::slice::from_raw_parts_mut(ptr, expected_fact_size)
+        };
+
+        // let mut buf = vec![0u8; expected_fact_size];
         match buf_reader.read_exact(&mut buf) {
             Ok(()) => {
                 let elt = unsafe {
