@@ -12,7 +12,7 @@ fn report_build_categories(loader: &Loader, report_path: &Path) {
 
     let categories = loader.load_iter_crate_categories();
     let categories = categories
-        .map(|RE((build, category))| (build, build_resolver.resolve(build), strings.r(category)));
+        .map(|(build, category)| (build, build_resolver.resolve(build), strings.r(category)));
 
     write_csv!(report_path, categories);
 }
@@ -23,7 +23,7 @@ fn report_build_keywords(loader: &Loader, report_path: &Path) {
 
     let keywords = loader.load_iter_crate_keywords();
     let keywords = keywords
-        .map(|RE((build, keyword))| (build, build_resolver.resolve(build), strings.r(keyword)));
+        .map(|(build, keyword)| (build, build_resolver.resolve(build), strings.r(keyword)));
 
     write_csv!(report_path, keywords);
 }
