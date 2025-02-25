@@ -1,5 +1,28 @@
 use std::{fmt::Debug, ops::{Deref, DerefMut}};
 
+pub trait VecOfRelationElementAdapter<T> {
+    fn vec_into_inner(self) -> Vec<T>;
+}
+
+pub trait VecIntoRelationElementAdapter<T> {
+    fn vec_into_relation_vec(self) -> Vec<RelationElement<T>>;
+}
+
+impl<T> VecOfRelationElementAdapter<T> for Vec<RelationElement<T>> {
+    fn vec_into_inner(self) -> Vec<T> {
+        self.into_iter().map(|x| x.into_inner()).collect()
+    }
+
+
+}
+
+impl<T> VecIntoRelationElementAdapter<T> for Vec<T> {
+    fn vec_into_relation_vec(self) -> Vec<RelationElement<T>> {
+        self.into_iter().map(|x| x.into()).collect()
+    }
+}
+
+
 // This is unfortunately needed because we need trait impls for tuples of length > 12.
 #[derive(Copy, Clone)]
 pub struct RelationElement<T>(pub T);
@@ -7,6 +30,10 @@ pub struct RelationElement<T>(pub T);
 impl<T> RelationElement<T> {
     pub fn into_inner(self) -> T {
         self.0
+    }
+
+    pub fn vec_into_inner(vec: Vec<Self>) -> Vec<T> {
+        vec.into_iter().map(|x| x.into_inner()).collect()
     }
 }
 

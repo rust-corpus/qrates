@@ -41,6 +41,12 @@ impl<T> Relation<T> {
     }
 }
 
+impl<T> Relation<RelationElement<T>> {
+    pub fn into_tuple_vec(self) -> Vec<T> {
+        self.facts.into_iter().map(|re| re.into_inner()).collect()
+    }
+}
+
 impl<T> Into<Vec<T>> for Relation<T> {
     fn into(self) -> Vec<T> {
         self.facts

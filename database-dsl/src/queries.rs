@@ -16,6 +16,9 @@ pub(crate) fn generate(schema: ast::DatabaseSchema, input: TokenStream) -> Token
     let tokens = quote! {
         {
             use corpus_database::types::*;
+            use corpus_database::RelationElement;
+            use corpus_database::VecOfRelationElementAdapter;
+            use corpus_database::VecIntoRelationElementAdapter;
             #tokens
         }
     };
@@ -182,7 +185,7 @@ fn load_relations(
         let name = &relation.name;
         let load_fn_name = syn::Ident::new(&format!("load_{}", name), Span::call_site());
         pre_tokens.extend(quote! {
-            let #name = #loader.#load_fn_name().clone();
+            let #name = #loader.#load_fn_name().clone().vec_into_inner();
         });
         let mut args = TokenStream::new();
         for ast::RelationParameter { name, typ, .. } in &relation.parameters {

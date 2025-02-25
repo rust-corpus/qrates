@@ -8,6 +8,8 @@ mod storage;
 pub use self::data_structures::InterningTable;
 pub use self::data_structures::RelationMap;
 pub use self::data_structures::RelationElement;
+pub use self::data_structures::VecOfRelationElementAdapter;
+pub use self::data_structures::VecIntoRelationElementAdapter;
 pub use self::data_structures::DiskMap;
 pub use self::data_structures::DiskVec;
 
