@@ -123,7 +123,7 @@ unsafe fn unsafe_load_vec<T: Copy>(
     Ok(vec)
 }
 
-impl<T: Copy> Relation<T> {
+impl<T: Copy + DiskMapValue> Relation<T> {
     /// This function is safe only when T does not contain references or pointers.
     /// ``relation_hash`` – the hash of the relation schema. It is used to prevent
     /// loading relations that were saved with a different schema.
@@ -218,7 +218,7 @@ pub unsafe fn load_elts_relation<T: Copy>(expected_relation_hash: u64, mut path:
 
 }
 
-pub unsafe fn load_elts_relation_into_relation<T: Copy>(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Relation<T>> {
+pub unsafe fn load_elts_relation_into_relation<T: Copy + DiskMapValue>(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Relation<T>> {
     let iter = unsafe { load_elts_relation(expected_relation_hash, path)? };
     Ok(iter.collect::<Vec<T>>().into())
 }

@@ -25,6 +25,7 @@ impl<T> VecIntoRelationElementAdapter<T> for Vec<T> {
 
 // This is unfortunately needed because we need trait impls for tuples of length > 12.
 #[derive(Copy, Clone)]
+#[repr(transparent)]
 pub struct RelationElement<T>(pub T);
 
 impl<T> RelationElement<T> {
@@ -691,3 +692,191 @@ macro_rules! maybe_tuple_doc {
 
 // up to 25
 tuple! { T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, }
+
+mod eq_impls {
+    use super::RelationElement as RE;
+    // stolen from core/tuple.rs
+
+    use std::cmp::Ordering::{self, *};
+
+    use std::ops::Deref;
+
+    // Recursive macro for implementing n-ary tuple functions and operations
+    //
+    // Also provides implementations for tuples with lesser arity. For example, tuple_impls!(A B C)
+    // will implement everything for (A, B, C), (A, B) and (A,).
+    macro_rules! tuple_impls {
+        // Stopping criteria (1-ary tuple)
+        ($T:ident) => {
+            tuple_impls!(@impl $T);
+        };
+        // Running criteria (n-ary tuple, with n >= 2)
+        ($T:ident $( $U:ident )+) => {
+            tuple_impls!($( $U )+);
+            tuple_impls!(@impl $T $( $U )+);
+        };
+        // "Private" internal implementation
+        (@impl $( $T:ident )+) => {
+                impl<$($T: PartialEq),+> PartialEq for RE<($($T,)+)>
+
+                {
+                    #[inline]
+                    fn eq(&self, other: &RE<($($T,)+)>) -> bool {
+                        $( ${ignore($T)} self.deref().${index()} == other.deref().${index()} )&&+
+                    }
+                    #[inline]
+                    fn ne(&self, other: &RE<($($T,)+)>) -> bool {
+                        $( ${ignore($T)} self.deref().${index()} != other.deref().${index()} )||+
+                    }
+                }
+
+                impl<$($T: Eq),+> Eq for RE<($($T,)+)>
+                {}
+
+                impl<$($T: PartialOrd),+> PartialOrd for RE<($($T,)+)>
+                {
+                    #[inline]
+                    fn partial_cmp(&self, other: &RE<($($T,)+)>) -> Option<Ordering> {
+                        lexical_partial_cmp!($( ${ignore($T)} self.deref().${index()}, other.deref().${index()} ),+)
+                    }
+                    #[inline]
+                    fn lt(&self, other: &RE<($($T,)+)>) -> bool {
+                        lexical_ord!(lt, Less, $( ${ignore($T)} self.deref().${index()}, other.deref().${index()} ),+)
+                    }
+                    #[inline]
+                    fn le(&self, other: &RE<($($T,)+)>) -> bool {
+                        lexical_ord!(le, Less, $( ${ignore($T)} self.deref().${index()}, other.deref().${index()} ),+)
+                    }
+                    #[inline]
+                    fn ge(&self, other:&RE<($($T,)+)>) -> bool {
+                        lexical_ord!(ge, Greater, $( ${ignore($T)} self.deref().${index()}, other.deref().${index()} ),+)
+                    }
+                    #[inline]
+                    fn gt(&self, other: &RE<($($T,)+)>) -> bool {
+                        lexical_ord!(gt, Greater, $( ${ignore($T)} self.deref().${index()}, other.deref().${index()} ),+)
+                    }
+                }
+
+                impl<$($T: Ord),+> Ord for RE<($($T,)+)>
+                {
+                    #[inline]
+                    fn cmp(&self, other: &RE<($($T,)+)>) -> Ordering {
+                        lexical_cmp!($( ${ignore($T)} self.deref().${index()}, other.deref().${index()} ),+)
+                    }
+                }
+
+                impl<$($T: Default),+> Default for RE<($($T,)+)> {
+                    #[inline]
+                    fn default() -> RE<($($T,)+)> {
+                        RE(($({ let x: $T = Default::default(); x},)+))
+                    }
+                }
+
+                impl<T> From<[T; ${count($T)}]> for RE<($(${ignore($T)} T,)+)> {
+                    #[inline]
+                    #[allow(non_snake_case)]
+                    fn from(array: [T; ${count($T)}]) -> Self {
+                        let [$($T,)+] = array;
+                        RE(($($T,)+))
+                    }
+                }
+
+                // impl<T> From<($(${ignore($T)} T,)+)> for [T; ${count($T)}] {
+                //     #[inline]
+                //     #[allow(non_snake_case)]
+                //     fn from(tuple: ($(${ignore($T)} T,)+)) -> Self {
+                //         let ($($T,)+) = tuple;
+                //         [$($T,)+]
+                //     }
+                // }
+        }
+    }
+
+
+    // Constructs an expression that performs a lexical ordering using method `$rel`.
+    // The values are interleaved, so the macro invocation for
+    // `(a1, a2, a3) < (b1, b2, b3)` would be `lexical_ord!(lt, opt_is_lt, a1, b1,
+    // a2, b2, a3, b3)` (and similarly for `lexical_cmp`)
+    //
+    // `$ne_rel` is only used to determine the result after checking that they're
+    // not equal, so `lt` and `le` can both just use `Less`.
+    macro_rules! lexical_ord {
+        ($rel: ident, $ne_rel: ident, $a:expr, $b:expr, $($rest_a:expr, $rest_b:expr),+) => {{
+            let c = PartialOrd::partial_cmp(&$a, &$b);
+            if c != Some(Equal) { c == Some($ne_rel) }
+            else { lexical_ord!($rel, $ne_rel, $($rest_a, $rest_b),+) }
+        }};
+        ($rel: ident, $ne_rel: ident, $a:expr, $b:expr) => {
+            // Use the specific method for the last element
+            PartialOrd::$rel(&$a, &$b)
+        };
+    }
+
+    macro_rules! lexical_partial_cmp {
+        ($a:expr, $b:expr, $($rest_a:expr, $rest_b:expr),+) => {
+            match ($a).partial_cmp(&$b) {
+                Some(Equal) => lexical_partial_cmp!($($rest_a, $rest_b),+),
+                ordering => ordering
+            }
+        };
+        ($a:expr, $b:expr) => { ($a).partial_cmp(&$b) };
+    }
+
+    macro_rules! lexical_cmp {
+        ($a:expr, $b:expr, $($rest_a:expr, $rest_b:expr),+) => {
+            match $a.cmp(&$b) {
+                Equal => lexical_cmp!($($rest_a, $rest_b),+),
+                ordering => ordering
+            }
+        };
+        ($a:expr, $b:expr) => { ($a).cmp(&$b) };
+    }
+
+
+    tuple_impls! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 T20 T21 T22 T23 T24 T25 }
+}
+
+mod hash_impls {
+    use super::RelationElement;
+    use super::RelationElement as RE;
+    // stolen from core/hash/mod.rs
+    use std::ops::Deref;
+    use std::hash::{Hash, Hasher};
+
+    macro_rules! impl_hash_tuple {
+        ( $($name:ident)+) => (
+                impl<$($name: Hash),+> Hash for RE<($($name,)+)> {
+                    #[allow(non_snake_case)]
+                    #[inline]
+                    fn hash<S: Hasher>(&self, state: &mut S) {
+                        let RE(($(ref $name,)+)) = *self;
+                        $($name.hash(state);)+
+                    }
+                }
+        );
+    }
+
+
+    impl_hash_tuple! { T1 }
+    impl_hash_tuple! { T1 T2 }
+    impl_hash_tuple! { T1 T2 T3 }
+    impl_hash_tuple! { T1 T2 T3 T4 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 T20 }
+    impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 T20 T21 }
+
+}

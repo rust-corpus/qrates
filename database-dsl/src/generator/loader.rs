@@ -49,13 +49,13 @@ pub(super) fn generate_loader_functions(
                     // ) }.unwrap();
 
                     let relation = unsafe {
-                        load_elts_relation_into_relation::<#tuple_element_type>(
+                        load_elts_relation_into_relation::<#relation_element_type>(
                             #relation_hash,
                             self.database_root.join(#file_name)
                         )
                     }.unwrap();
 
-                    *self.#name.borrow_mut() = Some(relation.into());
+                    *self.#name.borrow_mut() = Some(relation.into_tuple_vec());
                 }
                 std::cell::Ref::map(self.#name.borrow(), |option| option.as_ref().unwrap())
             }

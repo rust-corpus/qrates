@@ -1,4 +1,6 @@
 #![deny(unsafe_op_in_unsafe_fn)]
+#![feature(macro_metavar_expr)] // for deriving rust eq/ord
+
 
 include!(concat!(env!("OUT_DIR"), "/schema.rs"));
 

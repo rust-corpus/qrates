@@ -16,17 +16,17 @@ pub use relation_element::*;
 
 #[derive(Deserialize, Serialize)]
 /// A table that expresses a relation between elements.
-pub struct Relation<T> {
+pub struct Relation<T: DiskMapValue> {
     pub(crate) facts: Vec<T>,
 }
 
-impl<T> Default for Relation<T> {
+impl<T: DiskMapValue> Default for Relation<T> {
     fn default() -> Self {
         Self { facts: Vec::new() }
     }
 }
 
-impl<T> Relation<T> {
+impl<T: DiskMapValue> Relation<T> {
     pub fn insert(&mut self, fact: T) {
         self.facts.push(fact);
     }
@@ -41,19 +41,30 @@ impl<T> Relation<T> {
     }
 }
 
-impl<T> Relation<RelationElement<T>> {
+impl<T> Relation<RelationElement<T>>
+    where RelationElement<T>: DiskMapValue
+{
     pub fn into_tuple_vec(self) -> Vec<T> {
         self.facts.into_iter().map(|re| re.into_inner()).collect()
     }
 }
 
-impl<T> Into<Vec<T>> for Relation<T> {
+impl<T: DiskMapValue> Into<Vec<T>> for Relation<T> {
     fn into(self) -> Vec<T> {
         self.facts
     }
 }
 
-impl<T> From<Vec<T>> for Relation<T> {
+impl<T: DiskMapValue> Into<Vec<T>> for Relation<RelationElement<T>>
+where RelationElement<T>: DiskMapValue
+{
+    fn into(self) -> Vec<T> {
+        self.into_tuple_vec()
+    }
+}
+
+
+impl<T: DiskMapValue> From<Vec<T>> for Relation<T> {
     fn from(facts: Vec<T>) -> Self {
         Self { facts }
     }
