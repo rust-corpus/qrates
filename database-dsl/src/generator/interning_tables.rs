@@ -34,6 +34,11 @@ pub(super) fn generate_interning_tables(schema: &ast::DatabaseSchema) -> TokenSt
         type_constraints.extend(quote! {
             #type_arg: crate::data_structures::InterningTableValue,
         });
+        if i == 0 {
+            // don't generate for length 1 tuples
+            // TODO: after we switch to diskmap, reenable this
+            continue;
+        }
         conversions.extend(quote! {
             impl<K, #type_args> Into<Vec<(K, #type_args)>> for &InterningTable<K, (#type_args)>
                 where

@@ -1,5 +1,7 @@
 use std::{fmt::Debug, ops::{Deref, DerefMut}};
 
+use serde::{Deserialize, Serialize};
+
 pub trait VecOfRelationElementAdapter<T> {
     fn vec_into_inner(self) -> Vec<T>;
 }
@@ -24,7 +26,7 @@ impl<T> VecIntoRelationElementAdapter<T> for Vec<T> {
 
 
 // This is unfortunately needed because we need trait impls for tuples of length > 12.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Deserialize, Serialize)]
 #[repr(transparent)]
 pub struct RelationElement<T>(pub T);
 

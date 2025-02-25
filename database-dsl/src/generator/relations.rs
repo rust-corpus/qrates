@@ -15,7 +15,7 @@ pub(super) fn generate_relations(schema: &ast::DatabaseSchema) -> TokenStream {
             parameter_tokens.extend(quote! {#typ,});
         }
         fields.extend(quote! {
-            pub #name: Relation<(#parameter_tokens)>,
+            pub #name: Relation<RelationElement<(#parameter_tokens)>>,
         });
     }
     quote! {

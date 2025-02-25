@@ -105,7 +105,7 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
 
             store_fields.extend(quote! {
                 {
-                    let facts_mapped: HashMap<#key, #value> = relations.#name.iter().map(|fact| {
+                    let facts_mapped: HashMap<#key, #value> = relations.#name.iter().map(|RelationElement(fact)| {
                         (fact.#source_idx_str, (#(fact.#non_source_idxs),*))
                     }).collect();
                     let intern_table: RelationMap<#key, #value> = facts_mapped.into();
