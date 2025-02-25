@@ -7,7 +7,7 @@
 use log::info;
 use redb::{ReadOnlyTable, ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde_derive::{Deserialize, Serialize};
-use std::{borrow::Borrow, collections::HashMap};
+use std::{borrow::Borrow, collections::HashMap, fmt::Debug};
 
 use crate::storage::Hack;
 
@@ -285,8 +285,8 @@ where
 
 pub trait DiskMapKey: Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
 impl<T> DiskMapKey for T where T: Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
-pub trait DiskMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static + for<'a> AsRef<<Self as redb::Value>::SelfType<'a>> {}
-impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static + for<'a> AsRef<<Self as redb::Value>::SelfType<'a>> {}
+pub trait DiskMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
+impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
 
 /// DiskMap<K, V> is essentially a HashMap<K, V> that is backed by a disk file.
 /// Currently it uses a redb::Database backend, and as such it needs a file path to live.
