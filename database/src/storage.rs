@@ -158,17 +158,20 @@ pub unsafe fn save_elts_relation<T: Copy>(elts: impl IntoIterator<Item = T>, rel
     }
     // do a streaming write.
     let element_size = std::mem::size_of::<T>();
+
+    let mut writer = std::io::BufWriter::new(file);
+
     // we don't know length, since we receive an iterator. will just have to read until EOF.
     // let mut len = 
-    file.write_all(&(relation_hash as u64).to_le_bytes()).unwrap();
-    file.write_all(&(element_size as u64).to_le_bytes())
+    writer.write_all(&(relation_hash as u64).to_le_bytes()).unwrap();
+    writer.write_all(&(element_size as u64).to_le_bytes())
         .unwrap();
     for elt in elts {
         // save the raw data, so we don't need T: Serialize
         let buf = unsafe {
             std::slice::from_raw_parts(&elt as *const T as *const u8, element_size)
         };
-        file.write_all(buf).unwrap();
+        writer.write_all(buf).unwrap();
 
         // bincode::serialize_into(&mut file, &elt).unwrap();
     }
@@ -329,16 +332,18 @@ where
     fn load_redb(&mut self, table_hash: u64, mut path: std::path::PathBuf) {
         path.set_extension("redb");
         let db = redb::Database::open(path).unwrap();
-        let read_txn = db.begin_read().unwrap();
         let table_name = table_hash.to_string();
+        self.rot_table_name = Some(table_name.clone());
         let inv_table_name = format!("inv_{}", table_name);
-        let table_definition = TableDefinition::<u64, Hack<V>>::new(&table_name);
-        let inv_table_definition = TableDefinition::<V, u64>::new(&inv_table_name);
-        let table = read_txn.open_table(table_definition).unwrap();
-        let inv_table = read_txn.open_table(inv_table_definition).unwrap();
+        self.rot_inv_table_name = Some(inv_table_name.clone());
+        // let read_txn = db.begin_read().unwrap();
+        // let table_definition = TableDefinition::<u64, Hack<V>>::new(&table_name);
+        // let inv_table_definition = TableDefinition::<V, u64>::new(&inv_table_name);
+        // let table = read_txn.open_table(table_definition).unwrap();
+        // let inv_table = read_txn.open_table(inv_table_definition).unwrap();
         self.db = Some(db);
-        self.read_only_table = Some(table);
-        self.read_only_inv_table = Some(inv_table);
+        // self.read_only_table = Some(table);
+        // self.read_only_inv_table = Some(inv_table);
     }
 }
 
@@ -375,12 +380,13 @@ for<'a>&'a K: Borrow<<K as redb::Value>::SelfType<'a>>
     fn load_redb(&mut self, relation_hash: u64, mut path: std::path::PathBuf) {
         path.set_extension("redb");
         let db = redb::Database::open(path).unwrap();
-        let read_txn = db.begin_read().unwrap();
         let table_name = relation_hash.to_string();
-        let table_definition = TableDefinition::<K, V>::new(&table_name);
-        let table = read_txn.open_table(table_definition).unwrap();
+        // let read_txn = db.begin_read().unwrap();
+        // let table_definition = TableDefinition::<K, V>::new(&table_name);
+        // let table = read_txn.open_table(table_definition).unwrap();
         self.db = Some(db);
-        self.read_only_table = Some(table);
+        // self.read_only_table = Some(table);
+        self.rot_name = Some(table_name);
     }
 }
 
