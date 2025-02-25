@@ -440,7 +440,12 @@ impl<V: DiskMapValue> DiskVec<V> {
     }
 
     pub fn from_iter_append(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = V>) -> Self {
-        let map = DiskMap::from_iter_append(path, iter.into_iter().enumerate().map(|(k, v)| (k as u64, v)));
+        let mut map: DiskMap<u64, V> = DiskMap::create_or_open(path);
+        // need to shift the enumerate indices by the old length 
+        let old_length = map.iter().len().unwrap();
+
+        map.insert_iter(iter.into_iter().enumerate().map(|(k, v)| (k as u64 + old_length as u64, v)));
+
         let length = map.iter().len().unwrap();
         Self {
             map,
