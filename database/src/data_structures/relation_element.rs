@@ -1,7 +1,14 @@
 use std::{fmt::Debug, ops::{Deref, DerefMut}};
 
 // This is unfortunately needed because we need trait impls for tuples of length > 12.
-pub struct RelationElement<T>(T);
+#[derive(Copy, Clone)]
+pub struct RelationElement<T>(pub T);
+
+impl<T> RelationElement<T> {
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}
 
 impl<T> Deref for RelationElement<T> {
     type Target = T;

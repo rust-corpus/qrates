@@ -4,6 +4,7 @@ use super::utils::{DefPathResolver, GroupByIterator, SpanResolver};
 use crate::queries::utils::BuildResolver;
 use crate::write_csv;
 use corpus_database::{tables::Loader, types};
+use corpus_database::RelationElement as RE;
 use corpus_queries_derive::datapond_query;
 use log::info;
 use std::collections::{HashMap, HashSet};

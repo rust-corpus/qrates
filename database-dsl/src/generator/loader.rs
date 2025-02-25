@@ -27,19 +27,20 @@ pub(super) fn generate_loader_functions(
         for ast::RelationParameter { typ, .. } in parameters {
             types.extend(quote! {#typ,});
         }
+        let relation_element_type = quote! {RelationElement<(#types)>};
         cache_field_tokens.extend(quote! {
-            #name: std::cell::RefCell<Option<Vec<(#types)>>>,
+            #name: std::cell::RefCell<Option<Vec<#relation_element_type>>>,
         });
         function_tokens.extend(quote! {
-            pub fn #load_iter_fn_name(&self) -> impl Iterator<Item = (#types)> {
+            pub fn #load_iter_fn_name(&self) -> impl Iterator<Item = #relation_element_type> {
                 unsafe {
-                    load_elts_relation::<(#types)>(
+                    load_elts_relation::<#relation_element_type>(
                         #relation_hash,
                         self.database_root.join(#file_name)
                     )
                 }.unwrap()
             }
-            pub fn #load_fn_name(&self) -> std::cell::Ref<Vec<(#types)>> {
+            pub fn #load_fn_name(&self) -> std::cell::Ref<Vec<#relation_element_type>> {
                 if self.#name.borrow().is_none() {
                     // let relation: Relation<(#types)> = unsafe { Relation::load(
                     //     #relation_hash,
@@ -47,7 +48,7 @@ pub(super) fn generate_loader_functions(
                     // ) }.unwrap();
 
                     let relation = unsafe {
-                        load_elts_relation_into_relation::<(#types)>(
+                        load_elts_relation_into_relation::<#relation_element_type>(
                             #relation_hash,
                             self.database_root.join(#file_name)
                         )
@@ -61,7 +62,7 @@ pub(super) fn generate_loader_functions(
             // ^^ well, if we can completely deprecate using _both_ relationmaps and relations for any given relation, then this is not an issue.
             // ^^  also, we panic if we ever try to load a relationmap that does not exist. so we would catch this.
             // pub fn #store_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
-            pub fn #store_fn_name(&self, facts: Vec<(#types)>) {
+            pub fn #store_fn_name(&self, facts: Vec<#relation_element_type>) {
                 //assert!(self.#name.borrow().is_none());
                 //let relation: Relation<(#types)> = facts.into();
                 //unsafe { relation.save(#relation_hash, self.database_root.join(#file_name)); }
@@ -76,14 +77,14 @@ pub(super) fn generate_loader_functions(
                 // }
                 self.#store_iter_fn_name(facts.into_iter());
             }
-            pub fn #store_iter_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
+            pub fn #store_iter_fn_name(&self, facts: impl IntoIterator<Item = #relation_element_type>) {
                 //assert!(self.#name.borrow().is_none());
                 //let relation: Relation<(#types)> = facts.into();
                 //unsafe { relation.save(#relation_hash, self.database_root.join(#file_name)); }
                 //*self.#name.borrow_mut() = Some(relation.into());
 
                 unsafe { 
-                    save_elts_relation::<(#types)>(
+                    save_elts_relation::<#relation_element_type>(
                         facts,
                         #relation_hash,
                         self.database_root.join(#file_name)
@@ -99,7 +100,7 @@ pub(super) fn generate_loader_functions(
             let value = &value.typ;
             function_tokens.extend(quote! {
                 pub fn #load_fn_name_as_map(&self) -> std::collections::HashMap<#key, #value> {
-                    self.#load_fn_name().iter().copied().collect()
+                    self.#load_iter_fn_name().map(RelationElement::into_inner).collect()
                 }
             });
         }
