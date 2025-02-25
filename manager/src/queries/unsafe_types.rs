@@ -6,7 +6,7 @@ use crate::write_csv;
 use corpus_database::tables::Loader;
 use corpus_database::types;
 use corpus_queries_derive::datapond_query;
-use log::info;
+use log::{info, warn};
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -60,6 +60,7 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
     //         }
     //     }).collect();
     // TODO: inefficient .count()
+    warn!("inefficient iter.count(), repeated iteration!");
     info!(
         "Number of UnsafeCell types: {}",
         get_unsafe_cell_types_relation().count()
@@ -72,19 +73,32 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
 }
 
 fn collect_union_types(loader: &Loader) {
-    let union_types: Vec<_> = loader
-        .load_types_adt_def()
-        .iter()
-        .flat_map(|&(typ, def_path, kind, _, _)| {
-            if kind == types::AdtKind::Union {
-                Some((typ, def_path))
-            } else {
-                None
-            }
-        })
-        .collect();
-    info!("Number of union types: {}", union_types.len());
-    loader.store_types_union(union_types);
+    let get_union_types = || {
+        loader
+            .load_iter_types_adt_def()
+            .flat_map(|(typ, def_path, kind, _, _)| {
+                if kind == types::AdtKind::Union {
+                    Some((typ, def_path))
+                } else {
+                    None
+                }
+            })
+    };
+
+    // let union_types: Vec<_> = loader
+    //     .load_types_adt_def()
+    //     .iter()
+    //     .flat_map(|&(typ, def_path, kind, _, _)| {
+    //         if kind == types::AdtKind::Union {
+    //             Some((typ, def_path))
+    //         } else {
+    //             None
+    //         }
+    //     })
+    //     .collect();
+    warn!("TODO: inefficient iter.count()");
+    info!("Number of union types: {}", get_union_types().count());
+    loader.store_iter_types_union(get_union_types());
 }
 
 fn collect_unsafe_types(loader: &Loader) {

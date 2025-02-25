@@ -334,6 +334,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
 
     // unsafe thir statements
 
+    // TODO: what is this double iteration?? don't we just index unsafe_thir_blocks_relation by block? fix this.
     let unsafe_thir_statements = || {
         let thir_statements = loader.load_iter_thir_stmts();
         thir_statements
