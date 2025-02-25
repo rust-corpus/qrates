@@ -7,6 +7,9 @@ mod storage;
 
 pub use self::data_structures::InterningTable;
 pub use self::data_structures::RelationMap;
+pub use self::data_structures::DiskMap;
+pub use self::data_structures::DiskVec;
+
 
 #[cfg(test)]
 mod tests {

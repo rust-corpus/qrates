@@ -5,7 +5,7 @@
 //! The implementation of interning tables and relations.
 
 use log::info;
-use redb::{ReadableTable, TableDefinition};
+use redb::{ReadOnlyTable, ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde_derive::{Deserialize, Serialize};
 use std::{borrow::Borrow, collections::HashMap};
 
@@ -279,5 +279,165 @@ where
 {
     fn into(self) -> Vec<(K, V)> {
         self.iter().collect()
+    }
+}
+
+
+pub trait DiskMapKey: Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
+impl<T> DiskMapKey for T where T: Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
+pub trait DiskMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static + for<'a> AsRef<<Self as redb::Value>::SelfType<'a>> {}
+impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static + for<'a> AsRef<<Self as redb::Value>::SelfType<'a>> {}
+
+/// DiskMap<K, V> is essentially a HashMap<K, V> that is backed by a disk file.
+/// Currently it uses a redb::Database backend, and as such it needs a file path to live.
+/// 
+/// The functions panic whenever an unexpected database-related error occurs.
+pub struct DiskMap<K, V>
+where
+    K: DiskMapKey,
+    V: DiskMapValue,
+{
+    db: redb::Database,
+    _phantom: std::marker::PhantomData<(K, V)>,
+}
+
+impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
+    pub fn create_override(path: impl AsRef<std::path::Path>) -> Self {
+        let path = path.as_ref();
+        // delete file at path if it exists
+        if std::fs::metadata(path).is_ok() {
+            std::fs::remove_file(path).unwrap();
+        }
+
+        Self::create_or_open(path)
+    }
+
+    pub fn create_or_open(path: impl AsRef<std::path::Path>) -> Self {
+        let db = redb::Database::open(path).unwrap();
+        Self {
+            db,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Create a new DiskMap from an iterator of key-value pairs. Destroys the file at path if it exists.
+    pub fn from_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = (K, V)>) -> Self {
+        let mut map = Self::create_override(path);
+        map.insert_iter(iter);
+        map
+    }
+
+    /// Create a new DiskMap from an iterator of key-value pairs. If the file at path exists, it will be opened.
+    pub fn from_iter_append(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = (K, V)>) -> Self {
+        let mut map = Self::create_or_open(path);
+        map.insert_iter(iter);
+        map
+    }
+
+    pub fn insert_iter(&mut self, iter: impl IntoIterator<Item = (K, V)>) {
+        let write_txn = self.db.begin_write().unwrap();
+        
+        {
+            let table_def: TableDefinition<K, V> = TableDefinition::new("table");
+            let mut table = write_txn.open_table(table_def).unwrap();
+
+            for (k, v) in iter {
+                table.insert(k, v).unwrap();
+            }
+        }
+
+        write_txn.commit().unwrap();
+    }
+
+    pub fn insert(&mut self, key: K, value: V) {
+        let write_txn = self.db.begin_write().unwrap();
+        
+        {
+            let table_def: TableDefinition<K, V> = TableDefinition::new("table");
+            let mut table = write_txn.open_table(table_def).unwrap();
+
+            table.insert(key, value).unwrap();
+        }
+
+        write_txn.commit().unwrap();
+    }
+
+    pub fn get(&self, key: K) -> Option<V> {
+        let read_txn = self.db.begin_read().unwrap();
+
+        let table_def: TableDefinition<K, V> = TableDefinition::new("table");
+        let table = read_txn.open_table(table_def).unwrap();
+
+        let result = table.get(key).ok()?;
+
+        result.map(|v| v.value())
+    }
+
+    pub fn iter(&self) -> ReadOnlyTable<K, V> {
+        let read_txn = self.db.begin_read().unwrap();
+
+        let table_def: TableDefinition<K, V> = TableDefinition::new("table");
+        read_txn.open_table(table_def).unwrap()
+    }
+}
+
+
+/// DiskVec<V> is essentially a Vec<V> that is backed by a disk file.
+/// It is currently backed by DiskMap<u64, V>, where the key is the index of the value in the Vec.
+/// 
+/// An important invariant is that the indices are compact, i.e. there are no "holes" in the Vec.
+/// Otherwise pushes will overwrite existing values, because the new index is computed from the 'length'.
+pub struct DiskVec<V: DiskMapValue> {
+    map: DiskMap<u64, V>,
+    length: u64,
+}
+
+impl<V: DiskMapValue> DiskVec<V> {
+    pub fn create_override(path: impl AsRef<std::path::Path>) -> Self {
+        let map = DiskMap::create_override(path);
+        Self {
+            map,
+            length: 0,
+        }
+    }
+
+    pub fn create_or_open(path: impl AsRef<std::path::Path>) -> Self {
+        let map = DiskMap::create_or_open(path);
+        let length = map.iter().len().unwrap();
+        Self {
+            map,
+            length,
+        }
+    }
+
+    pub fn from_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = V>) -> Self {
+        let map = DiskMap::from_iter_override(path, iter.into_iter().enumerate().map(|(k, v)| (k as u64, v)));
+        let length = map.iter().len().unwrap();
+        Self {
+            map,
+            length,
+        }
+    }
+
+    pub fn from_iter_append(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = V>) -> Self {
+        let map = DiskMap::from_iter_append(path, iter.into_iter().enumerate().map(|(k, v)| (k as u64, v)));
+        let length = map.iter().len().unwrap();
+        Self {
+            map,
+            length,
+        }
+    }
+
+    pub fn push(&mut self, value: V) {
+        self.map.insert(self.length, value);
+        self.length += 1;
+    }
+
+    pub fn get(&self, index: u64) -> Option<V> {
+        self.map.get(index)
+    }
+
+    pub fn iter(&self) -> ReadOnlyTable<u64, V> {
+        self.map.iter()
     }
 }
