@@ -7,9 +7,12 @@
 use log::info;
 use redb::{ReadOnlyTable, ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde_derive::{Deserialize, Serialize};
-use std::{borrow::Borrow, collections::HashMap, fmt::Debug};
+use std::{borrow::Borrow, collections::HashMap, fmt::Debug, ops::{Deref, DerefMut}};
 
 use crate::storage::Hack;
+
+mod relation_element;
+pub use relation_element::*;
 
 #[derive(Deserialize, Serialize)]
 /// A table that expresses a relation between elements.
