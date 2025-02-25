@@ -38,7 +38,7 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
     let get_unsafe_cell_types_relation = || {
         loader
         .load_iter_types_adt_def()
-        .flat_map(|(typ, def_path, _, _, _)| {
+        .filter_map(|(typ, def_path, _, _, _)| {
             let (_, _, _, _, def_path_summary) = def_paths.r(def_path);
             if def_path_summary == unsafe_cell_summary_id {
                 Some((typ, def_path))
@@ -60,11 +60,11 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
     //         }
     //     }).collect();
     // TODO: inefficient .count()
-    warn!("inefficient iter.count(), repeated iteration!");
-    info!(
-        "Number of UnsafeCell types: {}",
-        get_unsafe_cell_types_relation().count()
-    );
+    // warn!("inefficient iter.count(), repeated iteration!");
+    // info!(
+    //     "Number of UnsafeCell types: {}",
+    //     get_unsafe_cell_types_relation().count()
+    // );
     let def_path_resolver = DefPathResolver::new(loader);
     let unsafe_cell_types = get_unsafe_cell_types_relation()
         .map(|(typ, def_path)| (typ, def_path_resolver.resolve(def_path)));
