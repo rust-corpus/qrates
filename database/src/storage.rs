@@ -400,6 +400,8 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         self.flush();
         if path == self.path() {
             // already saved
+            // TODO: could remove this restriction.
+            assert!(!self.is_temp_map, "Cannot save a temporary map to its temporary path");
             return;
         }
 

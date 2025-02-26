@@ -21,7 +21,9 @@ pub struct Relation<T: DiskMapValue> {
 
 impl<T: DiskMapValue> Default for Relation<T> {
     fn default() -> Self {
-        Self { facts: DiskVec::create_override(get_new_disk_map_temp_dir()) }
+        let mut vec = DiskVec::create_override(get_new_disk_map_temp_dir());
+        vec.map.is_temp_map = true;
+        Self { facts: vec }
     }
 }
 
@@ -91,7 +93,9 @@ where RelationElement<T>: DiskMapValue
 
 impl<T: DiskMapValue> From<Vec<T>> for Relation<T> {
     fn from(facts: Vec<T>) -> Self {
-        Self { facts: DiskVec::from_iter_override(get_new_disk_map_temp_dir(), facts) }
+        let mut vec = DiskVec::from_iter_override(get_new_disk_map_temp_dir(), facts);
+        vec.map.is_temp_map = true;
+        Self { facts: vec }
     }
 }
 
@@ -100,7 +104,9 @@ where
     RelationElement<T>: DiskMapValue,
 {
     fn from(facts: Vec<T>) -> Self {
-        Self { facts: DiskVec::from_iter_override(get_new_disk_map_temp_dir(), facts.into_iter().map(RelationElement)) }
+        let mut vec = DiskVec::from_iter_override(get_new_disk_map_temp_dir(), facts.into_iter().map(RelationElement));
+        vec.map.is_temp_map = true;
+        Self { facts: vec }
     }
 }
 
@@ -116,8 +122,10 @@ where K: DiskMapKey,
         V: DiskMapValue,
 {
     fn default() -> Self {
+        let mut map = DiskMap::create_override(get_new_disk_map_temp_dir());
+        map.is_temp_map = true;
         Self {
-            map: DiskMap::create_override(get_new_disk_map_temp_dir()),
+            map,
         }
     }
 }
@@ -332,14 +340,22 @@ where
 {
     pub(crate) db: redb::Database,
     write_cache: Vec<(K, V)>,
+    // if 'true', the file at 'path' will be deleted when the DiskMap is dropped and no flushing will happen.
+    pub(crate) is_temp_map: bool,
     path: PathBuf,
     _phantom: std::marker::PhantomData<(K, V)>,
 }
 
 impl<K: DiskMapKey, V: DiskMapValue> Drop for DiskMap<K, V> {
     fn drop(&mut self) {
-        eprintln!("Dropping DiskMap at {:?}, thus flushing", self.path);
-        self.flush();
+        if self.is_temp_map {
+            eprintln!("Dropping tmp DiskMap at {:?} and deleting path", self.path);
+            // Unsure why, but redb seems to not care about the file being deleted despite not being dropped yet.
+            std::fs::remove_file(&self.path).unwrap();
+        } else {
+            eprintln!("Dropping DiskMap at {:?}, thus flushing", self.path);
+            self.flush();
+        }
     }
 }
 
@@ -377,6 +393,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         let mut diskmap = Self {
             db,
             path: path.to_path_buf(),
+            is_temp_map: false,
             write_cache: Vec::with_capacity(DISK_MAP_WRITE_CACHE_SIZE),
             _phantom: std::marker::PhantomData,
         };
@@ -480,6 +497,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
 impl<K: DiskMapKey, V: DiskMapValue> FromIterator<(K, V)> for DiskMap<K, V> {
     fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
         let mut map = Self::create_override(get_new_disk_map_temp_dir());
+        map.is_temp_map = true;
         map.insert_iter(iter);
         map
     }
