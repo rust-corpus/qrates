@@ -36,6 +36,10 @@ impl<T: DiskMapValue> Relation<T> {
         self.facts.len()
     }
 
+    pub fn insert_iter(&mut self, iter: impl IntoIterator<Item = T>) {
+        self.facts.insert_iter(iter);
+    }
+
     pub(crate) fn from_disk_vec(facts: DiskVec<T>) -> Self {
         Self { facts }
     }
@@ -360,6 +364,9 @@ impl<K: DiskMapKey, V: DiskMapValue> Drop for DiskMap<K, V> {
     }
 }
 
+const DISK_MAP_WRITE_CACHE_SIZE: usize = 100_000;
+const DISK_MAP_REDB_CACHE_SIZE: usize = 50_000_000;
+
 impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     pub fn create_override(path: impl AsRef<std::path::Path>) -> Self {
         let path = path.as_ref();
@@ -383,12 +390,15 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     pub fn create_or_open(path: impl AsRef<std::path::Path>) -> Self {
         let path = path.as_ref();
         eprintln!("Opening DiskMap at {:?}", path);
-        let db = redb::Database::create(path).unwrap();
+        let mut builder = redb::Database::builder();
+        builder.set_cache_size(DISK_MAP_REDB_CACHE_SIZE);
+
+        let db = builder.create(path).unwrap();
 
         let mut diskmap = Self {
             db,
             path: path.to_path_buf(),
-            write_cache: Vec::new(),
+            write_cache: Vec::with_capacity(DISK_MAP_WRITE_CACHE_SIZE),
             _phantom: std::marker::PhantomData,
         };
         diskmap.create_self_table();
@@ -433,7 +443,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
 
     pub fn insert(&mut self, key: K, value: V) {
         self.write_cache.push((key, value));
-        if self.write_cache.len() > 1000000 {
+        if self.write_cache.len() > DISK_MAP_WRITE_CACHE_SIZE {
             self.flush();
         }
     }
@@ -547,6 +557,12 @@ impl<V: DiskMapValue> DiskVec<V> {
             map,
             length,
         }
+    }
+
+    pub fn insert_iter(&mut self, iter: impl IntoIterator<Item = V>) {
+        let old_length = self.length;
+        self.map.insert_iter(iter.into_iter().enumerate().map(|(k, v)| (k as u64 + old_length, v)));
+        self.length = self.map.len();
     }
 
     pub fn push(&mut self, value: V) {

@@ -303,14 +303,25 @@ fn merge_relations(
             &mut relation_without_target_remap_tokens
         };
         target_tokens.extend(quote! {
-            for (#params) in other.relations.#name.iter() {
-                #params_remap
-                #filter_tokens
-                self.tables
+            // for (#params) in other.relations.#name.iter() {
+            //     #params_remap
+            //     #filter_tokens
+            //     self.tables
+            //         .relations
+            //         .#name
+            //         .insert(RelationElement((#new_params)));
+            // }
+            self.tables
                     .relations
                     .#name
-                    .insert(RelationElement((#new_params)));
-            }
+                    .insert_iter(
+                        other.relations.#name.iter()
+                            .map(|(#params)| {
+                                #params_remap
+                                #filter_tokens
+                                RelationElement((#new_params))
+                            })
+                    );
             drop(other.relations.#name);
         });
     }
