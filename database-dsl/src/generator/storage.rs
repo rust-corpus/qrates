@@ -29,7 +29,7 @@ pub(super) fn generate_load_save_functions(schema: &ast::DatabaseSchema) -> Toke
             pub fn load_single_file(
                 tables_file: &Path
             ) -> Result<Tables> {
-                crate::storage::load(tables_file)
+                Self::load(tables_file)
             }
             pub fn store_multifile(&self, database_root: &Path) -> Result<()> {
                 let relations_path = database_root.join("relations");
@@ -66,7 +66,7 @@ fn load_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStrea
         });
     }
     quote! {
-        fn load_multifile_relations(path: &Path) -> Result<Relations> {
+        pub fn load_multifile_relations(path: &Path) -> Result<Relations> {
             Ok(Relations {
                 #load_fields
             })
@@ -115,7 +115,7 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
         }
     }
     quote! {
-        fn store_multifile_relations(
+        pub fn store_multifile_relations(
             relations: &Relations,
             path: &Path
         ) {

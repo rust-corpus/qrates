@@ -122,7 +122,7 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
             #relations
             #counters
 
-            #[derive(Default, Deserialize, Serialize)]
+            #[derive(Default)]
             pub struct Tables {
                 /// Relations between Rust program elements.
                 pub(crate) relations: Relations,

@@ -4,8 +4,11 @@
 
 //! Helper functions for serializing and deserializing.
 
-use crate::data_structures::{DiskMapValue, InterningTable, InterningTableKey, InterningTableValue, Relation, RelationMap, RelationMapKey, RelationMapValue};
+use crate::data_structures::{DiskMapKey, DiskMapValue, InterningTable, InterningTableKey, InterningTableValue, Relation, RelationMap, RelationMapKey, RelationMapValue};
 use crate::tables::Tables;
+use crate::tables::{store_multifile_relations, load_multifile_relations};
+use crate::tables::Relations;
+use crate::{DiskMap, DiskVec};
 use anyhow::{Context, Result};
 use log::trace;
 use redb::TableDefinition;
@@ -129,17 +132,22 @@ impl<T: Copy + DiskMapValue> Relation<T> {
     /// loading relations that were saved with a different schema.
     /// ``path`` – the path **without** the extension.
     pub unsafe fn save(&self, relation_hash: u64, path: std::path::PathBuf) {
+        self.facts.save(path);
 
-        unsafe { save_elts_relation(self.facts.iter().cloned(), relation_hash, path) };
+        // unsafe { save_elts_relation(self.facts.iter().cloned(), relation_hash, path) };
 
         // unsafe_save_vec(&self.facts, relation_hash, path);
     }
     /// This function is safe only when T does not contain references or pointers.
     /// Also, ``relation_hash`` must be correctly initialized.
     pub unsafe fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
-        let iter = unsafe { load_elts_relation(expected_relation_hash, path)? };
-        let facts = iter.collect::<Vec<T>>();
-        Ok(facts.into())
+
+        let vec = DiskVec::load(path)?;
+        Ok(Self::from_disk_vec(vec))
+
+        // let iter = unsafe { load_elts_relation(expected_relation_hash, path)? };
+        // let facts = iter.collect::<Vec<T>>();
+        // Ok(facts.into())
 
 
         // unsafe { unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into()) }
@@ -396,17 +404,83 @@ for<'a>&'a K: Borrow<<K as redb::Value>::SelfType<'a>>
 impl Tables {
     /// ``path`` – the path **without** the extension.
     pub fn save_json(&self, mut path: std::path::PathBuf) {
-        path.set_extension("json");
-        save(&self, &path);
+        panic!("Not implemented");
     }
     /// ``path`` – the path the **without** extension.
     pub fn save_bincode(&self, mut path: std::path::PathBuf) {
-        path.set_extension("bincode");
-        save(&self, &path);
+        let filename = path.file_name().unwrap().to_str().unwrap();
+        let path_counters = path.with_file_name(format!("{}.counters.bincode", filename));
+        let path_interning = path.with_file_name(format!("{}.interning.bincode", filename));
+        // directory
+        let path_relations = path.with_file_name("relations");
+
+        std::fs::create_dir_all(&path_relations).unwrap();
+
+        save(&self.counters, &path_counters);
+        save(&self.interning_tables, &path_interning);
+        store_multifile_relations(&self.relations, &path_relations);
     }
     /// ``path`` – the path **with** the extension.
     pub fn load(path: &std::path::Path) -> Result<Self> {
-        load(path)
+        let ext = path.extension().unwrap();
+        let path_without_ext = path.with_extension("");
+        let filename = path_without_ext.file_name().unwrap().to_str().unwrap();
+        let counters;
+        {   
+            let counters_filename = format!("{}.counters.{}", filename, ext.to_str().unwrap());
+            let counters_path = path.with_file_name(counters_filename);
+            counters = load(&counters_path)?;
+        }
+        let interning_tables;
+        {
+            let interning_tables_filename = format!("{}.interning.{}", filename, ext.to_str().unwrap());
+            let interning_tables_path = path.with_file_name(interning_tables_filename);
+            interning_tables = load(&interning_tables_path)?;
+        }
+
+        let relations;
+        {
+            // note: ignores json extension
+            let mut path_root = path.parent().unwrap().to_path_buf();
+            let relations_path = path_root.join("relations");
+            relations = load_multifile_relations(&relations_path)?;
+        }
+
+
+        Ok(Tables {
+            counters,
+            interning_tables,
+            relations,
+        })
+    }
+}
+
+impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
+    pub fn save(&self, path: std::path::PathBuf) {
+        // TODO: instead of assertion, just pretend it's already saved?
+        assert_ne!(path, self.path());
+
+        // create a new database at path and store self into it.
+        let saved_dm = DiskMap::from_iter_override(path, self.iter());
+        assert_eq!(saved_dm.len(), self.len());
+    }
+
+    pub fn load(path: std::path::PathBuf) -> Result<Self> {
+        // assert that path exists
+        assert!(path.exists());
+        let saved_dm = DiskMap::create_or_open(path);
+        Ok(saved_dm)
+    }
+}
+
+impl<V: DiskMapValue> DiskVec<V> {
+    pub fn save(&self, path: std::path::PathBuf) {
+        self.map.save(path);
+    }
+
+    pub fn load(path: std::path::PathBuf) -> Result<Self> {
+        let map = DiskMap::load(path)?;
+        Ok(DiskVec::from_map(map))
     }
 }
 

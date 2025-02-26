@@ -7,6 +7,11 @@ include!(concat!(env!("OUT_DIR"), "/schema.rs"));
 mod data_structures;
 mod storage;
 
+use std::path::PathBuf;
+use std::sync::LazyLock;
+use std::sync::Mutex;
+use std::sync::OnceLock;
+
 pub use self::data_structures::InterningTable;
 pub use self::data_structures::RelationMap;
 pub use self::data_structures::RelationElement;
@@ -14,6 +19,24 @@ pub use self::data_structures::VecOfRelationElementAdapter;
 pub use self::data_structures::VecIntoRelationElementAdapter;
 pub use self::data_structures::DiskMap;
 pub use self::data_structures::DiskVec;
+
+
+// Temporary directory for all diskvecs/diskmaps
+static DISK_MAP_TEMP_DIR_ROOT: OnceLock<PathBuf> = OnceLock::new();
+static DISK_MAP_COUNTER: LazyLock<Mutex<u64>> = LazyLock::new(|| Mutex::new(0));
+
+pub fn set_disk_map_temp_dir_root(root: PathBuf) {
+    DISK_MAP_TEMP_DIR_ROOT.set(root).unwrap();
+}
+
+/// `set_disk_map_temp_dir_root` must be called before this function.
+pub fn get_new_disk_map_temp_dir() -> PathBuf {
+    let mut counter = DISK_MAP_COUNTER.lock().expect("Disk map counter lock poisoned");
+    let root = DISK_MAP_TEMP_DIR_ROOT.get().expect("Disk map temp dir root not set");
+    let path = root.join(format!("disk_map_{}", *counter));
+    *counter += 1;
+    path
+}
 
 
 #[cfg(test)]

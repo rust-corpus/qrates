@@ -208,7 +208,7 @@ fn merge_relations(
         let mut new_source = TokenStream::new();
         for param in &relation.parameters {
             let param_name = &param.name;
-            params.extend(quote! { #param_name, });
+            params.extend(quote! { ref #param_name, });
             let new_name = name_generator.get_fresh_ident();
             new_params.extend(quote! { #new_name, });
             if relation.is_relation_key_target(param_name) {

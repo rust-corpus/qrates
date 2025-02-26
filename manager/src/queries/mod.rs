@@ -1,3 +1,4 @@
+use corpus_database::set_disk_map_temp_dir_root;
 use log::info;
 use std::path::Path;
 
@@ -26,6 +27,9 @@ pub fn run_query(
     workspace_path: &Path,
     sources_list_path: &Path,
 ) {
+    let tmp_database_root = database_root.join("tmp");
+    set_disk_map_temp_dir_root(tmp_database_root);
+
     info!("Running query: {}", query_name);
     let loader = corpus_database::tables::Loader::new(database_root.to_path_buf());
     match query_name {

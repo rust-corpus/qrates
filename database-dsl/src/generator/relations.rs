@@ -20,7 +20,7 @@ pub(super) fn generate_relations(schema: &ast::DatabaseSchema) -> TokenStream {
     }
     quote! {
         use crate::data_structures::Relation;
-        #[derive(Default, Deserialize, Serialize)]
+        #[derive(Default)]
         /// Relations between various entities of the Rust program.
         pub struct Relations {
             #fields
