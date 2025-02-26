@@ -105,11 +105,12 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
 
             store_fields.extend(quote! {
                 {
-                    let facts_mapped: HashMap<#key, #value> = relations.#name.iter().map(|RelationElement(fact)| {
+                    let path = path.join(#intern_table_file_name);
+                    let iter = relations.#name.iter().map(|RelationElement(fact)| {
                         (fact.#source_idx_str, (#(fact.#non_source_idxs),*))
-                    }).collect();
-                    let intern_table: RelationMap<#key, #value> = facts_mapped.into();
-                    intern_table.save(#intern_table_hash, path.join(#intern_table_file_name));
+                    });
+                    let mut relation_map: RelationMap<#key, #value> = RelationMap::from_iter_override(&path, iter);
+                    relation_map.save(#intern_table_hash, path);
                 }
             });
         }

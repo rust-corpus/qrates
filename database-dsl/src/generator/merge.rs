@@ -106,7 +106,7 @@ fn merge_interning_tables(
         } else {
             let arg_remap = if let Some(map) = interning_remap.get(&table.value) {
                 quote! {
-                    let new_value = #map[&value];
+                    let new_value = #map.r(value);
                 }
             } else {
                 quote! {
@@ -114,7 +114,7 @@ fn merge_interning_tables(
                 }
             };
             tokens.extend(quote! {
-                let #name: HashMap<_, _> = other
+                let #name: DiskMap<_, _> = other
                    .interning_tables
                    .#name
                    .into_iter()
@@ -138,7 +138,7 @@ fn merge_interning_tables(
             let arg = name_generator.get_fresh_ident();
             if let Some(map) = interning_remap.get(value_type) {
                 arg_remap.extend(quote! {
-                    let #arg = #map[&#param];
+                    let #arg = #map.r(#param);
                 });
             } else {
                 debug!("Not an interned type: {:?}", value_type);
@@ -151,7 +151,7 @@ fn merge_interning_tables(
             params.extend(quote! {#param,})
         }
         tokens.extend(quote! {
-            let #name: HashMap<_, _> = other
+            let #name: DiskMap<_, _> = other
                 .interning_tables
                 .#name
                 .into_iter()
@@ -250,7 +250,7 @@ fn merge_relations(
                 ast::TypeKind::InternedId(table) => {
                     let map = &table.name;
                     params_remap.extend(quote! {
-                        let #new_name = #map[#param_name];
+                        let #new_name = #map.r(*#param_name);
                     });
                 }
             }

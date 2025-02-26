@@ -4,7 +4,7 @@
 
 //! Helper functions for serializing and deserializing.
 
-use crate::data_structures::{DiskMapKey, DiskMapValue, InterningTable, InterningTableKey, InterningTableValue, Relation, RelationMap, RelationMapKey, RelationMapValue, DISK_MAP_REDB_CACHE_SIZE};
+use crate::data_structures::{DiskMapKey, DiskMapValue, InterningTable, InterningTableKey, InterningTableValue, Relation, RelationMap, DISK_MAP_REDB_CACHE_SIZE};
 use crate::tables::Tables;
 use crate::tables::{store_multifile_relations, load_multifile_relations};
 use crate::tables::Relations;
@@ -362,47 +362,20 @@ where
 }
 
 impl<K, V> RelationMap<K, V>
-where K: RelationMapKey,
-V: RelationMapValue,
+where K: DiskMapKey,
+V: DiskMapValue,
 for<'a>&'a K: Borrow<<K as redb::Value>::SelfType<'a>>
 {
-    pub fn save(&self, relation_hash: u64, path: std::path::PathBuf) {
-        self.save_to_redb(relation_hash, path);
-    }
-
-    fn save_to_redb(&self, relation_hash: u64, mut path: std::path::PathBuf) {
-        path.set_extension("redb");
-        let db = redb::Database::create(path).unwrap();
-        let mut write_txn = db.begin_write().unwrap();
-        let table_name = relation_hash.to_string();
-        let table_definition = TableDefinition::<K, V>::new(&table_name);
-        {
-            let mut table = write_txn.open_table(table_definition).unwrap();
-            for (k, v) in self.contents.iter() {
-                table.insert(k, v).unwrap();
-            }
-        }
-        write_txn.commit().unwrap();
+    pub fn save(&mut self, relation_hash: u64, path: std::path::PathBuf) {
+        self.map.save(path);
     }
 
     pub fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
-        let mut table: RelationMap<K, V> = HashMap::new().into();
-        table.load_redb(expected_relation_hash, path);
-        Ok(table)
+        let map = DiskMap::load(path)?;
+        Ok(Self { map })
     }
 
-    fn load_redb(&mut self, relation_hash: u64, mut path: std::path::PathBuf) {
-        path.set_extension("redb");
-        let mut builder = redb::Database::builder();
-        builder.set_cache_size(DISK_MAP_REDB_CACHE_SIZE);
-        let db = builder.open(path).unwrap();
-        let read_txn = db.begin_read().unwrap();
-        let table_name = relation_hash.to_string();
-        let table_definition = TableDefinition::<K, V>::new(&table_name);
-        let table = read_txn.open_table(table_definition).unwrap();
-        self.db = Some(db);
-        self.read_only_table = Some(table);
-    }
+
 }
 
 impl Tables {

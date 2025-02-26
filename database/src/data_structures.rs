@@ -104,57 +104,36 @@ where
     }
 }
 
-pub trait RelationMapKey: Eq + std::hash::Hash + redb::Key + 'static {}
-impl<T> RelationMapKey for T where T: Eq + std::hash::Hash + redb::Key + 'static {}
-pub trait RelationMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
-impl<T> RelationMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
-
 pub struct RelationMap<K, V>
-where K: RelationMapKey,
-        V: RelationMapValue,
+where K: DiskMapKey,
+        V: DiskMapValue,
 {
-    pub(crate) contents: HashMap<K, V>,
-    pub(crate) db: Option<redb::Database>,
-    pub(crate) read_only_table: Option<redb::ReadOnlyTable<K, V>>,
+    pub(crate) map: DiskMap<K, V>,
 }
 
 impl<K, V> Default for RelationMap<K, V>
-where K: RelationMapKey,
-        V: RelationMapValue,
+where K: DiskMapKey,
+        V: DiskMapValue,
 {
     fn default() -> Self {
         Self {
-            contents: HashMap::new(),
-            db: None,
-            read_only_table: None,
-        }
-    }
-}
-
-impl<K, V> From<HashMap<K, V>> for RelationMap<K, V>
-where K: RelationMapKey,
-        V: RelationMapValue,
-{
-    fn from(contents: HashMap<K, V>) -> Self {
-        Self {
-            contents,
-            db: None,
-            read_only_table: None,
+            map: DiskMap::create_override(get_new_disk_map_temp_dir()),
         }
     }
 }
 
 impl<K, V> RelationMap<K, V>
-where K: RelationMapKey,
-        V: RelationMapValue,
-        for<'a> &'a K: Borrow<<K as redb::Value>::SelfType<'a>>
+where K: DiskMapKey,
+        V: DiskMapValue,
 {
+    pub fn from_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = (K, V)>) -> Self {
+        let map = DiskMap::from_iter_override(path, iter);
+        Self { map }
+    }
+
     #[track_caller]
     pub fn get_redb(&self, key: K) -> Option<V> {
-        if let Some(table) = &self.read_only_table {
-            return Some(table.get(&key).ok()??.value());
-        }
-        None
+        self.map.get(key)
     }
 
     #[track_caller]
@@ -474,6 +453,10 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         result.map(|v| v.value())
     }
 
+    pub fn r(&self, key: K) -> V {
+        self.get(key).unwrap()
+    }
+
     pub fn len(&self) -> u64 {
         let read_txn = self.db.begin_read().unwrap();
 
@@ -491,6 +474,14 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
             let (k, v) = res.unwrap();
             (k.value(), v.value())
         })
+    }
+}
+
+impl<K: DiskMapKey, V: DiskMapValue> FromIterator<(K, V)> for DiskMap<K, V> {
+    fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
+        let mut map = Self::create_override(get_new_disk_map_temp_dir());
+        map.insert_iter(iter);
+        map
     }
 }
 

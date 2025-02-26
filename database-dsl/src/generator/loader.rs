@@ -151,12 +151,19 @@ pub(super) fn generate_loader_functions(
                 syn::Ident::new(&format!("store_{}", intern_table_name), Span::call_site());
             function_tokens.extend(quote! {
                 pub fn #store_intern_table_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
-                    // create an intern table and store that
-                    let facts_mapped: HashMap<#key, #value> = facts.into_iter().map(|fact| {
+                    // create a relation map
+                    let path = self.database_root.join(#intern_table_file_name);
+                    let iter = facts.into_iter().map(|fact| {
                         (fact.#source_idx_str, (#(fact.#non_source_idxs),*))
-                    }).collect();
-                    let intern_table: RelationMap<#key, #value> = facts_mapped.into();
-                    intern_table.save(#intern_table_hash, self.database_root.join(#intern_table_file_name));
+                    });
+                    let mut map: RelationMap<#key, #value> = RelationMap::from_iter_override(&path, iter);
+                    // let facts_mapped: HashMap<#key, #value> = facts.into_iter().map(|fact| {
+                    //     (fact.#source_idx_str, (#(fact.#non_source_idxs),*))
+                    // }).collect();
+                    // let intern_table: RelationMap<#key, #value> = facts_mapped.into();
+                    // intern_table.save(#intern_table_hash, self.database_root.join(#intern_table_file_name));
+                    map.save(#intern_table_hash, path);
+
                 }
             });
         }
