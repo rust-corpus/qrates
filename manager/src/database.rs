@@ -5,7 +5,7 @@
 //! Module responsible for managing the database.
 
 use anyhow::Result;
-use corpus_database::tables;
+use corpus_database::{set_disk_map_temp_dir_root, tables};
 use log::{debug, error, info, trace};
 use log_derive::logfn;
 use std::collections::HashSet;
@@ -58,6 +58,10 @@ impl DatabaseManager {
     }
     #[logfn(Trace)]
     pub fn update_database(&mut self, workspace_root: &Path) {
+        let tmp_dir = self.database_root.join("diskmap_tmp");
+        std::fs::create_dir_all(&tmp_dir).unwrap();
+        set_disk_map_temp_dir_root(tmp_dir);
+
         let crates = self.scan_crates(&workspace_root.join("rust-corpus"));
         let mut success_counter = 0;
         let mut fail_counter = 0;
