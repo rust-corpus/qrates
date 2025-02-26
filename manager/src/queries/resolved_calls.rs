@@ -28,8 +28,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let call_target_self = loader.load_terminators_call_const_target_self_as_map();
     let call_target_desc: HashMap<_, _> = loader
         .load_terminators_call_const_target_desc()
-        .iter()
-        .copied()
+        .tuple_iter()
         .map(|(call, desc, function_generics, type_generics)| {
             (call, (desc, function_generics, type_generics))
         })
@@ -42,20 +41,19 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let type_descriptions: HashMap<_, _> = loader
         .load_type_description()
-        .iter()
-        .copied()
+        .tuple_iter()
         .map(|(ty, desc, generics)| (ty, (desc, generics)))
         .collect();
 
     let basic_block_def_paths: HashMap<_, _> = loader
         .load_basic_blocks()
-        .iter()
-        .map(|&(bb, def_path, _kind)| (bb, def_path))
+        .tuple_iter()
+        .map(|(bb, def_path, _kind)| (bb, def_path))
         .collect();
 
     let all_calls = loader.load_terminators_call();
-    let all_calls = all_calls.iter().filter_map(
-        |&(block, call, _func, _unsafety, _abi, _return_ty, _destination, _span)| {
+    let all_calls = all_calls.tuple_iter().filter_map(
+        |(block, call, _func, _unsafety, _abi, _return_ty, _destination, _span)| {
             let target = call_target.get(&call)?; // none for function pointers
             let (target_desc, function_generics, type_generics) = call_target_desc[&call];
 

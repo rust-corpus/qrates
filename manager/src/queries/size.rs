@@ -14,8 +14,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let mut seen_scopes = HashSet::new();
     let build_resolver = BuildResolver::new(loader);
     let unsafe_statements = loader.load_unsafe_statements();
-    let unsafe_blocks_by_stmts = unsafe_statements.iter().safe_group_by(
-        |(build, _stmt, _block, _index, _kind, unsafe_scope, check_mode)| {
+    let unsafe_blocks_by_stmts = unsafe_statements.tuple_iter().safe_group_by(
+        |&(build, _stmt, _block, _index, _kind, unsafe_scope, check_mode)| {
             (build, unsafe_scope, check_mode)
         },
     );
@@ -23,24 +23,24 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .into_iter()
         .map(|((build, unsafe_scope, check_mode), group)| {
             assert!(
-                !seen_scopes.contains(unsafe_scope),
+                !seen_scopes.contains(&unsafe_scope),
                 "duplicate scope: {:?} {:?}",
                 build,
                 unsafe_scope
             );
             seen_scopes.insert(unsafe_scope);
-            (*build, unsafe_scope, check_mode, group.count())
+            (build, unsafe_scope, check_mode, group.count())
         })
         .collect();
 
     let unsafe_terminators = loader.load_unsafe_terminators();
-    let unsafe_blocks_by_terminators = unsafe_terminators.iter().safe_group_by(
-        |(build, _block, _kind, unsafe_scope, check_mode)| (build, unsafe_scope, check_mode),
+    let unsafe_blocks_by_terminators = unsafe_terminators.tuple_iter().safe_group_by(
+        |&(build, _block, _kind, unsafe_scope, check_mode)| (build, unsafe_scope, check_mode),
     );
     let unsafe_blocks_sizes_by_terminators: HashMap<_, _> = unsafe_blocks_by_terminators
         .into_iter()
         .map(|((build, unsafe_scope, check_mode), group)| {
-            ((*build, unsafe_scope, check_mode), group.count())
+            ((build, unsafe_scope, check_mode), group.count())
         })
         .collect();
 
@@ -62,7 +62,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .collect();
     for ((build, unsafe_scope, check_mode), terminator_count) in unsafe_blocks_sizes_by_terminators
     {
-        if !seen_scopes.contains(unsafe_scope) {
+        if !seen_scopes.contains(&unsafe_scope) {
             unsafe_block_sizes.push((build, unsafe_scope, check_mode, 0, terminator_count))
         }
     }

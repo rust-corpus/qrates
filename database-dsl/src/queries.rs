@@ -188,7 +188,7 @@ fn load_relations(
         //     let #name = #loader.#load_fn_name().clone().vec_into_inner();
         // });
         pre_tokens.extend(quote! {
-            let #name = #loader.#load_fn_name().clone();
+            let #name = #loader.#load_fn_name().to_tuple_vec();
         });
         let mut args = TokenStream::new();
         for ast::RelationParameter { name, typ, .. } in &relation.parameters {

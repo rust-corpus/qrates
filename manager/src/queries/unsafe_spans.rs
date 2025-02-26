@@ -20,8 +20,8 @@ fn report_unsafe_function_spans(loader: &Loader, report_path: &Path) {
     let def_path_spans = loader.load_def_path_span_redb_map();
 
     let selected_function_definitions = loader.load_selected_function_definitions();
-    let unsafe_function_spans = selected_function_definitions.iter().flat_map(
-        |&(build, _item, def_path, _module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
+    let unsafe_function_spans = selected_function_definitions.tuple_iter().flat_map(
+        |(build, _item, def_path, _module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
             if unsafety == types::Safety::Unsafe {
                 Some((
                     build,

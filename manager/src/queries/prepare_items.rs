@@ -42,7 +42,7 @@ fn compute_selected_functions_and_mir_cfgs(loader: &Loader) {
 
     let selected_mir_cfgs = super::utils::filter_selected(
         loader.load_iter_mir_cfgs(),
-        &selected_builds,
+        selected_builds.tuple_iter(),
         &def_paths,
         |(_item, body_def_path, _root_scope)| body_def_path,
         |build, (item, body_def_path, root_scope)| (build, item, body_def_path, root_scope),
@@ -58,7 +58,7 @@ fn compute_selected_functions_and_mir_cfgs(loader: &Loader) {
         corpus_database::types::ThirBlock,
     )> = super::utils::filter_selected(
         loader.load_iter_thir_bodies(),
-        &selected_builds,
+        selected_builds.tuple_iter(),
         &def_paths,
         |(_item, body_def_path, _root_block)| body_def_path,
         |build, (item, body_def_path, root_block)| (build, item, body_def_path, root_block),
@@ -71,7 +71,7 @@ fn compute_selected_functions_and_mir_cfgs(loader: &Loader) {
 
     let selected_functions = super::utils::filter_selected(
         loader.load_iter_function_definitions(),
-        &selected_builds,
+        selected_builds.tuple_iter(),
         &def_paths,
         |(_item, def_path, _module, _visibility, _unsafety, _abi, _return_ty)| def_path,
         |build, (item, def_path, module, visibility, unsafety, abi, return_ty)| {

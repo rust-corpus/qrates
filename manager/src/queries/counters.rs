@@ -51,9 +51,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let def_path_resolver = DefPathResolver::new(loader);
     let span_resolver = SpanResolver::new(loader);
     let selected_builds: HashSet<_> = loader
-        .load_selected_builds()
-        .iter()
-        .map(|(build, _package, _version, _krate, _crate_hash, _edition)| *build)
+        .load_iter_selected_builds()
+        .map(|(build, _package, _version, _krate, _crate_hash, _edition)| build)
         .collect();
 
     // Group by (mir_body_def_path, explicit_unsafe_group) and drop all with scopes
@@ -64,9 +63,9 @@ pub fn query(loader: &Loader, report_path: &Path) {
     // Maps each scope inside an unsafe block to a root scope of that unsafe block.
     let mut unsafe_root_scopes = HashMap::new();
     let iter = selected_scopes
-        .iter()
+        .tuple_iter()
         .filter(
-            |&(
+            |(
                 _build,
                 _mir_body_def_path,
                 _scope,
@@ -78,7 +77,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
             )| { *safety == types::ScopeSafety::ExplicitUnsafe },
         )
         .safe_group_by(
-            |(
+            |&(
                 _build,
                 def_path,
                 _scope,
@@ -109,7 +108,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
             children.insert(scope);
         }
         let mut found = false;
-        for &(
+        for (
             build,
             mir_body_def_path,
             scope,
@@ -159,8 +158,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let statements = loader.load_statements();
     let unsafe_statements: Vec<_> = statements
-        .iter()
-        .flat_map(|&(stmt, block, index, kind, scope)| {
+        .tuple_iter()
+        .flat_map(|(stmt, block, index, kind, scope)| {
             unsafe_root_scopes
                 .get(&scope)
                 .map(|&(unsafe_scope, build, check_mode)| {
@@ -174,8 +173,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let terminators = loader.load_terminators();
     let unsafe_terminators: Vec<_> = terminators
-        .iter()
-        .flat_map(|&(block, kind, scope)| {
+        .tuple_iter()
+        .flat_map(|(block, kind, scope)| {
             unsafe_root_scopes
                 .get(&scope)
                 .map(|&(unsafe_scope, build, check_mode)| {
@@ -224,12 +223,12 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
     let trait_items: HashSet<_> = trait_items
-        .iter()
+        .tuple_iter()
         .map(|(_trait_id, def_path, _defaultness)| def_path)
         .collect();
     let selected_function_definitions = loader.load_selected_function_definitions();
-    let selected_function_definitions = selected_function_definitions.iter().map(
-        |&(build, item, def_path, module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
+    let selected_function_definitions = selected_function_definitions.tuple_iter().map(
+        |(build, item, def_path, module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
             (
                 build,
                 def_path_resolver.resolve(def_path),
@@ -295,7 +294,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
     let mut unsafe_thir_blocks_relation = Vec::new();
     let mut unsafe_thir_blocks = Vec::new();
 
-    for &(
+    for (
         build,
         thir_body_def_path,
         _parent,
@@ -303,8 +302,8 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
         _safety, // for unsafe_thir_blocks, safety will always be ExplicitUnsafe
         check_mode,
         span,
-    ) in selected_thir_blocks.iter().filter(
-        |&(_build, _thir_body_def_path, _parent, _block, safety, _check_mode, _span)| {
+    ) in selected_thir_blocks.tuple_iter().filter(
+        |(_build, _thir_body_def_path, _parent, _block, safety, _check_mode, _span)| {
             *safety == types::ScopeSafety::ExplicitUnsafe
         },
     ) {
@@ -341,9 +340,9 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
         thir_statements
             .flat_map(|(stmt, _block, closest_unsafe_block, index)| {
                 unsafe_thir_blocks_relation
-                    .iter()
+                    .tuple_iter()
                     .filter(
-                        move |&(
+                        move |(
                             build,
                             _thir_body_def_path,
                             unsafe_block,
@@ -353,7 +352,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
                         )| { *unsafe_block == closest_unsafe_block },
                     )
                     .map(
-                        move |&(
+                        move |(
                             build,
                             _thir_body_def_path,
                             _unsafe_block,
@@ -441,12 +440,12 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
     let trait_items: HashSet<_> = trait_items
-        .iter()
+        .tuple_iter()
         .map(|(_trait_id, def_path, _defaultness)| def_path)
         .collect();
     let selected_function_definitions = loader.load_selected_function_definitions();
-    let selected_function_definitions_thir_counts = selected_function_definitions.iter().map(
-        |&(build, item, def_path, module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
+    let selected_function_definitions_thir_counts = selected_function_definitions.tuple_iter().map(
+        |(build, item, def_path, module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
             (
                 build,
                 def_path_resolver.resolve(def_path),

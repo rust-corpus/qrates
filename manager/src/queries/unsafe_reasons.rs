@@ -13,11 +13,11 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let function_unsafe_reasons: Vec<_> = loader
         .load_function_unsafe_reasons()
-        .iter()
+        .tuple_iter()
         .map(|(def_path, _index, reason)| (def_path, reason))
         .collect::<HashSet<_>>()
         .into_iter()
-        .map(|(def_path, reason)| (def_path_resolver.resolve(*def_path), strings.r(*reason)))
+        .map(|(def_path, reason)| (def_path_resolver.resolve(def_path), strings.r(reason)))
         .collect();
     write_csv!(report_path, function_unsafe_reasons);
 }

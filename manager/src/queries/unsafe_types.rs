@@ -14,8 +14,8 @@ fn report_types_foreign(loader: &Loader, report_path: &Path) {
     let def_path_resolver = DefPathResolver::new(loader);
     let types_foreign = loader.load_types_foreign();
     let types_foreign = types_foreign
-        .iter()
-        .map(|&(typ, def_path)| (typ, def_path_resolver.resolve(def_path)));
+        .tuple_iter()
+        .map(|(typ, def_path)| (typ, def_path_resolver.resolve(def_path)));
     write_csv!(report_path, types_foreign);
 }
 
@@ -151,13 +151,13 @@ fn report_unsafe_type_defs(loader: &Loader, report_path: &Path) {
     let type_kinds = loader.load_type_kinds();
     let unsafe_types: HashSet<_> = loader
         .load_unsafe_types()
-        .iter()
-        .map(|&(typ,)| typ)
+        .tuple_iter()
+        .map(|(typ,)| typ)
         .collect();
     assert_eq!(unsafe_types.len(), loader.load_unsafe_types().len());
     let type_defs = loader.load_selected_type_defs();
-    let unsafe_type_defs = type_defs.iter().flat_map(
-        |&(build, item, typ, def_path, name, visibility, type_kind, def_kind)| {
+    let unsafe_type_defs = type_defs.tuple_iter().flat_map(
+        |(build, item, typ, def_path, name, visibility, type_kind, def_kind)| {
             if unsafe_types.contains(&typ) {
                 Some((
                     build,
@@ -181,17 +181,17 @@ fn report_unsafe_type_defs(loader: &Loader, report_path: &Path) {
 fn collect_safe_wrapper_types(loader: &Loader) {
     let unsafe_types: HashSet<_> = loader
         .load_unsafe_types()
-        .iter()
-        .map(|&(typ,)| typ)
+        .tuple_iter()
+        .map(|(typ,)| typ)
         .collect();
     let safe_wrapper_types: Vec<_> = loader
         .load_types_adt_field()
-        .iter()
+        .tuple_iter()
         .safe_group_by(|&(_field, adt, _index, _def_path, _ident, _visibility, _typ)| adt)
         .into_iter()
         .flat_map(|(key, group)| {
             let mut contains_unsafe_field = false;
-            for &(_field, _adt, _index, _def_path, _ident, visibility, typ) in group {
+            for (_field, _adt, _index, _def_path, _ident, visibility, typ) in group {
                 if unsafe_types.contains(&typ) {
                     contains_unsafe_field = true;
                     if visibility == types::TyVisibility::Public {
@@ -201,7 +201,7 @@ fn collect_safe_wrapper_types(loader: &Loader) {
                 }
             }
             if contains_unsafe_field {
-                Some((*key,))
+                Some((key,))
             } else {
                 None
             }
@@ -219,16 +219,16 @@ fn report_safe_wrapper_type_defs(loader: &Loader, report_path: &Path) {
     let type_kinds = loader.load_type_kinds();
     let safe_wrapper_types: HashSet<_> = loader
         .load_safe_wrapper_types()
-        .iter()
-        .map(|&(typ,)| typ)
+        .tuple_iter()
+        .map(|(typ,)| typ)
         .collect();
     assert_eq!(
         safe_wrapper_types.len(),
         loader.load_safe_wrapper_types().len()
     );
     let type_defs = loader.load_selected_type_defs();
-    let safe_wrapper_type_defs = type_defs.iter().flat_map(
-        |&(build, item, typ, def_path, name, visibility, type_kind, def_kind)| {
+    let safe_wrapper_type_defs = type_defs.tuple_iter().flat_map(
+        |(build, item, typ, def_path, name, visibility, type_kind, def_kind)| {
             if safe_wrapper_types.contains(&typ) {
                 Some((
                     build,

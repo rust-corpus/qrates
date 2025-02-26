@@ -31,8 +31,8 @@ fn report_non_tree_types(loader: &Loader, report_path: &Path) {
     }
 
     let non_tree_types: HashSet<_> = non_tree_types.elements.iter().map(|&(typ,)| typ).collect();
-    let non_tree_adts = selected_adts.iter().flat_map(
-        |&(
+    let non_tree_adts = selected_adts.tuple_iter().flat_map(
+        |(
             build,
             item,
             typ,

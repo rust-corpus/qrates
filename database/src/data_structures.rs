@@ -44,6 +44,11 @@ impl<T: DiskMapValue> Relation<T> {
         let facts = DiskVec::create_override(path);
         Self { facts }
     }
+
+    pub fn from_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = T>) -> Self {
+        let facts = DiskVec::from_iter_override(path, iter);
+        Self { facts }
+    }
 }
 
 impl<T> Relation<RelationElement<T>>
@@ -52,8 +57,16 @@ impl<T> Relation<RelationElement<T>>
     pub fn into_tuple_vec(self) -> Vec<T> {
         self.facts.iter().map(|re| re.into_inner()).collect()
     }
+    pub fn to_tuple_vec(&self) -> Vec<T> {
+        self.tuple_iter().collect()
+    }
     pub fn tuple_iter(&self) -> impl Iterator<Item = T> {
         self.facts.iter().map(|re| re.into_inner())
+    }
+
+    pub fn from_tuple_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = T>) -> Self {
+        let facts = DiskVec::from_iter_override(path, iter.into_iter().map(RelationElement));
+        Self { facts }
     }
 }
 

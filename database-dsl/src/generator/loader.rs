@@ -30,18 +30,13 @@ pub(super) fn generate_loader_functions(
         let relation_element_type = quote! {RelationElement<(#types)>};
         let tuple_element_type = quote! {(#types)};
         cache_field_tokens.extend(quote! {
-            #name: std::cell::RefCell<Option<Vec<#tuple_element_type>>>,
+            #name: std::cell::RefCell<Option<Relation<#relation_element_type>>>,
         });
         function_tokens.extend(quote! {
             pub fn #load_iter_fn_name(&self) -> impl Iterator<Item = #tuple_element_type> {
-                unsafe {
-                    load_elts_relation::<#tuple_element_type>(
-                        #relation_hash,
-                        self.database_root.join(#file_name)
-                    )
-                }.unwrap()
+                self.#load_fn_name().tuple_iter()
             }
-            pub fn #load_fn_name(&self) -> std::cell::Ref<Vec<#tuple_element_type>> {
+            pub fn #load_fn_name(&self) -> std::cell::Ref<Relation<#relation_element_type>> {
                 if self.#name.borrow().is_none() {
                     // let relation: Relation<(#types)> = unsafe { Relation::load(
                     //     #relation_hash,
@@ -49,13 +44,13 @@ pub(super) fn generate_loader_functions(
                     // ) }.unwrap();
 
                     let relation = unsafe {
-                        load_elts_relation_into_relation::<#relation_element_type>(
+                        Relation::<#relation_element_type>::load(
                             #relation_hash,
                             self.database_root.join(#file_name)
                         )
                     }.unwrap();
 
-                    *self.#name.borrow_mut() = Some(relation.into_tuple_vec());
+                    *self.#name.borrow_mut() = Some(relation);
                 }
                 std::cell::Ref::map(self.#name.borrow(), |option| option.as_ref().unwrap())
             }
@@ -79,18 +74,25 @@ pub(super) fn generate_loader_functions(
                 self.#store_iter_fn_name(facts.into_iter());
             }
             pub fn #store_iter_fn_name(&self, facts: impl IntoIterator<Item = #tuple_element_type>) {
+                // TODO: store a root path on self.
+                // then from_iter a relation, and store it in the cached field.
+                // the from_iter already does saving (since it's a db), so we don't need to do any explicit saving.
+
+                let relation = Relation::from_tuple_iter_override(self.database_root.join(#file_name), facts);
+                *self.#name.borrow_mut() = Some(relation);
+
                 //assert!(self.#name.borrow().is_none());
                 //let relation: Relation<(#types)> = facts.into();
                 //unsafe { relation.save(#relation_hash, self.database_root.join(#file_name)); }
                 //*self.#name.borrow_mut() = Some(relation.into());
 
-                unsafe { 
-                    save_elts_relation::<#tuple_element_type>(
-                        facts,
-                        #relation_hash,
-                        self.database_root.join(#file_name)
-                    );
-                }
+                // unsafe { 
+                //     save_elts_relation::<#tuple_element_type>(
+                //         facts,
+                //         #relation_hash,
+                //         self.database_root.join(#file_name)
+                //     );
+                // }
             }
         });
 

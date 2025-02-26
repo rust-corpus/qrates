@@ -205,14 +205,14 @@ impl<'b> SpanResolver<'b> {
 // TODO: can we make this return an iterator? would it help if we streamed this?
 pub fn filter_selected<F1, F2, I, O>(
     iter: impl Iterator<Item = I>,
-    selected_builds: &[(
+    selected_builds: impl Iterator<Item = (
         types::Build,
         types::Package,
         types::PackageVersion,
         types::Krate,
         types::CrateHash,
         types::Edition,
-    )],
+    )>,
     def_paths: &InterningTable<
         types::DefPath,
         (
@@ -232,9 +232,8 @@ where
     I: Clone,
 {
     let selected_builds_set: HashMap<_, _> = selected_builds
-        .iter()
         .map(
-            |&(build, _package, _version, krate, crate_hash, _edition)| {
+            |(build, _package, _version, krate, crate_hash, _edition)| {
                 ((krate, crate_hash), build)
             },
         )

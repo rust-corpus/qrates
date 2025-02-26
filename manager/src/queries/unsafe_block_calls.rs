@@ -20,19 +20,19 @@ fn report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
     let trait_items: HashSet<_> = trait_items
-        .iter()
+        .tuple_iter()
         .map(|(_trait_id, def_path, _defaultness)| def_path)
         .collect();
     let summary_keys = loader.load_summary_keys();
     let subscopes = loader.load_subscopes();
     let scope_spans: HashMap<_, _> = subscopes
-        .iter()
-        .map(|&(_parent, child, _safety, _check_mode, _explicit_unsafe_group, span)| (child, span))
+        .tuple_iter()
+        .map(|(_parent, child, _safety, _check_mode, _explicit_unsafe_group, span)| (child, span))
         .collect();
     let unsafe_block_calls = loader.load_unsafe_block_calls();
 
-    let unsafe_block_calls = unsafe_block_calls.iter().map(
-        |&(build, block, unsafe_scope, check_mode, call, unsafety, abi, _return_ty)| {
+    let unsafe_block_calls = unsafe_block_calls.tuple_iter().map(
+        |(build, block, unsafe_scope, check_mode, call, unsafety, abi, _return_ty)| {
             let (
                 target_crate_name,
                 target_crate_hash,
@@ -88,14 +88,14 @@ fn report_all_calls(loader: &Loader, report_path: &Path) {
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
     let trait_items: HashSet<_> = trait_items
-        .iter()
+        .tuple_iter()
         .map(|(_trait_id, def_path, _defaultness)| def_path)
         .collect();
     let summary_keys = loader.load_summary_keys();
 
     let all_calls = loader.load_terminators_call();
-    let all_calls = all_calls.iter().map(
-        |&(_block, call, func, unsafety, abi, _return_ty, _destination, _span)| {
+    let all_calls = all_calls.tuple_iter().map(
+        |(_block, call, func, unsafety, abi, _return_ty, _destination, _span)| {
             let (call_target, is_trait_item) = if let Some(target) =
                 terminators_call_const_target.get(&call)
             {
@@ -140,7 +140,7 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
     let trait_items: HashSet<_> = trait_items
-        .iter()
+        .tuple_iter()
         .map(|(_trait_id, def_path, _defaultness)| def_path)
         .collect();
     let summary_keys = loader.load_summary_keys();
@@ -213,7 +213,7 @@ fn new_report_all_calls(loader: &Loader, report_path: &Path) {
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
     let trait_items: HashSet<_> = trait_items
-        .iter()
+        .tuple_iter()
         .map(|(_trait_id, def_path, _defaultness)| def_path)
         .collect();
     let summary_keys = loader.load_summary_keys();

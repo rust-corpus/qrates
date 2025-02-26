@@ -67,13 +67,13 @@ pub fn query(loader: &Loader, report_path: &Path, workspace_path: &Path, sources
     let editions = loader.load_editions();
     let crate_types = loader.load_build_crate_types();
     let crate_types: HashMap<_, Vec<_>> = crate_types
-        .iter()
+        .tuple_iter()
         .safe_group_by(|&(build, _)| build)
         .into_iter()
         .map(|(build, group)| {
             (
                 build,
-                group.map(|(_build, crate_type)| *crate_type).collect(),
+                group.map(|(_build, crate_type)| crate_type).collect(),
             )
         })
         .collect();
