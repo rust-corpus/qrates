@@ -364,8 +364,8 @@ impl<K: DiskMapKey, V: DiskMapValue> Drop for DiskMap<K, V> {
     }
 }
 
-const DISK_MAP_WRITE_CACHE_SIZE: usize = 100_000;
-const DISK_MAP_REDB_CACHE_SIZE: usize = 50_000_000;
+pub(crate) const DISK_MAP_WRITE_CACHE_SIZE: usize = 100_000;
+pub(crate) const DISK_MAP_REDB_CACHE_SIZE: usize = 50_000_000;
 
 impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     pub fn create_override(path: impl AsRef<std::path::Path>) -> Self {

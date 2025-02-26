@@ -4,7 +4,7 @@
 
 //! Helper functions for serializing and deserializing.
 
-use crate::data_structures::{DiskMapKey, DiskMapValue, InterningTable, InterningTableKey, InterningTableValue, Relation, RelationMap, RelationMapKey, RelationMapValue};
+use crate::data_structures::{DiskMapKey, DiskMapValue, InterningTable, InterningTableKey, InterningTableValue, Relation, RelationMap, RelationMapKey, RelationMapValue, DISK_MAP_REDB_CACHE_SIZE};
 use crate::tables::Tables;
 use crate::tables::{store_multifile_relations, load_multifile_relations};
 use crate::tables::Relations;
@@ -345,7 +345,9 @@ where
 
     fn load_redb(&mut self, table_hash: u64, mut path: std::path::PathBuf) {
         path.set_extension("redb");
-        let db = redb::Database::open(path).unwrap();
+        let mut builder = redb::Database::builder();
+        builder.set_cache_size(DISK_MAP_REDB_CACHE_SIZE);
+        let db = builder.open(path).unwrap();
         let read_txn = db.begin_read().unwrap();
         let table_name = table_hash.to_string();
         let inv_table_name = format!("inv_{}", table_name);
@@ -391,7 +393,9 @@ for<'a>&'a K: Borrow<<K as redb::Value>::SelfType<'a>>
 
     fn load_redb(&mut self, relation_hash: u64, mut path: std::path::PathBuf) {
         path.set_extension("redb");
-        let db = redb::Database::open(path).unwrap();
+        let mut builder = redb::Database::builder();
+        builder.set_cache_size(DISK_MAP_REDB_CACHE_SIZE);
+        let db = builder.open(path).unwrap();
         let read_txn = db.begin_read().unwrap();
         let table_name = relation_hash.to_string();
         let table_definition = TableDefinition::<K, V>::new(&table_name);
