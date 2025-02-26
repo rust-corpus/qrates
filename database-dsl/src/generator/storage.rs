@@ -13,28 +13,28 @@ pub(super) fn generate_load_save_functions(schema: &ast::DatabaseSchema) -> Toke
     let store_counters = store_counters_function();
     let store_interning_tables = store_multifle_interning_function(schema);
     quote! {
-        impl Tables {
+        impl DiskTables {
             pub fn load_multifile(
                 database_root: &Path
-            ) -> Result<Tables> {
+            ) -> Result<DiskTables> {
                 let relations = load_multifile_relations(&database_root.join("relations"))?;
                 let counters = load_counters(&database_root.join("counters.bincode"))?;
                 let interning_tables = load_interning_tables(&database_root.join("interning"))?;
-                Ok(Tables {
+                Ok(DiskTables {
                     relations,
                     counters,
                     interning_tables,
                 })
             }
-            pub fn load_single_file(
-                tables_file: &Path
-            ) -> Result<Tables> {
-                Self::load(tables_file)
-            }
-            pub fn store_multifile(&self, database_root: &Path) -> Result<()> {
+            // pub fn load_single_file(
+            //     tables_file: &Path
+            // ) -> Result<Tables> {
+            //     Self::load(tables_file)
+            // }
+            pub fn store_multifile(&mut self, database_root: &Path) -> Result<()> {
                 let relations_path = database_root.join("relations");
                 std::fs::create_dir_all(&relations_path)?;
-                store_multifile_relations(&self.relations, &relations_path);
+                store_multifile_relations(&mut self.relations, &relations_path);
                 let counters_path = database_root.join("counters.bincode");
                 store_counters(&self.counters, &counters_path);
                 let interning_tables_path = &database_root.join("interning");
@@ -66,8 +66,8 @@ fn load_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStrea
         });
     }
     quote! {
-        pub fn load_multifile_relations(path: &Path) -> Result<Relations> {
-            Ok(Relations {
+        pub fn load_multifile_relations(path: &Path) -> Result<DiskRelations> {
+            Ok(DiskRelations {
                 #load_fields
             })
         }
@@ -116,7 +116,7 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
     }
     quote! {
         pub fn store_multifile_relations(
-            relations: &Relations,
+            relations: &mut DiskRelations,
             path: &Path
         ) {
             #store_fields

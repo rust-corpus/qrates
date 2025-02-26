@@ -39,6 +39,11 @@ impl<T: DiskMapValue> Relation<T> {
     pub(crate) fn from_disk_vec(facts: DiskVec<T>) -> Self {
         Self { facts }
     }
+
+    pub fn create_override_in(path: impl AsRef<std::path::Path>) -> Self {
+        let facts = DiskVec::create_override(path);
+        Self { facts }
+    }
 }
 
 impl<T> Relation<RelationElement<T>>
@@ -330,8 +335,16 @@ where
     V: DiskMapValue,
 {
     pub(crate) db: redb::Database,
+    write_cache: Vec<(K, V)>,
     path: PathBuf,
     _phantom: std::marker::PhantomData<(K, V)>,
+}
+
+impl<K: DiskMapKey, V: DiskMapValue> Drop for DiskMap<K, V> {
+    fn drop(&mut self) {
+        eprintln!("Dropping DiskMap at {:?}, thus flushing", self.path);
+        self.flush();
+    }
 }
 
 impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
@@ -362,6 +375,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         let mut diskmap = Self {
             db,
             path: path.to_path_buf(),
+            write_cache: Vec::new(),
             _phantom: std::marker::PhantomData,
         };
         diskmap.create_self_table();
@@ -387,6 +401,9 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn insert_iter(&mut self, iter: impl IntoIterator<Item = (K, V)>) {
+        // to preserve insertion order. Likely not important for our usecase.
+        self.flush();
+
         let write_txn = self.db.begin_write().unwrap();
         
         {
@@ -402,13 +419,22 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn insert(&mut self, key: K, value: V) {
+        self.write_cache.push((key, value));
+        if self.write_cache.len() > 1000000 {
+            self.flush();
+        }
+    }
+
+    pub(crate) fn flush(&mut self) {
         let write_txn = self.db.begin_write().unwrap();
         
         {
             let table_def: TableDefinition<K, V> = TableDefinition::new("table");
             let mut table = write_txn.open_table(table_def).unwrap();
 
-            table.insert(key, value).unwrap();
+            for (k, v) in self.write_cache.drain(..) {
+                table.insert(k, v).unwrap();
+            }
         }
 
         write_txn.commit().unwrap();

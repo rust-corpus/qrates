@@ -46,6 +46,9 @@ pub fn generate_definition(dest_path: &Path, schema: ast::DatabaseSchema) {
     child.stdin.as_mut().unwrap().write_all(tokens.as_bytes()).unwrap();
     let output = child.wait_with_output().unwrap();
     let bytes = output.stdout;
+    if bytes.len() == 0 {
+        panic!("rustfmt failed: {:?}", output.stderr);
+    }
 
     file.write_all(&bytes).unwrap();
     // file.write_all(tokens.to_string().as_bytes()).unwrap();

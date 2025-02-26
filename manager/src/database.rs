@@ -40,12 +40,14 @@ impl DatabaseManager {
             });
             (
                 loaded_crates,
-                tables::Tables::load_multifile(&database_root).unwrap(),
+                tables::DiskTables::load_multifile(&database_root).unwrap(),
             )
         } else {
             fs::create_dir_all(&database_root)
                 .expect("Failed to create the directory for the database");
-            (HashSet::new(), tables::Tables::default())
+            fs::create_dir_all(&database_root.join("relations"))
+            .expect("Failed to create the directory for the database relations");
+            (HashSet::new(), tables::DiskTables::create_in(&database_root).unwrap())
         };
         Self {
             loaded_crates_path,

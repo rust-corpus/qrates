@@ -131,7 +131,7 @@ impl<T: Copy + DiskMapValue> Relation<T> {
     /// ``relation_hash`` – the hash of the relation schema. It is used to prevent
     /// loading relations that were saved with a different schema.
     /// ``path`` – the path **without** the extension.
-    pub unsafe fn save(&self, relation_hash: u64, path: std::path::PathBuf) {
+    pub unsafe fn save(&mut self, relation_hash: u64, path: std::path::PathBuf) {
         self.facts.save(path);
 
         // unsafe { save_elts_relation(self.facts.iter().cloned(), relation_hash, path) };
@@ -404,61 +404,27 @@ for<'a>&'a K: Borrow<<K as redb::Value>::SelfType<'a>>
 impl Tables {
     /// ``path`` – the path **without** the extension.
     pub fn save_json(&self, mut path: std::path::PathBuf) {
-        panic!("Not implemented");
+        path.set_extension("json");
+        save(&self, &path);
     }
     /// ``path`` – the path the **without** extension.
     pub fn save_bincode(&self, mut path: std::path::PathBuf) {
-        let filename = path.file_name().unwrap().to_str().unwrap();
-        let path_counters = path.with_file_name(format!("{}.counters.bincode", filename));
-        let path_interning = path.with_file_name(format!("{}.interning.bincode", filename));
-        // directory
-        let path_relations = path.with_file_name(format!("{}.relations", filename));
-
-        std::fs::create_dir_all(&path_relations).unwrap();
-
-        save(&self.counters, &path_counters);
-        save(&self.interning_tables, &path_interning);
-        store_multifile_relations(&self.relations, &path_relations);
+        path.set_extension("bincode");
+        save(&self, &path);
     }
     /// ``path`` – the path **with** the extension.
     pub fn load(path: &std::path::Path) -> Result<Self> {
-        let ext = path.extension().unwrap();
-        let path_without_ext = path.with_extension("");
-        let filename = path_without_ext.file_name().unwrap().to_str().unwrap();
-        let counters;
-        {   
-            let counters_filename = format!("{}.counters.{}", filename, ext.to_str().unwrap());
-            let counters_path = path.with_file_name(counters_filename);
-            counters = load(&counters_path)?;
-        }
-        let interning_tables;
-        {
-            let interning_tables_filename = format!("{}.interning.{}", filename, ext.to_str().unwrap());
-            let interning_tables_path = path.with_file_name(interning_tables_filename);
-            interning_tables = load(&interning_tables_path)?;
-        }
-
-        let relations;
-        {
-            // note: ignores json extension
-            let relations_path = format!("{}.relations", filename);
-            let mut path_root = path.with_file_name(relations_path);
-            relations = load_multifile_relations(&path_root)?;
-        }
-
-
-        Ok(Tables {
-            counters,
-            interning_tables,
-            relations,
-        })
+        load(path)
     }
 }
 
 impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
-    pub fn save(&self, path: std::path::PathBuf) {
-        // TODO: instead of assertion, just pretend it's already saved?
-        assert_ne!(path, self.path());
+    pub fn save(&mut self, path: std::path::PathBuf) {
+        self.flush();
+        if path == self.path() {
+            // already saved
+            return;
+        }
 
         // create a new database at path and store self into it.
         let saved_dm = DiskMap::from_iter_override(path, self.iter());
@@ -474,7 +440,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
 }
 
 impl<V: DiskMapValue> DiskVec<V> {
-    pub fn save(&self, path: std::path::PathBuf) {
+    pub fn save(&mut self, path: std::path::PathBuf) {
         self.map.save(path);
     }
 

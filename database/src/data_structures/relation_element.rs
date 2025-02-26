@@ -1,6 +1,6 @@
 use std::{fmt::Debug, ops::{Deref, DerefMut}};
 
-use serde::{Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 
 pub trait VecOfRelationElementAdapter<T> {
     fn vec_into_inner(self) -> Vec<T>;

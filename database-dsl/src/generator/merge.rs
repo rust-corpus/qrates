@@ -69,13 +69,14 @@ pub(super) fn generate_merge_functions(schema: &ast::DatabaseSchema) -> TokenStr
     tokens.extend(merge_counters(schema));
     quote! {
 
+        /// Merges arbitrary amount of Tables into a DiskTables
         pub struct TableMerger {
-            pub(crate) tables: Tables,
+            pub(crate) tables: DiskTables,
             #field_tokens
         }
 
         impl TableMerger {
-            pub fn new(tables: super::tables::Tables) -> Self {
+            pub fn new(tables: super::tables::DiskTables) -> Self {
                 Self {
                     #field_init_tokens
                     tables,
@@ -84,7 +85,7 @@ pub(super) fn generate_merge_functions(schema: &ast::DatabaseSchema) -> TokenStr
             pub fn merge(&mut self, other: super::tables::Tables) {
                 #tokens
             }
-            pub fn tables(&mut self) -> &mut Tables {
+            pub fn tables(&mut self) -> &mut DiskTables {
                 &mut self.tables
             }
         }
@@ -208,7 +209,7 @@ fn merge_relations(
         let mut new_source = TokenStream::new();
         for param in &relation.parameters {
             let param_name = &param.name;
-            params.extend(quote! { ref #param_name, });
+            params.extend(quote! { #param_name, });
             let new_name = name_generator.get_fresh_ident();
             new_params.extend(quote! { #new_name, });
             if relation.is_relation_key_target(param_name) {
@@ -302,7 +303,7 @@ fn merge_relations(
             &mut relation_without_target_remap_tokens
         };
         target_tokens.extend(quote! {
-            for RelationElement((#params)) in other.relations.#name.iter() {
+            for (#params) in other.relations.#name.iter() {
                 #params_remap
                 #filter_tokens
                 self.tables

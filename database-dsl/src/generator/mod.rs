@@ -13,6 +13,8 @@ mod storage;
 mod types;
 mod utils;
 
+// mod disktables;
+
 pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
     let types = types::generate_types(&schema);
     let tables = interning_tables::generate_interning_tables(&schema);
@@ -122,7 +124,7 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
             #relations
             #counters
 
-            #[derive(Default)]
+            #[derive(Default, Deserialize, Serialize)]
             pub struct Tables {
                 /// Relations between Rust program elements.
                 pub(crate) relations: Relations,
@@ -130,6 +132,25 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
                 pub(crate) counters: Counters,
                 /// Interning tables that link typed ids to untyped interning ids.
                 pub(crate) interning_tables: InterningTables,
+            }
+
+            pub struct DiskTables {
+                /// Relations between Rust program elements.
+                pub(crate) relations: DiskRelations,
+                /// Counters used for generating ids.
+                pub(crate) counters: Counters,
+                /// Interning tables that link typed ids to untyped interning ids.
+                pub(crate) interning_tables: InterningTables,
+            }
+
+            impl DiskTables {
+                pub fn create_in(root: &Path) -> Result<Self> {
+                    Ok(Self {
+                        relations: DiskRelations::create_in(&root.join("relations"))?,
+                        counters: Counters::default(),
+                        interning_tables: InterningTables::default(),
+                    })
+                }
             }
 
             impl Tables {
