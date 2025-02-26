@@ -33,7 +33,8 @@ pub fn set_disk_map_temp_dir_root(root: PathBuf) {
 pub fn get_new_disk_map_temp_dir() -> PathBuf {
     let mut counter = DISK_MAP_COUNTER.lock().expect("Disk map counter lock poisoned");
     let root = DISK_MAP_TEMP_DIR_ROOT.get().expect("Disk map temp dir root not set");
-    let path = root.join(format!("disk_map_{}", *counter));
+    let random = rand::random::<u64>();
+    let path = root.join(format!("disk_map_{}_{}", *counter, random));
     *counter += 1;
     path
 }

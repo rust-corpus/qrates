@@ -345,14 +345,27 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         Self::create_or_open(path)
     }
 
+    fn create_self_table(&mut self) {
+        let write_txn = self.db.begin_write().unwrap();
+        {
+            let table_def: TableDefinition<K, V> = TableDefinition::new("table");
+            write_txn.open_table(table_def).unwrap();
+        }
+        write_txn.commit().unwrap();
+    }
+
     pub fn create_or_open(path: impl AsRef<std::path::Path>) -> Self {
         let path = path.as_ref();
-        let db = redb::Database::open(path).unwrap();
-        Self {
+        eprintln!("Opening DiskMap at {:?}", path);
+        let db = redb::Database::create(path).unwrap();
+
+        let mut diskmap = Self {
             db,
             path: path.to_path_buf(),
             _phantom: std::marker::PhantomData,
-        }
+        };
+        diskmap.create_self_table();
+        diskmap
     }
 
     pub fn path(&self) -> &std::path::Path {

@@ -28,6 +28,7 @@ mod thir_storage;
 mod thir_visitor;
 mod utils;
 
+use corpus_database::set_disk_map_temp_dir_root;
 use lazy_static::lazy_static;
 use rustc_data_structures::fx::FxIndexSet;
 use rustc_hir::def_id::DefId;
@@ -63,6 +64,20 @@ lazy_static! {
 fn analyse_with_tcx(name: String, tcx: TyCtxt, session: &Session) {
     let hash = tcx.crate_hash(rustc_hir::def_id::LOCAL_CRATE);
     let file_name = format!("{}_{}", name, hash.to_string());
+
+    let mut path = if let Ok(results_dir_path) = std::env::var("CORPUS_RESULTS_DIR") {
+        results_dir_path.into()
+    } else {
+        let mut path: PathBuf = std::env::var("CARGO_TARGET_DIR").unwrap().into();
+        path.push("rust-corpus");
+        path
+    };
+    std::fs::create_dir_all(&path).unwrap();
+    let tmp_dm_path = path.join("tmp_diskmap");
+    std::fs::create_dir_all(&tmp_dm_path).unwrap();
+    set_disk_map_temp_dir_root(tmp_dm_path);
+    path.push(file_name);
+
     let cargo_pkg_version = std::env::var("CARGO_PKG_VERSION").unwrap();
     let cargo_pkg_name = std::env::var("CARGO_PKG_NAME").unwrap();
     let mut tables = corpus_database::tables::Tables::default();
@@ -155,16 +170,6 @@ fn analyse_with_tcx(name: String, tcx: TyCtxt, session: &Session) {
     }
 
     let tables = filler.tables;
-    let mut path = if let Ok(results_dir_path) = std::env::var("CORPUS_RESULTS_DIR") {
-        results_dir_path.into()
-    } else {
-        let mut path: PathBuf = std::env::var("CARGO_TARGET_DIR").unwrap().into();
-        path.push("rust-corpus");
-        path
-    };
-    std::fs::create_dir_all(&path).unwrap();
-    path.push(file_name);
-
     if Some("true")
         == std::env::var("CORPUS_OUTPUT_JSON")
             .ok()

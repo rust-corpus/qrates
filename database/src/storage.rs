@@ -412,7 +412,7 @@ impl Tables {
         let path_counters = path.with_file_name(format!("{}.counters.bincode", filename));
         let path_interning = path.with_file_name(format!("{}.interning.bincode", filename));
         // directory
-        let path_relations = path.with_file_name("relations");
+        let path_relations = path.with_file_name(format!("{}.relations", filename));
 
         std::fs::create_dir_all(&path_relations).unwrap();
 
@@ -441,9 +441,9 @@ impl Tables {
         let relations;
         {
             // note: ignores json extension
-            let mut path_root = path.parent().unwrap().to_path_buf();
-            let relations_path = path_root.join("relations");
-            relations = load_multifile_relations(&relations_path)?;
+            let relations_path = format!("{}.relations", filename);
+            let mut path_root = path.with_file_name(relations_path);
+            relations = load_multifile_relations(&path_root)?;
         }
 
 
