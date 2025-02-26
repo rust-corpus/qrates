@@ -101,7 +101,9 @@ pub fn run_query(
     let tmp_database_root = database_root.join("tmp");
     std::fs::create_dir_all(&tmp_database_root).unwrap();
     set_disk_map_temp_dir_root(tmp_database_root);
+    let loader = corpus_database::tables::Loader::new(database_root.to_path_buf());
     queries::run_query(
+        &loader,
         query_name,
         database_root,
         report_path,

@@ -21,6 +21,7 @@ mod unsafe_types;
 mod utils;
 
 pub fn run_query(
+    loader: &corpus_database::tables::Loader,
     query_name: &str,
     database_root: &Path,
     report_path: &Path,
@@ -28,7 +29,6 @@ pub fn run_query(
     sources_list_path: &Path,
 ) {
     info!("Running query: {}", query_name);
-    let loader = corpus_database::tables::Loader::new(database_root.to_path_buf());
     match query_name {
         "prepare-builds" => prepare_builds::query(
             &loader,
@@ -38,14 +38,14 @@ pub fn run_query(
         ),
         "prepare-items" => prepare_items::query(&loader),
         "prepare-all" => {
-            run_query(
+            run_query(&loader,
                 "prepare-builds",
                 database_root,
                 report_path,
                 workspace_path,
                 sources_list_path,
             );
-            run_query(
+            run_query(&loader,
                 "prepare-items",
                 database_root,
                 report_path,
@@ -84,6 +84,7 @@ pub fn run_query(
         "non-tree-types" => non_tree_types::query(&loader, &report_path.join("non-tree-types")),
         "all" => {
             run_query(
+                &loader,
                 "unsafe-reasons",
                 database_root,
                 report_path,
@@ -91,6 +92,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "prepare-all",
                 database_root,
                 report_path,
@@ -98,6 +100,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "counters",
                 database_root,
                 report_path,
@@ -105,6 +108,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "size",
                 database_root,
                 report_path,
@@ -112,6 +116,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "function-size",
                 database_root,
                 report_path,
@@ -119,6 +124,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "build-files",
                 database_root,
                 report_path,
@@ -126,6 +132,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "build-meta",
                 database_root,
                 report_path,
@@ -133,6 +140,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "traits",
                 database_root,
                 report_path,
@@ -140,6 +148,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "types",
                 database_root,
                 report_path,
@@ -147,6 +156,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "unsafe-types",
                 database_root,
                 report_path,
@@ -154,6 +164,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "unsafe-block-groups",
                 database_root,
                 report_path,
@@ -161,6 +172,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "unsafe-block-calls",
                 database_root,
                 report_path,
@@ -168,6 +180,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "unsafe-spans",
                 database_root,
                 report_path,
@@ -175,6 +188,7 @@ pub fn run_query(
                 sources_list_path,
             );
             run_query(
+                &loader,
                 "non-tree-types",
                 database_root,
                 report_path,
