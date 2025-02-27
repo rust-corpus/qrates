@@ -23,12 +23,10 @@ mod counters {
             {
                 use corpus_database::types::*;
                 use corpus_database::RelationElement;
-                let selected_mir_cfgs = RelationElement::vec_into_inner(
-                    loader.load_selected_mir_cfgs().clone(),
-                );
-                let subscopes = RelationElement::vec_into_inner(
-                    loader.load_subscopes().clone(),
-                );
+                use corpus_database::VecOfRelationElementAdapter;
+                use corpus_database::VecIntoRelationElementAdapter;
+                let selected_mir_cfgs = loader.load_selected_mir_cfgs().to_tuple_vec();
+                let subscopes = loader.load_subscopes().to_tuple_vec();
                 {
                     let mut iteration = datafrog::Iteration::new();
                     let var_selected_mir_cfgs = datafrog::Relation::<
@@ -265,17 +263,16 @@ mod counters {
         let def_path_resolver = DefPathResolver::new(loader);
         let span_resolver = SpanResolver::new(loader);
         let selected_builds: HashSet<_> = loader
-            .load_selected_builds()
-            .iter()
-            .map(|(build, _package, _version, _krate, _crate_hash, _edition)| *build)
+            .load_iter_selected_builds()
+            .map(|(build, _package, _version, _krate, _crate_hash, _edition)| build)
             .collect();
         let mut unsafe_blocks_relation = Vec::new();
         let mut unsafe_blocks = Vec::new();
         let mut unsafe_root_scopes = HashMap::new();
         let iter = selected_scopes
-            .iter()
+            .tuple_iter()
             .filter(|
-                &(
+                (
                     _build,
                     _mir_body_def_path,
                     _scope,
@@ -287,7 +284,7 @@ mod counters {
                 )|
             { *safety == types::ScopeSafety::ExplicitUnsafe })
             .safe_group_by(|
-                (
+                &(
                     _build,
                     def_path,
                     _scope,
@@ -316,7 +313,7 @@ mod counters {
                 children.insert(scope);
             }
             let mut found = false;
-            for &(
+            for (
                 build,
                 mir_body_def_path,
                 scope,
@@ -447,8 +444,8 @@ mod counters {
         };
         let statements = loader.load_statements();
         let unsafe_statements: Vec<_> = statements
-            .iter()
-            .flat_map(|&(stmt, block, index, kind, scope)| {
+            .tuple_iter()
+            .flat_map(|(stmt, block, index, kind, scope)| {
                 unsafe_root_scopes
                     .get(&scope)
                     .map(|&(unsafe_scope, build, check_mode)| {
@@ -474,8 +471,8 @@ mod counters {
         };
         let terminators = loader.load_terminators();
         let unsafe_terminators: Vec<_> = terminators
-            .iter()
-            .flat_map(|&(block, kind, scope)| {
+            .tuple_iter()
+            .flat_map(|(block, kind, scope)| {
                 unsafe_root_scopes
                     .get(&scope)
                     .map(|&(unsafe_scope, build, check_mode)| {
@@ -512,12 +509,10 @@ mod counters {
             {
                 use corpus_database::types::*;
                 use corpus_database::RelationElement;
-                let selected_mir_cfgs = RelationElement::vec_into_inner(
-                    loader.load_selected_mir_cfgs().clone(),
-                );
-                let unsafe_blocks = RelationElement::vec_into_inner(
-                    loader.load_unsafe_blocks().clone(),
-                );
+                use corpus_database::VecOfRelationElementAdapter;
+                use corpus_database::VecIntoRelationElementAdapter;
+                let selected_mir_cfgs = loader.load_selected_mir_cfgs().to_tuple_vec();
+                let unsafe_blocks = loader.load_unsafe_blocks().to_tuple_vec();
                 {
                     let mut iteration = datafrog::Iteration::new();
                     let var_selected_mir_cfgs = datafrog::Relation::<
@@ -690,14 +685,14 @@ mod counters {
         let abis = loader.load_abis();
         let trait_items = loader.load_trait_items();
         let trait_items: HashSet<_> = trait_items
-            .iter()
+            .tuple_iter()
             .map(|(_trait_id, def_path, _defaultness)| def_path)
             .collect();
         let selected_function_definitions = loader.load_selected_function_definitions();
         let selected_function_definitions = selected_function_definitions
-            .iter()
+            .tuple_iter()
             .map(|
-                &(
+                (
                     build,
                     item,
                     def_path,
@@ -756,12 +751,12 @@ mod counters {
             {
                 use corpus_database::types::*;
                 use corpus_database::RelationElement;
-                let selected_thir_bodies = RelationElement::vec_into_inner(
-                    loader.load_selected_thir_bodies().clone(),
-                );
-                let thir_blocks = RelationElement::vec_into_inner(
-                    loader.load_thir_blocks().clone(),
-                );
+                use corpus_database::VecOfRelationElementAdapter;
+                use corpus_database::VecIntoRelationElementAdapter;
+                let selected_thir_bodies = loader
+                    .load_selected_thir_bodies()
+                    .to_tuple_vec();
+                let thir_blocks = loader.load_thir_blocks().to_tuple_vec();
                 {
                     let mut iteration = datafrog::Iteration::new();
                     let var_selected_thir_bodies = datafrog::Relation::<
@@ -983,10 +978,11 @@ mod counters {
         let strings = loader.load_strings();
         let mut unsafe_thir_blocks_relation = Vec::new();
         let mut unsafe_thir_blocks = Vec::new();
-        for &(build, thir_body_def_path, _parent, block, _safety, check_mode, span) in selected_thir_blocks
-            .iter()
+        let mut unsafe_thir_block_to_build_and_checkmode = HashMap::new();
+        for (build, thir_body_def_path, _parent, block, _safety, check_mode, span) in selected_thir_blocks
+            .tuple_iter()
             .filter(|
-                &(
+                (
                     _build,
                     _thir_body_def_path,
                     _parent,
@@ -1014,6 +1010,7 @@ mod counters {
                     check_mode.to_string(),
                     span_resolver.resolve(span),
                 ));
+            unsafe_thir_block_to_build_and_checkmode.insert(block, (build, check_mode));
         }
         {
             let lvl = ::log::Level::Info;
@@ -1085,29 +1082,10 @@ mod counters {
         let unsafe_thir_statements = || {
             let thir_statements = loader.load_iter_thir_stmts();
             thir_statements
-                .flat_map(|(stmt, _block, closest_unsafe_block, index)| {
-                    unsafe_thir_blocks_relation
-                        .iter()
-                        .filter(move |
-                            &(
-                                build,
-                                _thir_body_def_path,
-                                unsafe_block,
-                                _expansion_kind,
-                                _check_mode,
-                                _span,
-                            )|
-                        { *unsafe_block == closest_unsafe_block })
-                        .map(move |
-                            &(
-                                build,
-                                _thir_body_def_path,
-                                _unsafe_block,
-                                _expansion_kind,
-                                check_mode,
-                                span,
-                            )|
-                        { (build, stmt, closest_unsafe_block, index, check_mode) })
+                .filter_map(|(stmt, _block, closest_unsafe_block, index)| {
+                    let &(build, check_mode) = unsafe_thir_block_to_build_and_checkmode
+                        .get(&closest_unsafe_block)?;
+                    Some((build, stmt, closest_unsafe_block, index, check_mode))
                 })
         };
         loader.store_iter_unsafe_thir_stmts(unsafe_thir_statements());
@@ -1172,12 +1150,12 @@ mod counters {
             {
                 use corpus_database::types::*;
                 use corpus_database::RelationElement;
-                let selected_thir_bodies = RelationElement::vec_into_inner(
-                    loader.load_selected_thir_bodies().clone(),
-                );
-                let unsafe_thir_blocks = RelationElement::vec_into_inner(
-                    loader.load_unsafe_thir_blocks().clone(),
-                );
+                use corpus_database::VecOfRelationElementAdapter;
+                use corpus_database::VecIntoRelationElementAdapter;
+                let selected_thir_bodies = loader
+                    .load_selected_thir_bodies()
+                    .to_tuple_vec();
+                let unsafe_thir_blocks = loader.load_unsafe_thir_blocks().to_tuple_vec();
                 {
                     let mut iteration = datafrog::Iteration::new();
                     let var_selected_thir_bodies = datafrog::Relation::<
@@ -1358,14 +1336,14 @@ mod counters {
         let abis = loader.load_abis();
         let trait_items = loader.load_trait_items();
         let trait_items: HashSet<_> = trait_items
-            .iter()
+            .tuple_iter()
             .map(|(_trait_id, def_path, _defaultness)| def_path)
             .collect();
         let selected_function_definitions = loader.load_selected_function_definitions();
         let selected_function_definitions_thir_counts = selected_function_definitions
-            .iter()
+            .tuple_iter()
             .map(|
-                &(
+                (
                     build,
                     item,
                     def_path,

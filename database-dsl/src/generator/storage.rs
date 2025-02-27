@@ -91,7 +91,7 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
 
             let intern_table_name = syn::Ident::new(&format!("{}_redb_map", name), Span::call_site());
             let intern_table_hash = relation_hash;
-            let intern_table_file_name = format!("{}", name);
+            let intern_table_file_name = format!("{}_relation_map", name);
 
 
             let source_idx_str = TokenStream::from_str(&format!("{}", source_idx)).unwrap();

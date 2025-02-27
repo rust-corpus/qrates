@@ -117,7 +117,7 @@ pub(super) fn generate_loader_functions(
 
             let intern_table_name = syn::Ident::new(&format!("{}_redb_map", name), Span::call_site());
             let intern_table_hash = relation_hash;
-            let intern_table_file_name = format!("relations/{}", name);
+            let intern_table_file_name = format!("relations/{}_relation_map", name);
             let load_intern_table_fn_name =
                 syn::Ident::new(&format!("load_{}", intern_table_name), Span::call_site());
             cache_field_tokens.extend(quote! {
