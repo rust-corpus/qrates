@@ -21,7 +21,8 @@ extern crate rustc_target;
 
 mod converters;
 mod hir_visitor;
-mod mir_visitor;
+// mir visitor disabled due to not being used anymore
+// mod mir_visitor;
 mod mirai_utils;
 mod table_filler;
 mod thir_storage;

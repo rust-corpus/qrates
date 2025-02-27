@@ -3,7 +3,6 @@
 // modified, or distributed except according to those terms.
 
 use crate::converters::ConvertInto;
-use crate::mir_visitor::MirVisitor;
 use crate::table_filler::TableFiller;
 use crate::thir_storage;
 use crate::thir_visitor::ThirVisitor;
@@ -125,8 +124,8 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
     fn visit_mir(&mut self, body_id: rustc_span::def_id::LocalDefId, body: &mir::Body<'tcx>) {
         let error = format!("Mir outside of an item: {:?}", body.span);
         let item = self.current_item.expect(&error);
-        let mut mir_visitor = MirVisitor::new(self.tcx, item, body_id, body, &mut self.filler);
-        mir_visitor.visit();
+        let body_path = self.filler.resolve_local_def_id(body_id);
+        self.filler.tables.register_mir_cfgs(item, body_path);
     }
     /// Extract information from THIR.
     fn visit_thir(&mut self, thir: Thir<'tcx>, body_id: ExprId, def_path: types::DefPath) {
