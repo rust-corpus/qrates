@@ -54,26 +54,4 @@ pub fn query(loader: &Loader, report_path: &Path) {
         })
         .collect();
     write_csv!(report_path, build_script_crates);
-    // datapond_query! {
-    //     load loader {
-    //         interning_tables_as_relations(def_paths),
-    //         relations(mir_cfgs, subscopes),
-    //     }
-    //     input build_script_builds(
-    //         build: Build,
-    //         package: Package,
-    //         version: PackageVersion,
-    //         krate: Krate,
-    //         crate_hash: CrateHash,
-    //     )
-
-    //     internal build_scopes(build: Build, scope: Scope)
-    //     build_scopes(build, scope) :-
-    //         build_script_builds(.build=build, .krate=krate, .crate_hash=crate_hash),
-    //         def_paths(.def_path=def_path, .krate=krate, .crate_hash=crate_hash),
-    //         mir_cfgs(_, def_path, scope).
-    //     build_scopes(build, scope) :-
-    //         build_scopes(build, parent),
-    //         subscopes(parent, scope, _, _, _, _).
-    // };
 }

@@ -573,10 +573,6 @@ relation global_asm_blocks(def_path: DefPath, item: auto Item, module: Module, n
 relation items(def_path: DefPath, item: auto Item, module: Module, name: Name, visibility: TyVisibility);
 /// MIR cfgs inside a specific item.
 relation mir_cfgs(item: Item, body_def_path: DefPath, root_scope: auto Scope);
-/// parent_scope, scope, scope's safety.
-/// `explicit_unsafe_group` is a unique identifier of a unsafe block within
-/// a function. If `ScopeSafety` is not `ExplicitUnsafe`, then it is 0.
-relation subscopes(parent: Scope, child: auto Scope, safety: ScopeSafety, check_mode: BlockCheckMode, explicit_unsafe_group: u32, span: Span);
 /// Information about spans: (span, call_site_span, expansion kind, location).
 relation spans(
     span: auto Span,
