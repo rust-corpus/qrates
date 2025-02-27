@@ -135,6 +135,8 @@ enum TyVisibility {
 enum Safety {
     Unsafe,
     Safe,
+    // From HeaderSafety::SafeTargetFeatures
+    SafeTargetFeatures,
     /// Failed to obtain unsafety information from the compiler.
     ///
     /// TODO: For closures we could check if that closure is declared inside an unsafe block.
@@ -343,6 +345,8 @@ enum SpanExpansionKind {
     DesugaringYeetExpr,
     /// Desugaring done by the compiler during HIR lowering.
     DesugaringBoundModifier,
+    /// Desugaring done by the compiler during HIR lowering.
+    DesugaringContract,
     /// Inlined MIR.
     Inlined,
 }

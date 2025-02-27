@@ -9,6 +9,8 @@ use rustc_middle::{
     ty::{self, adjustment::PointerCoercion},
 };
 
+extern crate rustc_abi;
+
 pub trait ConvertInto<T> {
     fn convert_into(&self) -> T;
 }
@@ -27,6 +29,15 @@ impl ConvertInto<types::Safety> for hir::Safety {
         match self {
             hir::Safety::Unsafe => types::Safety::Unsafe,
             hir::Safety::Safe => types::Safety::Safe,
+        }
+    }
+}
+
+impl ConvertInto<types::Safety> for hir::HeaderSafety {
+    fn convert_into(&self) -> types::Safety {
+        match self {
+            hir::HeaderSafety::SafeTargetFeatures => types::Safety::SafeTargetFeatures,
+            hir::HeaderSafety::Normal(safety) => safety.convert_into(),
         }
     }
 }
@@ -70,6 +81,9 @@ impl ConvertInto<types::SpanExpansionKind> for rustc_span::hygiene::ExpnKind {
             }
             EK::Desugaring(DesugaringKind::BoundModifier) => {
                 types::SpanExpansionKind::DesugaringYeetExpr
+            }
+            EK::Desugaring(DesugaringKind::Contract) => {
+                types::SpanExpansionKind::DesugaringContract
             }
         }
     }
@@ -264,13 +278,13 @@ impl ConvertInto<types::AdtKind> for ty::AdtKind {
     }
 }
 
-impl ConvertInto<types::AdtVariantIndex> for rustc_target::abi::VariantIdx {
+impl ConvertInto<types::AdtVariantIndex> for rustc_abi::VariantIdx {
     fn convert_into(&self) -> types::AdtVariantIndex {
         self.index().into()
     }
 }
 
-impl ConvertInto<types::FieldIndex> for rustc_target::abi::FieldIdx {
+impl ConvertInto<types::FieldIndex> for rustc_abi::FieldIdx {
     fn convert_into(&self) -> types::FieldIndex {
         self.index().into()
     }

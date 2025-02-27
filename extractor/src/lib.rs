@@ -34,7 +34,6 @@ use lazy_static::lazy_static;
 use rustc_data_structures::fx::FxIndexSet;
 use rustc_hir::def_id::DefId;
 use rustc_interface::interface::Compiler;
-use rustc_interface::Queries;
 use rustc_middle::query::Providers;
 use rustc_middle::ty::TyCtxt;
 use rustc_session::Session;
@@ -136,8 +135,8 @@ fn analyse_with_tcx(name: String, tcx: TyCtxt, session: &Session) {
 
     let mut hir_visitor = hir_visitor::HirVisitor::new(tables, build, session, hir_map, tcx);
 
-    tcx.hir().walk_toplevel_module(&mut hir_visitor);
-    tcx.hir().walk_attributes(&mut hir_visitor);
+    tcx.hir_walk_toplevel_module(&mut hir_visitor);
+    tcx.hir_walk_attributes(&mut hir_visitor);
 
     let mut filler = hir_visitor.filler();
 
@@ -182,16 +181,14 @@ fn analyse_with_tcx(name: String, tcx: TyCtxt, session: &Session) {
     tables.save_bincode(path);
 }
 
-pub fn analyse<'tcx>(compiler: &Compiler, queries: &'tcx Queries<'tcx>) {
+pub fn analyse<'tcx>(compiler: &Compiler, tcx: TyCtxt<'tcx>) {
     let session = &compiler.sess;
-    queries.global_ctxt().unwrap().enter(|tcx| {
-        let name = tcx.crate_name(rustc_hir::def_id::LOCAL_CRATE).to_string();
-        assert!(
-            name != "rust_out",
-            "Why this crate has such a strange name?"
-        );
-        analyse_with_tcx(name, tcx, session);
-    });
+    let name = tcx.crate_name(rustc_hir::def_id::LOCAL_CRATE).to_string();
+    assert!(
+        name != "rust_out",
+        "Why this crate has such a strange name?"
+    );
+    analyse_with_tcx(name, tcx, session);
 }
 
 pub fn override_queries(_session: &Session, providers: &mut rustc_middle::util::Providers) {
@@ -203,7 +200,7 @@ pub fn override_queries(_session: &Session, providers: &mut rustc_middle::util::
         let Ok((steal, expr_id)) = body else {
             return body;
         };
-        let thir_clone = steal.borrow().clone();
+        let thir_clone = steal.borrow();
         unsafe { thir_storage::store_thir_body(tcx, def_id, thir_clone, expr_id) };
 
         Ok((steal, expr_id))

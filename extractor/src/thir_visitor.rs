@@ -2,7 +2,7 @@ use crate::{converters::ConvertInto, utils::pretty_description};
 use corpus_database::types::{self, Safety, ThirBlock};
 use rustc_hir as hir;
 use rustc_middle::{
-    thir::{ExprId, Thir},
+    thir::{AdtExprBase, ExprId, Thir},
     ty::{self, TyCtxt},
 };
 
@@ -368,12 +368,18 @@ impl<'a, 'b, 'thir, 'tcx: 'thir> ThirVisitor<'a, 'b, 'thir, 'tcx> {
                 (interned_tuple_expr,)
             }
             rustc_middle::thir::ExprKind::Adt(adt_expr) => {
-                let base = if let Some(base) = &adt_expr.base {
-                    self.visit_expr_and_intern(&self.thir[base.base])
-                } else {
-                    self.filler.tables.get_no_thir_expr()
+                let base = match adt_expr.base {
+                    AdtExprBase::None => {
+                        self.filler.tables.get_no_thir_expr()
+                    } 
+                    AdtExprBase::Base(base) => {
+                        self.visit_expr_and_intern(&self.thir[base.base])
+                    }
+                    AdtExprBase::DefaultFields(default_fields) => {
+                        self.filler.tables.get_no_thir_expr()
+                    }
                 };
-
+                
                 let (interned_adt_expr,) = self
                     .filler
                     .tables
@@ -487,6 +493,9 @@ impl<'a, 'b, 'thir, 'tcx: 'thir> ThirVisitor<'a, 'b, 'thir, 'tcx> {
             rustc_middle::thir::ExprKind::Yield { value } => {
                 let interned_value = self.visit_expr_and_intern(&self.thir[*value]);
                 self.filler.tables.register_thir_exprs_yield(interned_value)
+            }
+            rustc_middle::thir::ExprKind::PlaceUnwrapUnsafeBinder {..} =>  {
+                // TODO: add schema support
             }
         };
 

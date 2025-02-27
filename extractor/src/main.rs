@@ -14,6 +14,7 @@ use rustc_interface::{
     interface::{Compiler, Config},
     Queries,
 };
+use rustc_middle::ty::TyCtxt;
 use rustc_session::EarlyDiagCtxt;
 use std::process;
 
@@ -27,10 +28,10 @@ impl rustc_driver::Callbacks for CorpusCallbacks {
     fn after_analysis<'tcx>(
         &mut self,
         compiler: &Compiler,
-        queries: &'tcx Queries<'tcx>,
+        tcx: TyCtxt<'tcx>,
     ) -> Compilation {
         save_cfg_configuration(&compiler.sess.psess.config);
-        analyse(compiler, queries);
+        analyse(compiler, tcx);
         Compilation::Continue
     }
 }

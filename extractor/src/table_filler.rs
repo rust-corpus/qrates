@@ -352,6 +352,10 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                     );
                     interned_type
                 }
+                ty::TyKind::UnsafeBinder(_unsafe_binder) => {
+                    
+                    // TODO: add unsafe binder type
+                }
                 ty::TyKind::Bound(..)
                 | ty::TyKind::Placeholder(_)
                 | ty::TyKind::Infer(_)

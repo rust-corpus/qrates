@@ -42,7 +42,7 @@ pub fn find_sysroot() -> String {
 /// Returns true if the function identified by def_id is a public function.
 #[logfn(TRACE)]
 pub fn is_public(def_id: DefId, tcx: TyCtxt<'_>) -> bool {
-    if let Some(node) = tcx.hir().get_if_local(def_id) {
+    if let Some(node) = tcx.hir_get_if_local(def_id) {
         let visibility = tcx.visibility(def_id);
         match node {
             Node::Expr(rustc_hir::Expr {
@@ -53,7 +53,7 @@ pub fn is_public(def_id: DefId, tcx: TyCtxt<'_>) -> bool {
                 is_public(parent_def_id, tcx)
             }
             Node::Item(item) => match item.kind {
-                ItemKind::Fn(..) | ItemKind::Const(..) | ItemKind::Static(..) => {
+                ItemKind::Fn {..} | ItemKind::Const(..) | ItemKind::Static(..) => {
                     visibility == ty::Visibility::Public
                 }
                 _ => {
