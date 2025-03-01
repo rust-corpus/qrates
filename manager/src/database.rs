@@ -46,7 +46,9 @@ impl DatabaseManager {
             fs::create_dir_all(&database_root)
                 .expect("Failed to create the directory for the database");
             fs::create_dir_all(&database_root.join("relations"))
-            .expect("Failed to create the directory for the database relations");
+                .expect("Failed to create the directory for the database relations");
+            fs::create_dir_all(&database_root.join("interning"))
+                .expect("Failed to create the directory for the database interning tables");
             (HashSet::new(), tables::DiskTables::create_in(&database_root).unwrap())
         };
         Self {

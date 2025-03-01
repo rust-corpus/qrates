@@ -190,8 +190,7 @@ pub(super) fn generate_loader_functions(
             let file_name = format!("interning/{}", name);
             quote! {
                 unsafe {
-                    InterningTable::load(
-                        #table_hash,
+                    DiskInterningTable::load(
                         self.database_root.join(#file_name)
                     ).unwrap()
                 }
@@ -217,10 +216,10 @@ pub(super) fn generate_loader_functions(
         //     }
         // };
         cache_field_tokens.extend(quote! {
-            #name: std::cell::RefCell<Option<InterningTable<#key_type, #value>>>,
+            #name: std::cell::RefCell<Option<DiskInterningTable<#key_type, #value>>>,
         });
         function_tokens.extend(quote! {
-            pub fn #fn_name(&self) -> std::cell::Ref<InterningTable<#key_type, #value>> {
+            pub fn #fn_name(&self) -> std::cell::Ref<DiskInterningTable<#key_type, #value>> {
                 if self.#name.borrow().is_none() {
                     *self.#name.borrow_mut() = Some(#load);
                 }

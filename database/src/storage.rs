@@ -4,7 +4,7 @@
 
 //! Helper functions for serializing and deserializing.
 
-use crate::data_structures::{DiskMapKey, DiskMapValue, InterningTable, InterningTableKey, InterningTableValue, Relation, RelationMap, DISK_MAP_REDB_CACHE_SIZE};
+use crate::data_structures::{DiskInterningKey, DiskInterningTable, DiskInterningValue, DiskMapKey, DiskMapValue, InterningTable, InterningTableKey, InterningTableValue, Relation, RelationMap, DISK_MAP_REDB_CACHE_SIZE};
 use crate::tables::Tables;
 use crate::tables::{store_multifile_relations, load_multifile_relations};
 use crate::tables::Relations;
@@ -151,6 +151,23 @@ impl<T: Copy + DiskMapValue> Relation<T> {
 
 
         // unsafe { unsafe_load_vec(expected_relation_hash, path).map(|vec| vec.into()) }
+    }
+}
+
+impl<K: DiskInterningKey, V: DiskInterningValue> DiskInterningTable<K, V> {
+    pub fn save(&mut self, path: std::path::PathBuf) {
+        let contents_path = Self::get_contents_path(path.clone());
+        let inv_map_path = Self::get_inv_map_path(path.clone());
+        self.contents.save(contents_path);
+        self.inv_map.save(inv_map_path);
+    }
+
+    pub fn load(path: std::path::PathBuf) -> Result<Self> {
+        let contents_path = Self::get_contents_path(path.clone());
+        let inv_map_path = Self::get_inv_map_path(path.clone());
+        let contents = DiskVec::load(contents_path)?;
+        let inv_map = DiskMap::load(inv_map_path)?;
+        Ok(Self { contents, inv_map })
     }
 }
 

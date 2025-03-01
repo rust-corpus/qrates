@@ -40,7 +40,7 @@ pub(super) fn generate_load_save_functions(schema: &ast::DatabaseSchema) -> Toke
                 let interning_tables_path = &database_root.join("interning");
                 std::fs::create_dir_all(&interning_tables_path)?;
                 store_multifile_interning_tables(
-                    &self.interning_tables,
+                    &mut self.interning_tables,
                     &interning_tables_path
                 );
                 Ok(())
@@ -149,7 +149,7 @@ fn load_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStream
             let table_hash = table.get_hash();
             let file_name = name.to_string();
             load_fields.extend(quote! {
-                #name: unsafe { InterningTable::load(#table_hash, path.join(#file_name))? },
+                #name: unsafe { DiskInterningTable::load(path.join(#file_name))? },
             });
         // } 
         // else {
@@ -160,8 +160,8 @@ fn load_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStream
         // }
     }
     quote! {
-        fn load_interning_tables(path: &Path) -> Result<InterningTables> {
-            Ok(InterningTables {
+        fn load_interning_tables(path: &Path) -> Result<DiskInterningTables> {
+            Ok(DiskInterningTables {
                 #load_fields
             })
         }
@@ -176,7 +176,7 @@ fn store_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStrea
             let table_hash = table.get_hash();
             let file_name = name.to_string();
             store_fields.extend(quote! {
-                unsafe { interning_tables.#name.save(#table_hash, path.join(#file_name)); }
+                unsafe { interning_tables.#name.save(path.join(#file_name)); }
             });
         // } else {
         //     let file_name = format!("{}.bincode", name);
@@ -187,7 +187,7 @@ fn store_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStrea
     }
     quote! {
         fn store_multifile_interning_tables(
-            interning_tables: &InterningTables,
+            interning_tables: &mut DiskInterningTables,
             path: &Path
         ) {
             #store_fields
