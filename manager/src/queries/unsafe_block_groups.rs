@@ -64,6 +64,7 @@ fn new_count_called_functions(loader: &Loader) {
     for (build, _, block, _, check_mode, _) in loader.load_iter_unsafe_thir_blocks() {
         unsafe_blocks_to_data.insert(block, (build, check_mode));
     }
+    // Uncomment below to be faster but use more memory.
     // let mut expr_to_call_data = HashMap::new();
     // for (call, ty, fun, unsafety, abi, return_ty) in loader.load_iter_thir_exprs_call() {
     //     expr_to_call_data.insert(call, (fun, unsafety, abi, return_ty));
