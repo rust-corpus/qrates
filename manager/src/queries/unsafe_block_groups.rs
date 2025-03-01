@@ -64,15 +64,16 @@ fn new_count_called_functions(loader: &Loader) {
     for (build, _, block, _, check_mode, _) in loader.load_iter_unsafe_thir_blocks() {
         unsafe_blocks_to_data.insert(block, (build, check_mode));
     }
-    let mut expr_to_call_data = HashMap::new();
-    for (call, ty, fun, unsafety, abi, return_ty) in loader.load_iter_thir_exprs_call() {
-        expr_to_call_data.insert(call, (fun, unsafety, abi, return_ty));
-    }
+    // let mut expr_to_call_data = HashMap::new();
+    // for (call, ty, fun, unsafety, abi, return_ty) in loader.load_iter_thir_exprs_call() {
+    //     expr_to_call_data.insert(call, (fun, unsafety, abi, return_ty));
+    // }
+    let expr_to_call_data = loader.load_thir_exprs_call_redb_map();
 
 
     let mut unsafe_thir_block_call_counts_map = HashMap::new();
     for (expr, _, closest_unsafe_block, _, _) in loader.load_iter_thir_exprs() {
-        let Some((fun, unsafety, abi, return_ty)) = expr_to_call_data.get(&expr) else {
+        let Some((ty, fun, unsafety, abi, return_ty)) = expr_to_call_data.get_redb(expr) else {
             continue;
         };
         let Some((build, check_mode)) = unsafe_blocks_to_data.get(&closest_unsafe_block) else {
@@ -86,9 +87,9 @@ fn new_count_called_functions(loader: &Loader) {
 
     // same as above, but for storing
     let iter_version = loader.load_iter_thir_exprs().flat_map(|(expr, _, closest_unsafe_block, _, _)| {
-        let (fun, unsafety, abi, return_ty) = expr_to_call_data.get(&expr)?;
+        let (_ty, fun, unsafety, abi, return_ty) = expr_to_call_data.get_redb(expr)?;
         let (build, check_mode) = unsafe_blocks_to_data.get(&closest_unsafe_block)?;
-        Some((*build, closest_unsafe_block, *check_mode, expr, *fun, *unsafety, *abi, *return_ty))
+        Some((*build, closest_unsafe_block, *check_mode, expr, fun, unsafety, abi, return_ty))
     });
 
 

@@ -160,6 +160,8 @@ pub struct DiskInterningTable<K, V>
 where K: DiskInterningKey,
         V: DiskInterningValue
 {
+    // TODO: optimization: Instead of using two DiskMaps (DiskVec is backed by DiskMap), could we just add a second index to a single diskmap?
+    // The only reason we need `contents` is for `get`ting the value from the key.
     pub(crate) contents: DiskVec<V>,
     pub(crate) inv_map: DiskMap<V, K>,
 }
