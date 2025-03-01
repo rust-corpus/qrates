@@ -216,9 +216,10 @@ where
         let inv_map_path = Self::get_inv_map_path(path.as_ref());
         let mut contents = DiskVec::create_override(contents_path);
         let mut inv_map = DiskMap::create_override(inv_map_path);
+        // Ignore below. we switched to HashMap.
         // need to disable write caching since during merging we're both interning + looking up
-        contents.map.set_write_cache_size(0);
-        inv_map.set_write_cache_size(0);
+        // contents.map.set_write_cache_size(0);
+        // inv_map.set_write_cache_size(0);
         Self {
             contents,
             inv_map,
@@ -439,13 +440,17 @@ impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb:
 /// Currently it uses a redb::Database backend, and as such it needs a file path to live.
 /// 
 /// The functions panic whenever an unexpected database-related error occurs.
+/// 
+/// WARNING: The read functions bypass the write cache. If you need to read + write in the same phase,
+/// either flush before each read or set the write cache size to 0 with set_write_cache_size(0).
+/// The functions will panic if the write cache is not empty.
 pub struct DiskMap<K, V>
 where
     K: DiskMapKey,
     V: DiskMapValue,
 {
     pub(crate) db: redb::Database,
-    write_cache: Vec<(K, V)>,
+    write_cache: HashMap<K, V>,
     // if 'true', the file at 'path' will be deleted when the DiskMap is dropped and no flushing will happen.
     pub(crate) is_temp_map: bool,
     path: PathBuf,
@@ -501,7 +506,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
             db,
             path: path.to_path_buf(),
             is_temp_map: false,
-            write_cache: Vec::with_capacity(DISK_MAP_WRITE_CACHE_SIZE),
+            write_cache: HashMap::with_capacity(DISK_MAP_WRITE_CACHE_SIZE),
             write_cache_size: DISK_MAP_WRITE_CACHE_SIZE,
             _phantom: std::marker::PhantomData,
         };
@@ -510,7 +515,10 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn set_write_cache_size(&mut self, size: usize) {
+        self.flush();
         self.write_cache_size = size;
+        // Free old cache
+        self.write_cache = HashMap::with_capacity(size);
     }
 
     pub fn path(&self) -> &std::path::Path {
@@ -550,7 +558,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn insert(&mut self, key: K, value: V) {
-        self.write_cache.push((key, value));
+        self.write_cache.insert(key, value);
         if self.write_cache.len() > self.write_cache_size {
             self.flush();
         }
@@ -563,7 +571,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
             let table_def: TableDefinition<K, V> = TableDefinition::new("table");
             let mut table = write_txn.open_table(table_def).unwrap();
 
-            for (k, v) in self.write_cache.drain(..) {
+            for (k, v) in self.write_cache.drain() {
                 table.insert(k, v).unwrap();
             }
         }
@@ -572,6 +580,10 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn get(&self, key: K) -> Option<V> {
+        if let Some(value) = self.write_cache.get(&key) {
+            return Some(value.clone());
+        }
+
         let read_txn = self.db.begin_read().unwrap();
 
         let table_def: TableDefinition<K, V> = TableDefinition::new("table");
@@ -587,6 +599,8 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn len(&self) -> u64 {
+        assert!(self.write_cache.is_empty(), "DiskMap write cache not empty during len() call");
+
         let read_txn = self.db.begin_read().unwrap();
 
         let table_def: TableDefinition<K, V> = TableDefinition::new("table");
@@ -596,6 +610,8 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (K, V)> {
+        assert!(self.write_cache.is_empty(), "DiskMap write cache not empty during iter() call");
+
         let read_txn = self.db.begin_read().unwrap();
 
         let table_def: TableDefinition<K, V> = TableDefinition::new("table");
@@ -654,7 +670,7 @@ impl<V: DiskMapValue> DiskVec<V> {
 
     #[track_caller]
     pub fn len(&self) -> usize {
-        assert_eq!(self.map.len(), self.length, "DiskVec invariant violated: map.len() != length");
+        // assert_eq!(self.map.len(), self.length, "DiskVec invariant violated: map.len() != length");
         self.length as usize
     }
 
