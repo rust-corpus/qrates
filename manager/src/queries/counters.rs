@@ -11,37 +11,90 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 pub fn new_query(loader: &Loader, report_path: &Path) {
-    let selected_thir_blocks;
+    let mut thir_block_parent_to_children: HashMap<_, Vec<_>> = HashMap::new();
+    for (parent, child, _safety, _check_mode, _span) in loader.load_iter_thir_blocks() {
+        thir_block_parent_to_children.entry(parent).or_insert_with(Vec::new).push(child);
+    }
 
-    // TODO: optimize away transitive closure somehow?
-    datapond_query!(
-        load loader {
-            relations(selected_thir_bodies, thir_blocks),
+    // map a root block to build and thir_body_def_path
+    let mut map_selected_thir_bodies_to_data: HashMap<_, _> = loader.load_iter_selected_thir_bodies().map(
+        |(build, item, thir_body_def_path, body)| {
+            (body, (build, thir_body_def_path))
+        },
+    ).collect();
+
+    // root_block = key into map_selected_thir_bodies_to_data
+    // (root_block, block)
+    let mut selected_thir_blocks: HashSet<_> = loader.load_iter_selected_thir_bodies().map(
+        |(build, item, thir_body_def_path, body)| {
+            (body, body)
+        },
+    ).collect();
+
+    let mut stack: Vec<_> = selected_thir_blocks.iter().cloned().collect();
+    while let Some((key, block)) = stack.pop() {
+        let Some(children) = thir_block_parent_to_children.get(&block) else {
+            continue;
+        };
+        for &child in children {
+            if selected_thir_blocks.insert((key, child)) {
+                stack.push((key, child));
+            } else {
+                panic!("Child has multiple parent THIR blocks: {:?}", child);
+            }
         }
-        output selected_thir_blocks(
-            build: Build,
-            thir_body_def_path: DefPath,
-            parent: ThirBlock,
-            block: ThirBlock,
-            safety: ScopeSafety,
-            check_mode: BlockCheckMode,
-            span: Span,
-        )
-        selected_thir_blocks(
-            build, thir_body_def_path, parent, block, safety, check_mode, span
-        ) :-
-            thir_blocks(parent, block, safety, check_mode, span),
-            selected_thir_bodies(build, _, thir_body_def_path, parent).
+    }
 
-        selected_thir_blocks(
-            build, thir_body_def_path, parent, block, safety, check_mode, span
-        ) :-
-            selected_thir_blocks(.build=build, .thir_body_def_path=thir_body_def_path, .block=parent),
-            thir_blocks(parent, block, safety, check_mode, span).
+    let thir_block_data_map = loader.load_thir_blocks_redb_map();
+    let full_selected_thir_blocks = selected_thir_blocks.iter().filter_map(
+        |&(root_block, block)| {
+            if root_block == block {
+                // we're looking at a block from selected_thir_bodies. this block has no parent or other data, and we also skipped it in the datapond query.
+                return None;
+            }
+            let (build, thir_body_def_path) = *map_selected_thir_bodies_to_data.get(&root_block).unwrap();
+            let (parent, safety, check_mode, span) = thir_block_data_map.r(block);
+            Some((build, thir_body_def_path, parent, block, safety, check_mode, span))
+        },
     );
-    info!("selected_thir_blocks.len = {}", selected_thir_blocks.len());
-    loader.store_selected_thir_blocks(selected_thir_blocks.elements);
+    loader.store_iter_selected_thir_blocks(full_selected_thir_blocks);
+
+
+    // let selected_thir_blocks;
+
+    // // TODO: optimize away transitive closure somehow?
+    // datapond_query!(
+    //     load loader {
+    //         relations(selected_thir_bodies, thir_blocks),
+    //     }
+    //     output selected_thir_blocks(
+    //         build: Build,
+    //         thir_body_def_path: DefPath,
+    //         parent: ThirBlock,
+    //         block: ThirBlock,
+    //         safety: ScopeSafety,
+    //         check_mode: BlockCheckMode,
+    //         span: Span,
+    //     )
+    //     selected_thir_blocks(
+    //         build, thir_body_def_path, parent, block, safety, check_mode, span
+    //     ) :-
+    //         thir_blocks(parent, block, safety, check_mode, span),
+    //         selected_thir_bodies(build, _, thir_body_def_path, parent).
+
+    //     selected_thir_blocks(
+    //         build, thir_body_def_path, parent, block, safety, check_mode, span
+    //     ) :-
+    //         selected_thir_blocks(.build=build, .thir_body_def_path=thir_body_def_path, .block=parent),
+    //         thir_blocks(parent, block, safety, check_mode, span).
+    // );
+    // info!("selected_thir_blocks.len = {}", selected_thir_blocks.len());
+    // loader.store_selected_thir_blocks(selected_thir_blocks.elements);
     let selected_thir_blocks = loader.load_selected_thir_blocks();
+    // {
+    //     let selected_thir_blocks = selected_thir_blocks.tuple_iter();
+    //     write_csv!(report_path, selected_thir_blocks);
+    // }
 
     let def_path_resolver = DefPathResolver::new(loader);
     let span_resolver = SpanResolver::new(loader);
@@ -89,7 +142,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
     write_csv!(report_path, unsafe_thir_blocks);
     info!("Saved unsafe thir block report.");
 
-    let unsafe_thir_blocks_relation = loader.load_unsafe_thir_blocks();
+    // let unsafe_thir_blocks_relation = loader.load_unsafe_thir_blocks();
 
     // unsafe thir statements
 
