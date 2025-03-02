@@ -102,46 +102,87 @@ fn collect_union_types(loader: &Loader) {
 }
 
 fn collect_unsafe_types(loader: &Loader) {
-    let public_visibility = vec![(types::TyVisibility::Public,)];
+    // let public_visibility = vec![(types::TyVisibility::Public,)];
 
-    // TODO: rewrite without datafrog?
+    // let unsafe_types;
+    // datapond_query! {
+    //     load loader {
+    //         relations(
+    //             types_unsafe_cell, types_union, types_raw_ptr, types_foreign,
+    //             types_adt_field, types_array, types_slice, types_ref, types_tuple_element),
+    //     }
+    //     input public_visibility(visibility: TyVisibility)
+    //     output unsafe_types(typ: Type)
+    //     unsafe_types(typ) :- types_unsafe_cell(.typ=typ).
+    //     unsafe_types(typ) :- types_union(.typ=typ).
+    //     unsafe_types(typ) :- types_raw_ptr(.typ=typ).
+    //     unsafe_types(typ) :- types_foreign(.typ=typ).
 
-    let unsafe_types;
-    datapond_query! {
-        load loader {
-            relations(
-                types_unsafe_cell, types_union, types_raw_ptr, types_foreign,
-                types_adt_field, types_array, types_slice, types_ref, types_tuple_element),
+    //     unsafe_types(typ) :-
+    //         public_visibility(visibility),
+    //         unsafe_types(field_type),
+    //         types_adt_field(.adt=typ, .visibility=visibility, .typ=field_type).
+
+    //     unsafe_types(typ) :-
+    //         unsafe_types(element_type),
+    //         types_array(typ, element_type).
+    //     unsafe_types(typ) :-
+    //         unsafe_types(element_type),
+    //         types_slice(typ, element_type).
+    //     unsafe_types(typ) :-
+    //         unsafe_types(target_type),
+    //         types_ref(typ, target_type, _).
+
+    //     unsafe_types(typ) :-
+    //         unsafe_types(element_type),
+    //         types_tuple_element(typ, _, element_type).
+    // }
+
+    let mut unsafe_types = HashSet::new();
+    // base cases
+    unsafe_types.extend(loader.load_iter_types_unsafe_cell().map(|(typ, _)| typ));
+    unsafe_types.extend(loader.load_iter_types_union().map(|(typ, _)| typ));
+    unsafe_types.extend(loader.load_iter_types_raw_ptr().map(|(typ, _, _)| typ));
+    unsafe_types.extend(loader.load_iter_types_foreign().map(|(typ, _)| typ));
+
+    // recursive cases
+    // need a loop for recursion..
+    // TODO: if a list is in reverse parent-child order this causes quadratic explosion
+    // ^fix: for each relation, load the full list into memory and remove elements after they're inserted
+    // actually, would still be quadratic. need to do a topological sort over all relations simultaneously
+    let mut modified = true;
+    while modified {
+        modified = false;
+        for (field, adt, index, def_path, ident, visibility, typ) in loader.load_iter_types_adt_field() {
+            if visibility == types::TyVisibility::Public && unsafe_types.contains(&typ) {
+                modified |= unsafe_types.insert(adt);
+            }
         }
-        input public_visibility(visibility: TyVisibility)
-        output unsafe_types(typ: Type)
-        unsafe_types(typ) :- types_unsafe_cell(.typ=typ).
-        unsafe_types(typ) :- types_union(.typ=typ).
-        unsafe_types(typ) :- types_raw_ptr(.typ=typ).
-        unsafe_types(typ) :- types_foreign(.typ=typ).
-
-        unsafe_types(typ) :-
-            public_visibility(visibility),
-            unsafe_types(field_type),
-            types_adt_field(.adt=typ, .visibility=visibility, .typ=field_type).
-
-        unsafe_types(typ) :-
-            unsafe_types(element_type),
-            types_array(typ, element_type).
-        unsafe_types(typ) :-
-            unsafe_types(element_type),
-            types_slice(typ, element_type).
-        unsafe_types(typ) :-
-            unsafe_types(target_type),
-            types_ref(typ, target_type, _).
-
-        unsafe_types(typ) :-
-            unsafe_types(element_type),
-            types_tuple_element(typ, _, element_type).
+        for (typ, element_type) in loader.load_iter_types_array() {
+            if unsafe_types.contains(&element_type) {
+                modified |= unsafe_types.insert(typ);
+            }
+        }
+        for (typ, element_type) in loader.load_iter_types_slice() {
+            if unsafe_types.contains(&element_type) {
+                modified |= unsafe_types.insert(typ);
+            }
+        }
+        for (typ, target_type, _) in loader.load_iter_types_ref() {
+            if unsafe_types.contains(&target_type) {
+                modified |= unsafe_types.insert(typ);
+            }
+        }
+        for (typ, _, element_type) in loader.load_iter_types_tuple_element() {
+            if unsafe_types.contains(&element_type) {
+                modified |= unsafe_types.insert(typ);
+            }
+        }
     }
 
-    info!("Number of unsafe types: {}", unsafe_types.elements.len());
-    loader.store_unsafe_types(unsafe_types.elements);
+
+    info!("Number of unsafe types: {}", unsafe_types.len());
+    loader.store_iter_unsafe_types(unsafe_types.into_iter().map(|typ| (typ,)));
 }
 
 fn report_unsafe_type_defs(loader: &Loader, report_path: &Path) {
