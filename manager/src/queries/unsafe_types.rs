@@ -4,10 +4,10 @@ use super::utils::GroupByIterator;
 use super::utils::{BuildResolver, DefPathResolver};
 use crate::write_csv;
 use corpus_database::tables::Loader;
-use corpus_database::types;
+use corpus_database::{types, DiskMap};
 use corpus_queries_derive::datapond_query;
 use log::{info, warn};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 fn report_types_foreign(loader: &Loader, report_path: &Path) {
@@ -220,37 +220,66 @@ fn report_unsafe_type_defs(loader: &Loader, report_path: &Path) {
 }
 
 fn collect_safe_wrapper_types(loader: &Loader) {
+    let mut adt_to_field_types: HashMap<_, Vec<_>> = HashMap::new();
+    for (field, adt, index, def_path, ident, visibility, typ) in loader.load_iter_types_adt_field() {
+        adt_to_field_types
+            .entry(adt)
+            .or_default()
+            .push((visibility, typ));
+    }
+
     let unsafe_types: HashSet<_> = loader
-        .load_unsafe_types()
-        .tuple_iter()
+        .load_iter_unsafe_types()
         .map(|(typ,)| typ)
         .collect();
-    let safe_wrapper_types: Vec<_> = loader
-        .load_types_adt_field()
-        .tuple_iter()
-        .safe_group_by(|&(_field, adt, _index, _def_path, _ident, _visibility, _typ)| adt)
-        .into_iter()
-        .flat_map(|(key, group)| {
-            let mut contains_unsafe_field = false;
-            for (_field, _adt, _index, _def_path, _ident, visibility, typ) in group {
-                if unsafe_types.contains(&typ) {
-                    contains_unsafe_field = true;
-                    if visibility == types::TyVisibility::Public {
-                        // Unsafe field is public, the type is not a safe wrapper.
-                        return None;
+    // let safe_wrapper_types: Vec<_> = loader
+    //     .load_iter_types_adt_field()
+    //     .safe_group_by(|&(_field, adt, _index, _def_path, _ident, _visibility, _typ)| adt)
+    //     .into_iter()
+    //     .flat_map(|(key, group)| {
+    //         let mut contains_unsafe_field = false;
+    //         for (_field, _adt, _index, _def_path, _ident, visibility, typ) in group {
+    //             if unsafe_types.contains(&typ) {
+    //                 contains_unsafe_field = true;
+    //                 if visibility == types::TyVisibility::Public {
+    //                     // Unsafe field is public, the type is not a safe wrapper.
+    //                     return None;
+    //                 }
+    //             }
+    //         }
+    //         if contains_unsafe_field {
+    //             Some((key,))
+    //         } else {
+    //             None
+    //         }
+    //     })
+    //     .collect();
+
+    let get_safe_wrapper_types = || {
+        adt_to_field_types
+        .iter()
+            .filter_map(|(adt, fields)| {
+                let mut contains_unsafe_field = false;
+                for (visibility, typ) in fields {
+                    if unsafe_types.contains(&typ) {
+                        contains_unsafe_field = true;
+                        if *visibility == types::TyVisibility::Public {
+                            // Unsafe field is public, the type is not a safe wrapper.
+                            return None;
+                        }
                     }
                 }
-            }
-            if contains_unsafe_field {
-                Some((key,))
-            } else {
-                None
-            }
-        })
-        .collect();
+                if contains_unsafe_field {
+                    Some((*adt,))
+                } else {
+                    None
+                }
+            })
+    };
 
-    info!("Number of safe wrapper types: {}", safe_wrapper_types.len());
-    loader.store_safe_wrapper_types(safe_wrapper_types);
+    warn!("TODO: inefficient iter.count()");
+    info!("Number of safe wrapper types: {}", get_safe_wrapper_types().count());
+    loader.store_iter_safe_wrapper_types(get_safe_wrapper_types());
 }
 
 fn report_safe_wrapper_type_defs(loader: &Loader, report_path: &Path) {
