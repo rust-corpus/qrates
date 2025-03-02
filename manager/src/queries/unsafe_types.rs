@@ -220,18 +220,13 @@ fn report_unsafe_type_defs(loader: &Loader, report_path: &Path) {
 }
 
 fn collect_safe_wrapper_types(loader: &Loader) {
-    let mut adt_to_field_types: HashMap<_, Vec<_>> = HashMap::new();
-    for (field, adt, index, def_path, ident, visibility, typ) in loader.load_iter_types_adt_field() {
-        adt_to_field_types
-            .entry(adt)
-            .or_default()
-            .push((visibility, typ));
-    }
-
     let unsafe_types: HashSet<_> = loader
         .load_iter_unsafe_types()
         .map(|(typ,)| typ)
         .collect();
+
+    // Datapond way: (1.1GB)
+
     // let safe_wrapper_types: Vec<_> = loader
     //     .load_iter_types_adt_field()
     //     .safe_group_by(|&(_field, adt, _index, _def_path, _ident, _visibility, _typ)| adt)
@@ -255,26 +250,58 @@ fn collect_safe_wrapper_types(loader: &Loader) {
     //     })
     //     .collect();
 
+    // hashmap way: (700MB)
+    // let mut adt_to_field_types: HashMap<_, Vec<_>> = HashMap::new();
+    // for (field, adt, index, def_path, ident, visibility, typ) in loader.load_iter_types_adt_field() {
+    //     adt_to_field_types
+    //         .entry(adt)
+    //         .or_default()
+    //         .push((visibility, typ));
+    // }
+
+    // let get_safe_wrapper_types = || {
+    //     adt_to_field_types
+    //     .iter()
+    //         .filter_map(|(adt, fields)| {
+    //             let mut contains_unsafe_field = false;
+    //             for (visibility, typ) in fields {
+    //                 if unsafe_types.contains(&typ) {
+    //                     contains_unsafe_field = true;
+    //                     if *visibility == types::TyVisibility::Public {
+    //                         // Unsafe field is public, the type is not a safe wrapper.
+    //                         return None;
+    //                     }
+    //                 }
+    //             }
+    //             if contains_unsafe_field {
+    //                 Some((*adt,))
+    //             } else {
+    //                 None
+    //             }
+    //         })
+    // };
+
+    // attempt without hashmap:
+    // 1. collect all adt types that have at least one unsafe field
+    // 2. in the same pass, collect those which contain a public unsafe field
+    // 3. compute the difference from 1 and 2 to get the safe wrapper types
+    // - works and validated. ~50MB
+    let mut adt_with_unsafe_field = HashSet::new();
+    let mut adt_with_public_unsafe_field = HashSet::new();
+
+    for (field, adt, index, def_path, ident, visibility, typ) in loader.load_iter_types_adt_field() {
+        if unsafe_types.contains(&typ) {
+            adt_with_unsafe_field.insert(adt);
+            if visibility == types::TyVisibility::Public {
+                adt_with_public_unsafe_field.insert(adt);
+            }
+        }
+    }
+
     let get_safe_wrapper_types = || {
-        adt_to_field_types
-        .iter()
-            .filter_map(|(adt, fields)| {
-                let mut contains_unsafe_field = false;
-                for (visibility, typ) in fields {
-                    if unsafe_types.contains(&typ) {
-                        contains_unsafe_field = true;
-                        if *visibility == types::TyVisibility::Public {
-                            // Unsafe field is public, the type is not a safe wrapper.
-                            return None;
-                        }
-                    }
-                }
-                if contains_unsafe_field {
-                    Some((*adt,))
-                } else {
-                    None
-                }
-            })
+        adt_with_unsafe_field
+            .difference(&adt_with_public_unsafe_field)
+            .map(|&typ| (typ,))
     };
 
     warn!("TODO: inefficient iter.count()");
