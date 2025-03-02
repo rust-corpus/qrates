@@ -17,6 +17,14 @@ pub(super) fn generate_loader_functions(
             ref intern_key,
             ..
         } = relation;
+
+        // names to provide basic doc comments
+        let names = parameters.iter().map(|param| &param.name);
+        let names = names.map(|name| name.to_string()).collect::<Vec<_>>().join(", ");
+        let iter_doc_comment = format!("Stream over the relation with idents `({})`.", names);
+        let load_doc_comment = format!("Load the relation with idents `({})`.", names);
+        let store_doc_comment = format!("Store the relation with idents `({})`.", names);
+
         let relation_hash = relation.get_hash();
         let file_name = format!("relations/{}", name);
         let load_fn_name = syn::Ident::new(&format!("load_{}", name), Span::call_site());
@@ -33,9 +41,11 @@ pub(super) fn generate_loader_functions(
             #name: std::cell::RefCell<Option<Relation<#relation_element_type>>>,
         });
         function_tokens.extend(quote! {
+            #[doc = #iter_doc_comment]
             pub fn #load_iter_fn_name(&self) -> impl Iterator<Item = #tuple_element_type> {
                 self.#load_fn_name().tuple_iter()
             }
+            #[doc = #load_doc_comment]
             pub fn #load_fn_name(&self) -> std::cell::Ref<Relation<#relation_element_type>> {
                 if self.#name.borrow().is_none() {
                     // let relation: Relation<(#types)> = unsafe { Relation::load(
@@ -58,6 +68,7 @@ pub(super) fn generate_loader_functions(
             // ^^ well, if we can completely deprecate using _both_ relationmaps and relations for any given relation, then this is not an issue.
             // ^^  also, we panic if we ever try to load a relationmap that does not exist. so we would catch this.
             // pub fn #store_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
+            #[doc = #store_doc_comment]
             pub fn #store_fn_name(&self, facts: Vec<#tuple_element_type>) {
                 //assert!(self.#name.borrow().is_none());
                 //let relation: Relation<(#types)> = facts.into();
@@ -73,6 +84,7 @@ pub(super) fn generate_loader_functions(
                 // }
                 self.#store_iter_fn_name(facts.into_iter());
             }
+            #[doc = #store_doc_comment]
             pub fn #store_iter_fn_name(&self, facts: impl IntoIterator<Item = #tuple_element_type>) {
                 // TODO: store a root path on self.
                 // then from_iter a relation, and store it in the cached field.
@@ -114,6 +126,25 @@ pub(super) fn generate_loader_functions(
             let key = &parameters[*source_idx].typ;
             let value = intern_key.get_value_type(&parameters);
 
+            let key_ident_name = parameters[*source_idx].name.to_string();
+            let value_ident_names: Vec<String> = parameters
+                .iter()
+                .enumerate()
+                .filter_map(|(idx, param)| {
+                    if idx != *source_idx {
+                        Some(param.name.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            let value_ident_names = value_ident_names.join(", ");
+            let load_relation_map_doc_comment = format!(
+                "Load the map `{} => ({})` as a map.",
+                key_ident_name,
+                value_ident_names
+            );
+
 
             let intern_table_name = syn::Ident::new(&format!("{}_redb_map", name), Span::call_site());
             let intern_table_hash = relation_hash;
@@ -124,6 +155,7 @@ pub(super) fn generate_loader_functions(
                 #intern_table_name: std::cell::RefCell<Option<RelationMap<#key, #value>>>,
             });
             function_tokens.extend(quote! {
+                #[doc = #load_relation_map_doc_comment]
                 pub fn #load_intern_table_fn_name(&self) -> std::cell::Ref<RelationMap<#key, #value>> {
                     if self.#intern_table_name.borrow().is_none() {
                         *self.#intern_table_name.borrow_mut() = Some(unsafe {
