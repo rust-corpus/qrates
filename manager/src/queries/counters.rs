@@ -4,16 +4,19 @@ use super::utils::{DefPathResolver, GroupByIterator, SpanResolver};
 use crate::queries::utils::BuildResolver;
 use crate::write_csv;
 use corpus_database::{tables::Loader, types};
-use corpus_database::RelationElement as RE;
+use corpus_database::{get_new_disk_map_temp_dir, DiskMap, RelationElement as RE};
 use corpus_queries_derive::datapond_query;
 use log::info;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 pub fn new_query(loader: &Loader, report_path: &Path) {
-    let mut thir_block_parent_to_children: HashMap<_, Vec<_>> = HashMap::new();
+    let mut thir_block_parent_to_children: DiskMap<_, Vec<_>> = DiskMap::create_override(get_new_disk_map_temp_dir());
     for (parent, child, _safety, _check_mode, _span) in loader.load_iter_thir_blocks() {
-        thir_block_parent_to_children.entry(parent).or_insert_with(Vec::new).push(child);
+        let mut children = thir_block_parent_to_children.get(parent).unwrap_or_default();
+        children.push(child);
+        thir_block_parent_to_children.insert(parent, children);
+        // thir_block_parent_to_children.entry(parent).or_insert_with(Vec::new).push(child);
     }
 
     // map a root block to build and thir_body_def_path
@@ -33,10 +36,10 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
 
     let mut stack: Vec<_> = selected_thir_blocks.iter().cloned().collect();
     while let Some((key, block)) = stack.pop() {
-        let Some(children) = thir_block_parent_to_children.get(&block) else {
+        let Some(children) = thir_block_parent_to_children.get(block) else {
             continue;
         };
-        for &child in children {
+        for child in children {
             if selected_thir_blocks.insert((key, child)) {
                 stack.push((key, child));
             } else {
