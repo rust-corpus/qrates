@@ -150,6 +150,115 @@ where K: DiskMapKey,
     }
 }
 
+pub trait DiskInterningKey: DiskMapKey + DiskMapValue + Into<usize> + From<usize> + Clone {}
+impl<T> DiskInterningKey for T where T: DiskMapKey + DiskMapValue + Into<usize> + From<usize> {}
+
+pub trait DiskInterningValue: DiskMapValue + DiskMapKey {}
+impl<T> DiskInterningValue for T where T: DiskMapValue + DiskMapKey {}
+
+pub struct DiskInterningTable<K, V>
+where K: DiskInterningKey,
+        V: DiskInterningValue
+{
+    // TODO: optimization: Instead of using two DiskMaps (DiskVec is backed by DiskMap), could we just add a second index to a single diskmap?
+    // The only reason we need `contents` is for `get`ting the value from the key.
+    pub(crate) contents: DiskVec<V>,
+    pub(crate) inv_map: DiskMap<V, K>,
+}
+
+impl<K> DiskInterningTable<K, String>
+where
+    K: DiskInterningKey,
+{
+    pub fn lookup_str(&self, value: &str) -> Option<K> {
+        self.inv_map.get(value.to_string())
+    }
+}
+
+impl<K, V> DiskInterningTable<K, V>
+where
+    K: DiskInterningKey,
+    V: DiskInterningValue,
+{
+    pub fn lookup(&self, value: &V) -> Option<K> {
+        self.inv_map.get(value.clone())
+    }
+
+    pub fn intern(&mut self, value: V) -> K {
+        if let Some(key) = self.lookup(&value) {
+            key
+        } else {
+            // eprintln!("Interning {:?}...", value);
+            let new_key: K = self.contents.len().into();
+            // eprintln!("...as {:?}", new_key);
+            self.inv_map.insert(value.clone(), new_key.clone());
+            self.contents.push(value);
+            new_key
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (K, V)> {
+        self.contents.iter().enumerate().map(|(k, v)| (k.into(), v))
+    }
+
+    pub fn len(&self) -> usize {
+        self.contents.len()
+    }
+
+    pub fn get_redb(&self, key: K) -> Option<V> {
+        self.contents.get(key.into() as u64)
+    }
+
+    pub fn r(&self, key: K) -> V {
+        self.get_redb(key).unwrap()
+    }
+
+    pub fn create_override_in(path: impl AsRef<std::path::Path>) -> Self {
+        let contents_path = Self::get_contents_path(path.as_ref());
+        let inv_map_path = Self::get_inv_map_path(path.as_ref());
+        let mut contents = DiskVec::create_override(contents_path);
+        let mut inv_map = DiskMap::create_override(inv_map_path);
+        // Ignore below. we switched to HashMap.
+        // need to disable write caching since during merging we're both interning + looking up
+        // contents.map.set_write_cache_size(0);
+        // inv_map.set_write_cache_size(0);
+        Self {
+            contents,
+            inv_map,
+        }
+    }
+
+    pub(crate) fn get_contents_path(path: impl AsRef<std::path::Path>) -> PathBuf {
+        let path: &std::path::Path = path.as_ref();
+        let filename = path.file_name().unwrap();
+        let filename = filename.to_str().unwrap();
+        let filename = format!("{}_contents", filename);
+        let mut pathbuf = path.to_path_buf();
+        pathbuf.set_file_name(&filename);
+        pathbuf
+    }
+
+    pub(crate) fn get_inv_map_path(path: impl AsRef<std::path::Path>) -> PathBuf {
+        let path: &std::path::Path = path.as_ref();
+        let filename = path.file_name().unwrap();
+        let filename = filename.to_str().unwrap();
+        let filename = format!("{}_inv_map", filename);
+        let mut pathbuf = path.to_path_buf();
+        pathbuf.set_file_name(&filename);
+        pathbuf
+    }
+}
+
+impl<K, V> Into<Vec<(K, V)>> for &DiskInterningTable<K, V>
+where
+    K: DiskInterningKey,
+    V: DiskInterningValue,
+{
+    fn into(self) -> Vec<(K, V)> {
+        self.iter().collect()
+    }
+}
+
 pub trait InterningTableKey: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> + redb::Key {}
 impl<T> InterningTableKey for T where T: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> + redb::Key {}
 pub trait InterningTableValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key +  'static {}
@@ -326,23 +435,28 @@ where
 
 pub trait DiskMapKey: Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
 impl<T> DiskMapKey for T where T: Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
-pub trait DiskMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
-impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
+pub trait DiskMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static {}
+impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static {}
 
 /// DiskMap<K, V> is essentially a HashMap<K, V> that is backed by a disk file.
 /// Currently it uses a redb::Database backend, and as such it needs a file path to live.
 /// 
 /// The functions panic whenever an unexpected database-related error occurs.
+/// 
+/// WARNING: The read functions bypass the write cache. If you need to read + write in the same phase,
+/// either flush before each read or set the write cache size to 0 with set_write_cache_size(0).
+/// The functions will panic if the write cache is not empty.
 pub struct DiskMap<K, V>
 where
     K: DiskMapKey,
     V: DiskMapValue,
 {
     pub(crate) db: redb::Database,
-    write_cache: Vec<(K, V)>,
+    write_cache: HashMap<K, V>,
     // if 'true', the file at 'path' will be deleted when the DiskMap is dropped and no flushing will happen.
     pub(crate) is_temp_map: bool,
     path: PathBuf,
+    write_cache_size: usize,
     _phantom: std::marker::PhantomData<(K, V)>,
 }
 
@@ -394,11 +508,19 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
             db,
             path: path.to_path_buf(),
             is_temp_map: false,
-            write_cache: Vec::with_capacity(DISK_MAP_WRITE_CACHE_SIZE),
+            write_cache: HashMap::with_capacity(DISK_MAP_WRITE_CACHE_SIZE),
+            write_cache_size: DISK_MAP_WRITE_CACHE_SIZE,
             _phantom: std::marker::PhantomData,
         };
         diskmap.create_self_table();
         diskmap
+    }
+
+    pub fn set_write_cache_size(&mut self, size: usize) {
+        self.flush();
+        self.write_cache_size = size;
+        // Free old cache
+        self.write_cache = HashMap::with_capacity(size);
     }
 
     pub fn path(&self) -> &std::path::Path {
@@ -438,8 +560,8 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn insert(&mut self, key: K, value: V) {
-        self.write_cache.push((key, value));
-        if self.write_cache.len() > DISK_MAP_WRITE_CACHE_SIZE {
+        self.write_cache.insert(key, value);
+        if self.write_cache.len() > self.write_cache_size {
             self.flush();
         }
     }
@@ -451,7 +573,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
             let table_def: TableDefinition<K, V> = TableDefinition::new("table");
             let mut table = write_txn.open_table(table_def).unwrap();
 
-            for (k, v) in self.write_cache.drain(..) {
+            for (k, v) in self.write_cache.drain() {
                 table.insert(k, v).unwrap();
             }
         }
@@ -460,6 +582,10 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn get(&self, key: K) -> Option<V> {
+        if let Some(value) = self.write_cache.get(&key) {
+            return Some(value.clone());
+        }
+
         let read_txn = self.db.begin_read().unwrap();
 
         let table_def: TableDefinition<K, V> = TableDefinition::new("table");
@@ -475,6 +601,8 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn len(&self) -> u64 {
+        assert!(self.write_cache.is_empty(), "DiskMap write cache not empty during len() call");
+
         let read_txn = self.db.begin_read().unwrap();
 
         let table_def: TableDefinition<K, V> = TableDefinition::new("table");
@@ -484,6 +612,8 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (K, V)> {
+        assert!(self.write_cache.is_empty(), "DiskMap write cache not empty during iter() call");
+
         let read_txn = self.db.begin_read().unwrap();
 
         let table_def: TableDefinition<K, V> = TableDefinition::new("table");
@@ -540,8 +670,9 @@ impl<V: DiskMapValue> DiskVec<V> {
         }
     }
 
+    #[track_caller]
     pub fn len(&self) -> usize {
-        assert_eq!(self.map.len(), self.length, "DiskVec invariant violated: map.len() != length");
+        // assert_eq!(self.map.len(), self.length, "DiskVec invariant violated: map.len() != length");
         self.length as usize
     }
 

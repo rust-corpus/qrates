@@ -1,4 +1,4 @@
-use corpus_database::{InterningTable, RelationMap};
+use corpus_database::{DiskInterningTable, InterningTable, RelationMap};
 use corpus_database::{tables::Loader, types};
 use itertools::Itertools;
 use std::cell::Ref;
@@ -42,7 +42,7 @@ impl<T: ?Sized> GroupByIterator for T where T: Itertools {}
 pub struct BuildResolver<'b> {
     builds: Ref<
         'b,
-        InterningTable<
+        DiskInterningTable<
             types::Build,
             (
                 types::Package,
@@ -53,11 +53,11 @@ pub struct BuildResolver<'b> {
             ),
         >,
     >,
-    package_names: Ref<'b, InterningTable<types::Package, types::InternedString>>,
-    package_versions: Ref<'b, InterningTable<types::PackageVersion, types::InternedString>>,
-    crate_names: Ref<'b, InterningTable<types::Krate, types::InternedString>>,
-    editions: Ref<'b, InterningTable<types::Edition, types::InternedString>>,
-    strings: Ref<'b, InterningTable<types::InternedString, String>>,
+    package_names: Ref<'b, DiskInterningTable<types::Package, types::InternedString>>,
+    package_versions: Ref<'b, DiskInterningTable<types::PackageVersion, types::InternedString>>,
+    crate_names: Ref<'b, DiskInterningTable<types::Krate, types::InternedString>>,
+    editions: Ref<'b, DiskInterningTable<types::Edition, types::InternedString>>,
+    strings: Ref<'b, DiskInterningTable<types::InternedString, String>>,
 }
 
 impl<'b> BuildResolver<'b> {
@@ -88,7 +88,7 @@ impl<'b> BuildResolver<'b> {
 pub struct DefPathResolver<'b> {
     def_paths: Ref<
         'b,
-        InterningTable<
+        DiskInterningTable<
             types::DefPath,
             (
                 types::Krate,
@@ -99,10 +99,10 @@ pub struct DefPathResolver<'b> {
             ),
         >,
     >,
-    crate_names: Ref<'b, InterningTable<types::Krate, types::InternedString>>,
-    relative_def_paths: Ref<'b, InterningTable<types::RelativeDefId, types::InternedString>>,
-    summary_keys: Ref<'b, InterningTable<types::SummaryId, types::InternedString>>,
-    strings: Ref<'b, InterningTable<types::InternedString, String>>,
+    crate_names: Ref<'b, DiskInterningTable<types::Krate, types::InternedString>>,
+    relative_def_paths: Ref<'b, DiskInterningTable<types::RelativeDefId, types::InternedString>>,
+    summary_keys: Ref<'b, DiskInterningTable<types::SummaryId, types::InternedString>>,
+    strings: Ref<'b, DiskInterningTable<types::InternedString, String>>,
 }
 
 impl<'b> DefPathResolver<'b> {
@@ -151,8 +151,8 @@ pub struct SpanResolver<'b> {
         types::SpanFileName,
         u16,
         u16,)>>,
-    span_file_names: Ref<'b, InterningTable<types::SpanFileName, types::InternedString>>,
-    strings: Ref<'b, InterningTable<types::InternedString, String>>,
+    span_file_names: Ref<'b, DiskInterningTable<types::SpanFileName, types::InternedString>>,
+    strings: Ref<'b, DiskInterningTable<types::InternedString, String>>,
 }
 
 impl<'b> SpanResolver<'b> {
@@ -213,7 +213,7 @@ pub fn filter_selected<F1, F2, I, O>(
         types::CrateHash,
         types::Edition,
     )>,
-    def_paths: &InterningTable<
+    def_paths: &DiskInterningTable<
         types::DefPath,
         (
             types::Krate,

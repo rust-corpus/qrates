@@ -64,15 +64,17 @@ fn new_count_called_functions(loader: &Loader) {
     for (build, _, block, _, check_mode, _) in loader.load_iter_unsafe_thir_blocks() {
         unsafe_blocks_to_data.insert(block, (build, check_mode));
     }
-    let mut expr_to_call_data = HashMap::new();
-    for (call, ty, fun, unsafety, abi, return_ty) in loader.load_iter_thir_exprs_call() {
-        expr_to_call_data.insert(call, (fun, unsafety, abi, return_ty));
-    }
+    // Uncomment below to be faster but use more memory.
+    // let mut expr_to_call_data = HashMap::new();
+    // for (call, ty, fun, unsafety, abi, return_ty) in loader.load_iter_thir_exprs_call() {
+    //     expr_to_call_data.insert(call, (fun, unsafety, abi, return_ty));
+    // }
+    let expr_to_call_data = loader.load_thir_exprs_call_redb_map();
 
 
     let mut unsafe_thir_block_call_counts_map = HashMap::new();
     for (expr, _, closest_unsafe_block, _, _) in loader.load_iter_thir_exprs() {
-        let Some((fun, unsafety, abi, return_ty)) = expr_to_call_data.get(&expr) else {
+        let Some((ty, fun, unsafety, abi, return_ty)) = expr_to_call_data.get_redb(expr) else {
             continue;
         };
         let Some((build, check_mode)) = unsafe_blocks_to_data.get(&closest_unsafe_block) else {
@@ -86,9 +88,9 @@ fn new_count_called_functions(loader: &Loader) {
 
     // same as above, but for storing
     let iter_version = loader.load_iter_thir_exprs().flat_map(|(expr, _, closest_unsafe_block, _, _)| {
-        let (fun, unsafety, abi, return_ty) = expr_to_call_data.get(&expr)?;
+        let (_ty, fun, unsafety, abi, return_ty) = expr_to_call_data.get_redb(expr)?;
         let (build, check_mode) = unsafe_blocks_to_data.get(&closest_unsafe_block)?;
-        Some((*build, closest_unsafe_block, *check_mode, expr, *fun, *unsafety, *abi, *return_ty))
+        Some((*build, closest_unsafe_block, *check_mode, expr, fun, unsafety, abi, return_ty))
     });
 
 
@@ -182,11 +184,13 @@ fn new_report_called_functions(loader: &Loader, report_path: &Path) {
 /// Find all thir calls in unsafe functions that call non-constant targets. In other
 /// words, find all calls that call function pointers.
 fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
-    let const_calls: HashSet<_> = loader
-        .load_thir_exprs_call_const_target()
-        .tuple_iter()
-        .map(|(fun, _def_path)| fun)
-        .collect();
+    // let const_calls: HashSet<_> = loader
+    //     .load_thir_exprs_call_const_target()
+    //     .tuple_iter()
+    //     .map(|(fun, _def_path)| fun)
+    //     .collect();
+
+    let const_calls = loader.load_thir_exprs_call_const_target_redb_map();
 
     let build_resolver = BuildResolver::new(loader);
     let strings = loader.load_strings();
@@ -194,7 +198,7 @@ fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
     let unsafe_thir_block_calls = loader.load_unsafe_thir_block_calls();
     let non_const_thir_calls = unsafe_thir_block_calls.tuple_iter().flat_map(
         |(build, block, _check_mode, call, fun, unsafety, abi, _return_ty)| {
-            if const_calls.contains(&fun) {
+            if const_calls.get_redb(fun).is_some() {
                 None
             } else {
                 Some((
@@ -220,7 +224,7 @@ fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
 /// 3. Dynamic calls on trait objects.
 /// 4. Calls of closures.
 fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
-    let const_calls_map = loader.load_thir_exprs_call_const_target_as_map();
+    let const_calls_map = loader.load_thir_exprs_call_const_target_redb_map();
     let def_path_resolver = DefPathResolver::new(loader);
     let build_resolver = BuildResolver::new(loader);
     let strings = loader.load_strings();
@@ -228,11 +232,11 @@ fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
     let unsafe_thir_block_calls = loader.load_unsafe_thir_block_calls();
     let const_thir_calls = unsafe_thir_block_calls.tuple_iter().flat_map(
         |(build, block, check_mode, call, fun, unsafety, abi, _return_ty)| {
-            const_calls_map.get(&fun).map(|def_path| {
+            const_calls_map.get_redb(fun).map(|def_path| {
                 Some((
                     build,
                     build_resolver.resolve(build),
-                    def_path_resolver.resolve(*def_path),
+                    def_path_resolver.resolve(def_path),
                     block,
                     check_mode,
                     call,
@@ -248,6 +252,7 @@ fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
 
 pub fn new_query(loader: &Loader, report_path: &Path) {
     // quick debug, store trait_items
+    // TODO: delete me
     let def_path_resolver = DefPathResolver::new(loader);
     let trait_items = loader.load_trait_items();
     let trait_items_debug: Vec<_> = trait_items

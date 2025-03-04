@@ -13,6 +13,7 @@ use std::sync::Mutex;
 use std::sync::OnceLock;
 
 pub use self::data_structures::InterningTable;
+pub use self::data_structures::DiskInterningTable;
 pub use self::data_structures::RelationMap;
 pub use self::data_structures::RelationElement;
 pub use self::data_structures::VecOfRelationElementAdapter;

@@ -27,10 +27,11 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
             trailing_exprs.insert(expr);
         }
     }
-    let mut thir_exprs_call: HashSet<ThirExpr> = HashSet::new();
-    for (expr, _ty, _fun, _safety, _abi, _retty) in loader.load_iter_thir_exprs_call() {
-        thir_exprs_call.insert(expr);
-    }
+    // let mut thir_exprs_call: HashSet<ThirExpr> = HashSet::new();
+    // for (expr, _ty, _fun, _safety, _abi, _retty) in loader.load_iter_thir_exprs_call() {
+    //     thir_exprs_call.insert(expr);
+    // }
+    let thir_exprs_call_map = loader.load_thir_exprs_call_redb_map();
 
     let mut unsafe_block_to_count_trailing_expr: HashMap<ThirBlock, usize> = HashMap::new();
     let mut unsafe_thir_blocks_to_call_expr_count: HashMap<ThirBlock, usize> = HashMap::new();
@@ -39,7 +40,8 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
             let count = unsafe_block_to_count_trailing_expr.entry(closest_unsafe_block).or_insert(0);
             *count += 1;
         }
-        if thir_exprs_call.contains(&expr) {
+        // order matters here, we want to only access redb if we already know the expr is a trailing expr
+        if thir_exprs_call_map.get_redb(expr).is_some() {
             let count = unsafe_thir_blocks_to_call_expr_count.entry(closest_unsafe_block).or_insert(0);
             *count += 1;
         }

@@ -141,7 +141,7 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
                 /// Counters used for generating ids.
                 pub(crate) counters: Counters,
                 /// Interning tables that link typed ids to untyped interning ids.
-                pub(crate) interning_tables: InterningTables,
+                pub(crate) interning_tables: DiskInterningTables,
             }
 
             impl DiskTables {
@@ -149,7 +149,7 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
                     Ok(Self {
                         relations: DiskRelations::create_in(&root.join("relations"))?,
                         counters: Counters::default(),
-                        interning_tables: InterningTables::default(),
+                        interning_tables: DiskInterningTables::create_in(&root.join("interning"))?,
                     })
                 }
             }
