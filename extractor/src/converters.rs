@@ -82,9 +82,10 @@ impl ConvertInto<types::SpanExpansionKind> for rustc_span::hygiene::ExpnKind {
             EK::Desugaring(DesugaringKind::BoundModifier) => {
                 types::SpanExpansionKind::DesugaringYeetExpr
             }
-            EK::Desugaring(DesugaringKind::Contract) => {
-                types::SpanExpansionKind::DesugaringContract
-            }
+            // for future rust:
+            // EK::Desugaring(DesugaringKind::Contract) => {
+            //     types::SpanExpansionKind::DesugaringContract
+            // }
         }
     }
 }

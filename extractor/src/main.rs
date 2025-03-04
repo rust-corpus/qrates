@@ -7,12 +7,12 @@
 extern crate rustc_driver;
 extern crate rustc_interface;
 extern crate rustc_session;
+extern crate rustc_middle;
 
 use corpus_extractor::{analyse, override_queries, save_cfg_configuration};
 use rustc_driver::Compilation;
 use rustc_interface::{
     interface::{Compiler, Config},
-    Queries,
 };
 use rustc_middle::ty::TyCtxt;
 use rustc_session::EarlyDiagCtxt;
@@ -40,38 +40,35 @@ fn main() {
     let handler = EarlyDiagCtxt::new(Default::default());
     rustc_driver::init_rustc_env_logger(&handler);
     let mut callbacks = CorpusCallbacks {};
-    let exit_code = rustc_driver::catch_with_exit_code(|| {
-        use std::env;
-        let mut is_color_arg = false;
-        let mut args = env::args()
-            .filter(|arg| {
-                if arg == "--color" {
-                    is_color_arg = true;
-                    false
-                } else if is_color_arg {
-                    is_color_arg = false;
-                    false
-                } else {
-                    true
-                }
-            })
-            .collect::<Vec<_>>();
+    use std::env;
+    let mut is_color_arg = false;
+    let mut args = env::args()
+        .filter(|arg| {
+            if arg == "--color" {
+                is_color_arg = true;
+                false
+            } else if is_color_arg {
+                is_color_arg = false;
+                false
+            } else {
+                true
+            }
+        })
+        .collect::<Vec<_>>();
 
-        args.push("--sysroot".to_owned());
-        args.push(std::env::var("SYSROOT").expect("Please specify the SYSROOT env variable."));
-        args.splice(
-            1..1,
-            [
-                "-Zalways-encode-mir",
-                "-Zmir-opt-level=0",
-                "-Cdebug-assertions=on",
-                // Note: To disable incremental compilation, remove this flag entirely.
-                "-Cincremental=incremental",
-            ]
-            .iter()
-            .map(ToString::to_string),
-        );
-        rustc_driver::RunCompiler::new(&args, &mut callbacks).run()
-    });
-    process::exit(exit_code);
+    args.push("--sysroot".to_owned());
+    args.push(std::env::var("SYSROOT").expect("Please specify the SYSROOT env variable."));
+    args.splice(
+        1..1,
+        [
+            "-Zalways-encode-mir",
+            "-Zmir-opt-level=0",
+            "-Cdebug-assertions=on",
+            // Note: To disable incremental compilation, remove this flag entirely.
+            "-Cincremental=incremental",
+        ]
+        .iter()
+        .map(ToString::to_string),
+    );
+    rustc_driver::run_compiler(&args, &mut callbacks);
 }

@@ -135,8 +135,8 @@ fn analyse_with_tcx(name: String, tcx: TyCtxt, session: &Session) {
 
     let mut hir_visitor = hir_visitor::HirVisitor::new(tables, build, session, hir_map, tcx);
 
-    tcx.hir_walk_toplevel_module(&mut hir_visitor);
-    tcx.hir_walk_attributes(&mut hir_visitor);
+    tcx.hir().walk_toplevel_module(&mut hir_visitor);
+    tcx.hir().walk_attributes(&mut hir_visitor);
 
     let mut filler = hir_visitor.filler();
 
@@ -201,7 +201,7 @@ pub fn override_queries(_session: &Session, providers: &mut rustc_middle::util::
             return body;
         };
         let thir_clone = steal.borrow();
-        unsafe { thir_storage::store_thir_body(tcx, def_id, thir_clone, expr_id) };
+        unsafe { thir_storage::store_thir_body(tcx, def_id, thir_clone.clone(), expr_id) };
 
         Ok((steal, expr_id))
     };

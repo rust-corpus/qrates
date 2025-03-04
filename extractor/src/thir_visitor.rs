@@ -368,7 +368,7 @@ impl<'a, 'b, 'thir, 'tcx: 'thir> ThirVisitor<'a, 'b, 'thir, 'tcx> {
                 (interned_tuple_expr,)
             }
             rustc_middle::thir::ExprKind::Adt(adt_expr) => {
-                let base = match adt_expr.base {
+                let base = match &adt_expr.base {
                     AdtExprBase::None => {
                         self.filler.tables.get_no_thir_expr()
                     } 
@@ -494,8 +494,17 @@ impl<'a, 'b, 'thir, 'tcx: 'thir> ThirVisitor<'a, 'b, 'thir, 'tcx> {
                 let interned_value = self.visit_expr_and_intern(&self.thir[*value]);
                 self.filler.tables.register_thir_exprs_yield(interned_value)
             }
-            rustc_middle::thir::ExprKind::PlaceUnwrapUnsafeBinder {..} =>  {
-                // TODO: add schema support
+            rustc_middle::thir::ExprKind::PlaceUnwrapUnsafeBinder { source } =>  {
+                let source = self.visit_expr_and_intern(&self.thir[*source]);
+                self.filler.tables.register_thir_exprs_place_unwrap_unsafe_binder(source)
+            }
+            rustc_middle::thir::ExprKind::WrapUnsafeBinder { source } => {
+                let source = self.visit_expr_and_intern(&self.thir[*source]);
+                self.filler.tables.register_thir_exprs_wrap_unsafe_binder(source)
+            }
+            rustc_middle::thir::ExprKind::ValueUnwrapUnsafeBinder { source } => {
+                let source = self.visit_expr_and_intern(&self.thir[*source]);
+                self.filler.tables.register_thir_exprs_value_unwrap_unsafe_binder(source)
             }
         };
 

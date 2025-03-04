@@ -178,7 +178,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
 }
 
 impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
-    type MaybeTyCtxt = TyCtxt<'tcx>;
+    type Map = HirMap<'tcx>;
     type NestedFilter = rustc_middle::hir::nested_filter::All;
     fn visit_item(&mut self, item: &'tcx hir::Item) {
         let name: &str = &item.ident.name.as_str();
@@ -436,7 +436,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
     fn visit_body(&mut self, body: &hir::Body<'tcx>) {
         intravisit::walk_body(self, body);
         let id = body.id();
-        let def_id = self.tcx.hir_body_owner_def_id(id);
+        let def_id = self.tcx.hir().body_owner_def_id(id);
         let def_kind = self.tcx.def_kind(def_id);
         let mir_body = match def_kind {
             DefKind::Const
@@ -457,7 +457,7 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
             thir_body.expect(&format!("No THIR body found for {:?}", def_id));
         self.visit_thir(thir_body, expr_id, def_path);
     }
-    fn maybe_tcx<'this>(&'this mut self) -> Self::MaybeTyCtxt {
-        self.tcx
+    fn nested_visit_map<'this>(&'this mut self) -> Self::Map {
+        self.tcx.hir()
     }
 }
