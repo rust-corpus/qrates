@@ -150,6 +150,10 @@ fn collect_unsafe_types(loader: &Loader) {
     // TODO: if a list is in reverse parent-child order this causes quadratic explosion
     // ^fix: for each relation, load the full list into memory and remove elements after they're inserted
     // actually, would still be quadratic. need to do a topological sort over all relations simultaneously
+
+    // A way to actually do this properly:
+    // for every 'kind' of aggregate type, i.e., types_array, types_slice, types_adt, ..., make them a relation map.
+    // then store a DiskMap<type, bool> is_unsafe_type, and recurse down on all types applying memoization with the is_unsafe_type diskmap.
     let mut modified = true;
     while modified {
         modified = false;
