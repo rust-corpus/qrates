@@ -281,7 +281,7 @@ impl<V: InterningTableValue> redb::Value for Hack<V> {
 }
 
 
-impl<K, V> InterningTable<K, V>
+/*impl<K, V> InterningTable<K, V>
 where
     K: InterningTableKey,
     V: InterningTableValue,
@@ -376,7 +376,7 @@ where
         self.read_only_table = Some(table);
         self.read_only_inv_table = Some(inv_table);
     }
-}
+}*/
 
 impl<K, V> RelationMap<K, V>
 where K: DiskMapKey,

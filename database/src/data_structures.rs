@@ -275,12 +275,6 @@ where
     pub(crate) contents: Vec<V>,
     #[serde(skip_serializing)]
     inv_contents: HashMap<V, K>,
-    #[serde(skip_serializing)]
-    pub(crate) db: Option<redb::Database>,
-    #[serde(skip_serializing)]
-    pub(crate) read_only_table: Option<redb::ReadOnlyTable<u64, Hack<V>>>,
-    #[serde(skip_serializing)]
-    pub(crate) read_only_inv_table: Option<redb::ReadOnlyTable<V, u64>>,
 }
 
 impl<K, V> Default for InterningTable<K, V>
@@ -292,9 +286,6 @@ where
         Self {
             contents: Vec::new(),
             inv_contents: HashMap::new(),
-            db: None,
-            read_only_table: None,
-            read_only_inv_table: None,
         }
     }
 }
@@ -314,9 +305,6 @@ where
         Self {
             contents,
             inv_contents,
-            db: None,
-            read_only_table: None,
-            read_only_inv_table: None,
         }
     }
 }
@@ -348,60 +336,11 @@ where
     pub fn len(&self) -> usize {
         self.contents.len()
     }
-}
-
-impl<K> InterningTable<K, String>
-where
-    K: InterningTableKey,
-{
-    // pub fn lookup_str(&self, value: &str) -> Option<K> {
-    //     self.inv_contents.get(value).cloned()
-    // }
-
-    pub fn lookup_str(&self, value: &str) -> Option<K> {
-        if let Some(table) = &self.read_only_inv_table {
-            // TODO: to_string() is unfortunate.
-            return Some((table.get(&value.to_string()).ok()??.value() as usize).into());
-        }
-        None
-    }
-}
-
-impl<K, V> InterningTable<K, V>
-where
-    K: InterningTableKey,
-    V: InterningTableValue,
-{
-    // pub fn lookup(&self, value: &V) -> Option<K> {
-    //     self.inv_contents.get(value).cloned()
-    // }
-
-    pub fn lookup(&self, value: &V) -> Option<K> {
-        if let Some(table) = &self.read_only_inv_table {
-            return Some((table.get(value).ok()??.value() as usize).into());
-        }
-        None
-    }
-
-    pub fn get_redb(&self, key: K) -> Option<V> {
-        let index: usize = key.into();
-        if let Some(table) = &self.read_only_table {
-            return Some(table.get(index as u64).ok()??.value());
-        }
-        None
-    }
-
-    pub fn r(&self, key: K) -> V {
-        self.get_redb(key).unwrap()
-    }
-
     pub fn iter(&self) -> impl Iterator<Item = (K, V)> + '_ {
-        let rot = self.read_only_table.as_ref().unwrap();
-
-        rot.iter().unwrap().map(|res| {
-            let (k, v) = res.unwrap();
-            ((k.value() as usize).into(), v.value())
-        })    
+        self.contents
+            .iter()
+            .enumerate()
+            .map(|(k, v)| (k.into(), v.clone()))
     }
 }
 
@@ -428,7 +367,7 @@ where
     V: InterningTableValue,
 {
     fn into(self) -> Vec<(K, V)> {
-        self.iter().collect()
+        self.contents.iter().enumerate().map(|(k, v)| (k.into(), v.clone())).collect()
     }
 }
 
