@@ -53,12 +53,10 @@ pub(super) fn generate_loader_functions(
                     //     self.database_root.join(#file_name)
                     // ) }.unwrap();
 
-                    let relation = unsafe {
-                        Relation::<#relation_element_type>::load(
+                    let relation = Relation::<#relation_element_type>::load(
                             #relation_hash,
                             self.database_root.join(#file_name)
-                        )
-                    }.unwrap();
+                        ).unwrap();
 
                     *self.#name.borrow_mut() = Some(relation);
                 }
@@ -158,12 +156,11 @@ pub(super) fn generate_loader_functions(
                 #[doc = #load_relation_map_doc_comment]
                 pub fn #load_intern_table_fn_name(&self) -> std::cell::Ref<RelationMap<#key, #value>> {
                     if self.#intern_table_name.borrow().is_none() {
-                        *self.#intern_table_name.borrow_mut() = Some(unsafe {
+                        *self.#intern_table_name.borrow_mut() = Some(
                             RelationMap::load(
                                 #intern_table_hash,
                                 self.database_root.join(#intern_table_file_name)
-                            )
-                        }.unwrap());
+                            ).unwrap());
                     }
                     std::cell::Ref::map(self.#intern_table_name.borrow(), |option| option.as_ref().unwrap())
                 }
@@ -221,7 +218,7 @@ pub(super) fn generate_loader_functions(
             let table_hash = table.get_hash();
             let file_name = format!("interning/{}", name);
             quote! {
-                unsafe {
+                {
                     DiskInterningTable::load(
                         self.database_root.join(#file_name)
                     ).unwrap()

@@ -62,7 +62,7 @@ fn load_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStrea
         let name = &relation.name;
         let file_name = format!("{}", name);
         load_fields.extend(quote! {
-            #name: unsafe { Relation::load(#relation_hash, path.join(#file_name)) }?,
+            #name: Relation::load(#relation_hash, path.join(#file_name))?,
         });
     }
     quote! {
@@ -81,7 +81,7 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
         let relation_hash = relation.get_hash();
         let file_name = name.to_string();
         store_fields.extend(quote! {
-            unsafe { relations.#name.save(#relation_hash, path.join(#file_name)) }
+            { relations.#name.save(#relation_hash, path.join(#file_name)) }
         });
         if let Some(intern_key@ast::RelationInternKey { source, source_idx }) = &relation.intern_key {
             // save by into_iter the relations vec
@@ -149,7 +149,7 @@ fn load_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStream
             let table_hash = table.get_hash();
             let file_name = name.to_string();
             load_fields.extend(quote! {
-                #name: unsafe { DiskInterningTable::load(path.join(#file_name))? },
+                #name: { DiskInterningTable::load(path.join(#file_name))? },
             });
         // } 
         // else {
@@ -176,7 +176,7 @@ fn store_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStrea
             let table_hash = table.get_hash();
             let file_name = name.to_string();
             store_fields.extend(quote! {
-                unsafe { interning_tables.#name.save(path.join(#file_name)); }
+                { interning_tables.#name.save(path.join(#file_name)); }
             });
         // } else {
         //     let file_name = format!("{}.bincode", name);

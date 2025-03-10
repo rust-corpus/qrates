@@ -679,19 +679,6 @@ macro_rules! tuple {
     )
 }
 
-macro_rules! maybe_tuple_doc {
-    ($a:ident @ #[$meta:meta] $item:item) => {
-        #[doc(fake_variadic)]
-        #[doc = "This trait is implemented for tuples up to twelve items long."]
-        #[$meta]
-        $item
-    };
-    ($a:ident $($rest_a:ident)+ @ #[$meta:meta] $item:item) => {
-        #[doc(hidden)]
-        #[$meta]
-        $item
-    };
-}
 
 // up to 25
 tuple! { T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, }
@@ -840,10 +827,8 @@ mod eq_impls {
 }
 
 mod hash_impls {
-    use super::RelationElement;
     use super::RelationElement as RE;
     // stolen from core/hash/mod.rs
-    use std::ops::Deref;
     use std::hash::{Hash, Hasher};
 
     macro_rules! impl_hash_tuple {

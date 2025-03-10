@@ -4,10 +4,9 @@
 
 //! The implementation of interning tables and relations.
 
-use log::info;
-use redb::{ReadOnlyTable, ReadableTable, ReadableTableMetadata, TableDefinition};
+use redb::{ReadableTableMetadata, TableDefinition};
 use serde_derive::{Deserialize, Serialize};
-use std::{borrow::Borrow, collections::HashMap, fmt::Debug, ops::{Deref, DerefMut}, path::PathBuf};
+use std::{borrow::Borrow, collections::HashMap, path::PathBuf};
 
 use crate::get_new_disk_map_temp_dir;
 
@@ -214,12 +213,8 @@ where
     pub fn create_override_in(path: impl AsRef<std::path::Path>) -> Self {
         let contents_path = Self::get_contents_path(path.as_ref());
         let inv_map_path = Self::get_inv_map_path(path.as_ref());
-        let mut contents = DiskVec::create_override(contents_path);
-        let mut inv_map = DiskMap::create_override(inv_map_path);
-        // Ignore below. we switched to HashMap.
-        // need to disable write caching since during merging we're both interning + looking up
-        // contents.map.set_write_cache_size(0);
-        // inv_map.set_write_cache_size(0);
+        let contents = DiskVec::create_override(contents_path);
+        let inv_map = DiskMap::create_override(inv_map_path);
         Self {
             contents,
             inv_map,
@@ -342,23 +337,6 @@ where
     }
 }
 
-// impl<K, V> std::ops::Index<K> for InterningTable<K, V>
-// where
-//     K: InterningTableKey,
-//     V: InterningTableValue,
-// {
-//     type Output = V;
-//     fn index(&self, key: K) -> &Self::Output {
-//         let index: usize = key.into();
-
-//         // if let Some(table) = &self.read_only_table {
-//         //     return &table.get(index as u64).unwrap().unwrap().value();
-//         // }
-
-//         &self.contents[index]
-//     }
-// }
-
 impl<K, V> Into<Vec<(K, V)>> for &InterningTable<K, V>
 where
     K: InterningTableKey,
@@ -376,7 +354,10 @@ pub trait DiskMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfT
 impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static {}
 
 /// DiskMap<K, V> is essentially a HashMap<K, V> that is backed by a disk file.
+/// 
 /// Currently it uses a redb::Database backend, and as such it needs a file path to live.
+/// If no path is provided (e.g., from `DiskMap::create_temp()` or various std traits like Default or FromIterator),
+/// then the DiskMap will be created in a temporary directory that will be deleted when the DiskMap is dropped. 
 /// 
 /// The functions panic whenever an unexpected database-related error occurs.
 pub struct DiskMap<K, V>
@@ -576,8 +557,9 @@ impl<K: DiskMapKey, V: DiskMapValue> FromIterator<(K, V)> for DiskMap<K, V> {
 /// DiskVec<V> is essentially a Vec<V> that is backed by a disk file.
 /// It is currently backed by DiskMap<u64, V>, where the key is the index of the value in the Vec.
 /// 
-/// An important invariant is that the indices are compact, i.e. there are no "holes" in the Vec.
-/// Otherwise pushes will overwrite existing values, because the new index is computed from the 'length'.
+/// An important invariant is that the indices are compact and go from 0..length, i.e. there are no "holes" in the Vec.
+/// Otherwise pushes will overwrite existing values, because the new index is computed from the 'length', and will
+/// overwrite the value at that index in the table.
 pub struct DiskVec<V: DiskMapValue> {
     pub(crate) map: DiskMap<u64, V>,
     length: u64,

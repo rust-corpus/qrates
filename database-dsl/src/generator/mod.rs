@@ -114,12 +114,10 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
             use anyhow::Result;
             use serde_derive::{Deserialize, Serialize};
             use super::types::*;
-            use crate::storage::save_elts_relation;
-            use crate::storage::load_elts_relation;
-            use crate::storage::load_elts_relation_into_relation;
             use crate::data_structures::RelationMap;
             use crate::data_structures::DiskMap;
             use crate::data_structures::RelationElement;
+            // TODO: do I need QratesBytesAdapter?
             use super::int_bytes_adapter::QratesBytesAdapter;
             #tables
             #relations
