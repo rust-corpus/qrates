@@ -9,7 +9,7 @@ use redb::{ReadOnlyTable, ReadableTable, ReadableTableMetadata, TableDefinition}
 use serde_derive::{Deserialize, Serialize};
 use std::{borrow::Borrow, collections::HashMap, fmt::Debug, ops::{Deref, DerefMut}, path::PathBuf};
 
-use crate::{get_new_disk_map_temp_dir, storage::Hack};
+use crate::get_new_disk_map_temp_dir;
 
 mod relation_element;
 pub use relation_element::*;
@@ -21,8 +21,7 @@ pub struct Relation<T: DiskMapValue> {
 
 impl<T: DiskMapValue> Default for Relation<T> {
     fn default() -> Self {
-        let mut vec = DiskVec::create_override(get_new_disk_map_temp_dir());
-        vec.map.is_temp_map = true;
+        let vec = DiskVec::create_temp();
         Self { facts: vec }
     }
 }
@@ -93,8 +92,8 @@ where RelationElement<T>: DiskMapValue
 
 impl<T: DiskMapValue> From<Vec<T>> for Relation<T> {
     fn from(facts: Vec<T>) -> Self {
-        let mut vec = DiskVec::from_iter_override(get_new_disk_map_temp_dir(), facts);
-        vec.map.is_temp_map = true;
+        let mut vec = DiskVec::create_temp();
+        vec.insert_iter(facts);
         Self { facts: vec }
     }
 }
@@ -104,8 +103,8 @@ where
     RelationElement<T>: DiskMapValue,
 {
     fn from(facts: Vec<T>) -> Self {
-        let mut vec = DiskVec::from_iter_override(get_new_disk_map_temp_dir(), facts.into_iter().map(RelationElement));
-        vec.map.is_temp_map = true;
+        let mut vec = DiskVec::create_temp();
+        vec.insert_iter(facts.into_iter().map(RelationElement));
         Self { facts: vec }
     }
 }
@@ -122,8 +121,7 @@ where K: DiskMapKey,
         V: DiskMapValue,
 {
     fn default() -> Self {
-        let mut map = DiskMap::create_override(get_new_disk_map_temp_dir());
-        map.is_temp_map = true;
+        let map = DiskMap::create_temp();
         Self {
             map,
         }
@@ -381,10 +379,6 @@ impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb:
 /// Currently it uses a redb::Database backend, and as such it needs a file path to live.
 /// 
 /// The functions panic whenever an unexpected database-related error occurs.
-/// 
-/// WARNING: The read functions bypass the write cache. If you need to read + write in the same phase,
-/// either flush before each read or set the write cache size to 0 with set_write_cache_size(0).
-/// The functions will panic if the write cache is not empty.
 pub struct DiskMap<K, V>
 where
     K: DiskMapKey,
@@ -416,6 +410,13 @@ pub(crate) const DISK_MAP_WRITE_CACHE_SIZE: usize = 100_000;
 pub(crate) const DISK_MAP_REDB_CACHE_SIZE: usize = 50_000_000;
 
 impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
+    pub fn create_temp() -> Self {
+        let path = get_new_disk_map_temp_dir();
+        let mut map = Self::create_override(path);
+        map.is_temp_map = true;
+        map
+    }
+
     pub fn create_override(path: impl AsRef<std::path::Path>) -> Self {
         let path = path.as_ref();
         // delete file at path if it exists
@@ -565,8 +566,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
 
 impl<K: DiskMapKey, V: DiskMapValue> FromIterator<(K, V)> for DiskMap<K, V> {
     fn from_iter<I: IntoIterator<Item = (K, V)>>(iter: I) -> Self {
-        let mut map = Self::create_override(get_new_disk_map_temp_dir());
-        map.is_temp_map = true;
+        let mut map = Self::create_temp();
         map.insert_iter(iter);
         map
     }
@@ -589,6 +589,14 @@ impl<V: DiskMapValue> DiskVec<V> {
         Self {
             map,
             length,
+        }
+    }
+
+    pub fn create_temp() -> Self {
+        let map = DiskMap::create_temp();
+        Self {
+            map,
+            length: 0,
         }
     }
 

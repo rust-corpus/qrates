@@ -4,14 +4,14 @@ use super::utils::{DefPathResolver, GroupByIterator, SpanResolver};
 use crate::queries::utils::BuildResolver;
 use crate::write_csv;
 use corpus_database::{tables::Loader, types};
-use corpus_database::{get_new_disk_map_temp_dir, DiskMap, RelationElement as RE};
+use corpus_database::DiskMap;
 use corpus_queries_derive::datapond_query;
 use log::info;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 pub fn new_query(loader: &Loader, report_path: &Path) {
-    let mut thir_block_parent_to_children: DiskMap<_, Vec<_>> = DiskMap::create_override(get_new_disk_map_temp_dir());
+    let mut thir_block_parent_to_children: DiskMap<_, Vec<_>> = DiskMap::create_temp();
     for (parent, child, _safety, _check_mode, _span) in loader.load_iter_thir_blocks() {
         let mut children = thir_block_parent_to_children.get(parent).unwrap_or_default();
         children.push(child);
