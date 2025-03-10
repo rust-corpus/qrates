@@ -4141,8 +4141,8 @@ checksum = "f7c45b9784283f1b2e7fb61b42047c2fd678ef0960d4f6f1eba131594cc369d4"
 
 [[package]]
 name = "rustwide"
-version = "0.18.0"
-source = "git+https://github.com/skius/rustwide?branch=rwfix18#91cd3ac5822b2cf5e9b522d04cfb74a03b9f7592"
+version = "0.19.1"
+source = "git+https://github.com/skius/rustwide-fork?branch=master#a47f23c0ed9b8ef1eed21804d4eed3895c1574e3"
 dependencies = [
  "anyhow",
  "attohttpc",
