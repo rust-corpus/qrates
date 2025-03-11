@@ -262,4 +262,20 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
         },
     );
     write_csv!(report_path, selected_function_definitions_thir_counts);
+
+    // TODO: delete me, or move me somewhere else
+    // count the kinds of closures that exist
+    let closure_kinds = loader.load_thir_exprs_closure_kind();
+    let mut fn_count = 0;
+    let mut fnmut_count = 0;
+    let mut fnonce_count = 0;
+    for (_, kind) in closure_kinds.tuple_iter() {
+        match kind {
+            types::ClosureKind::Fn => fn_count += 1,
+            types::ClosureKind::FnMut => fnmut_count += 1,
+            types::ClosureKind::FnOnce => fnonce_count += 1,
+            types::ClosureKind::Unknown => {},
+        }
+    }
+    info!("[all builds] fn_count = {}, fnmut_count = {}, fnonce_count = {}", fn_count, fnmut_count, fnonce_count);
 }

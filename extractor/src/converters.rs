@@ -10,6 +10,7 @@ use rustc_middle::{
 };
 
 extern crate rustc_abi;
+extern crate rustc_type_ir;
 
 pub trait ConvertInto<T> {
     fn convert_into(&self) -> T;
@@ -340,6 +341,16 @@ impl ConvertInto<types::Movability> for Option<rustc_ast::Movability> {
             Some(rustc_ast::Movability::Static) => types::Movability::Static,
             Some(rustc_ast::Movability::Movable) => types::Movability::Movable,
             None => types::Movability::None,
+        }
+    }
+}
+
+impl ConvertInto<types::ClosureKind> for rustc_type_ir::ClosureKind {
+    fn convert_into(&self) -> types::ClosureKind {
+        match self {
+            rustc_type_ir::ClosureKind::Fn => types::ClosureKind::Fn,
+            rustc_type_ir::ClosureKind::FnMut => types::ClosureKind::FnMut,
+            rustc_type_ir::ClosureKind::FnOnce => types::ClosureKind::FnOnce,
         }
     }
 }

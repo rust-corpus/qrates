@@ -418,6 +418,14 @@ enum LitKind {
     Bool,
     Err,
 }
+/// rustc_type_ir::ClosureKind
+enum ClosureKind {
+    #[default]
+    Unknown,
+    Fn,
+    FnMut,
+    FnOnce,
+}
 
 // Interning tables.
 
@@ -552,6 +560,7 @@ relation thir_adt_field_expr(adt: ThirExpr, field_idx: FieldIndex, expr: ThirExp
 relation thir_exprs_place_type_ascription(expr: auto ThirExpr, source: ThirExpr, user_ty_span: Span);
 relation thir_exprs_value_type_ascription(expr: auto ThirExpr, source: ThirExpr, user_ty_span: Span);
 relation thir_exprs_closure(expr: auto ThirExpr, closure_id: DefPath, movability: Movability);
+relation thir_exprs_closure_kind(closure_expr: ThirExpr, kind: ClosureKind);
 relation thir_closure_upvars(closure_expr: ThirExpr, index: u32, upvar: ThirExpr);
 relation thir_exprs_literal(expr: auto ThirExpr, lit: LitKind, neg: bool);
 relation thir_exprs_non_hir_literal(expr: auto ThirExpr, scalar: u128);

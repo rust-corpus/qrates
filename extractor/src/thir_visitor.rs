@@ -3,7 +3,7 @@ use corpus_database::types::{self, Safety, ThirBlock};
 use rustc_hir as hir;
 use rustc_middle::{
     thir::{AdtExprBase, ExprId, Thir},
-    ty::{self, TyCtxt},
+    ty::{self, TyCtxt, UpvarArgs},
 };
 
 use crate::table_filler::TableFiller;
@@ -431,6 +431,18 @@ impl<'a, 'b, 'thir, 'tcx: 'thir> ThirVisitor<'a, 'b, 'thir, 'tcx> {
                     closure_def_id,
                     closure_expr.movability.convert_into(),
                 );
+
+                // Special casing getting the closure kind
+                match closure_expr.args {
+                    UpvarArgs::Closure(generic_args) => {
+                        let kind = generic_args.as_closure().kind();
+                        self.filler
+                            .tables
+                            .register_thir_exprs_closure_kind(interned_closure_expr, kind.convert_into());
+                    }
+                    _ => {}
+                }
+
 
                 for (i, upvar) in closure_expr.upvars.iter().enumerate() {
                     let interned_upvar = self.visit_expr_and_intern(&self.thir[*upvar]);
