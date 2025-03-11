@@ -27,7 +27,8 @@ static DISK_MAP_TEMP_DIR_ROOT: OnceLock<PathBuf> = OnceLock::new();
 static DISK_MAP_COUNTER: LazyLock<Mutex<u64>> = LazyLock::new(|| Mutex::new(0));
 
 pub fn set_disk_map_temp_dir_root(root: PathBuf) {
-    DISK_MAP_TEMP_DIR_ROOT.set(root).unwrap();
+    // Ignoring error, because we don't care if it was already set. These are just temporary diskmap locations.
+    let _ = DISK_MAP_TEMP_DIR_ROOT.set(root);
 }
 
 /// `set_disk_map_temp_dir_root` must be called before this function.

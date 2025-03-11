@@ -159,12 +159,22 @@ impl<V: DiskMapValue> DiskVec<V> {
 #[cfg(test)]
 mod tests {
 
-    use crate::data_structures::{DiskMapValue, Relation};
+    use crate::{data_structures::{DiskMapValue, Relation}, set_disk_map_temp_dir_root};
+
+    fn init() {
+        let mut t = std::env::temp_dir();
+        t.push("tmp_diskmap");
+        // create
+        std::fs::create_dir_all(&t).unwrap();
+        set_disk_map_temp_dir_root(t);
+    }
 
     fn checker<T>(test_count: u32, facts: &Vec<T>)
     where
         T: Copy + std::fmt::Debug + std::cmp::PartialEq + DiskMapValue,
     {
+        init();
+
         let mut relation: Relation<T> = facts.clone().into();
         let mut test_file = std::env::temp_dir();
         test_file.push(format!("rust-corpus-relation-saving-test-{}", test_count));
@@ -215,6 +225,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_saving_and_loading_relations6() {
+        init();
         let mut relation: Relation<u32> = vec![1, 2, 3, 4, 5].into();
         let mut test_file = std::env::temp_dir();
         test_file.push("rust-corpus-relation-saving-test-6");
