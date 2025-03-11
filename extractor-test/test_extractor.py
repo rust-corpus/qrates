@@ -31,7 +31,7 @@ class Tables:
         return self.data['counters'][name]
 
     def relation(self, name):
-        return self.data['relations'][name]['facts']
+        return self.data['relations'][name]
 
     def interning_table(self, name):
         return self.data['interning_tables'][name]['contents']
@@ -110,7 +110,7 @@ def check_output():
         if string.startswith('# '):
             continue
         assert string in tables.strings, string
-    assert len(tables.relation('terminators_call')) == 18
+    assert len(tables.relation('thir_exprs_call')) == 18
 
     # for t in sorted(tables.strings):
         # if t.startswith('extractor_test.'):
