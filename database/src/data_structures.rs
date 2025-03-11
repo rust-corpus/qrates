@@ -377,11 +377,11 @@ where
 impl<K: DiskMapKey, V: DiskMapValue> Drop for DiskMap<K, V> {
     fn drop(&mut self) {
         if self.is_temp_map {
-            eprintln!("Dropping tmp DiskMap at {:?} and deleting path", self.path);
+            // eprintln!("Dropping tmp DiskMap at {:?} and deleting path", self.path);
             // Unsure why, but redb seems to not care about the file being deleted despite not being dropped yet.
             std::fs::remove_file(&self.path).unwrap();
         } else {
-            eprintln!("Dropping DiskMap at {:?}, thus flushing", self.path);
+            // eprintln!("Dropping DiskMap at {:?}, thus flushing", self.path);
             self.flush();
         }
     }
@@ -419,7 +419,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
 
     pub fn create_or_open(path: impl AsRef<std::path::Path>) -> Self {
         let path = path.as_ref();
-        eprintln!("Opening DiskMap at {:?}", path);
+        // eprintln!("Opening DiskMap at {:?}", path);
         let mut builder = redb::Database::builder();
         builder.set_cache_size(DISK_MAP_REDB_CACHE_SIZE);
 

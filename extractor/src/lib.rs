@@ -73,9 +73,6 @@ fn analyse_with_tcx(name: String, tcx: TyCtxt, session: &Session) {
         path
     };
     std::fs::create_dir_all(&path).unwrap();
-    let tmp_dm_path = path.join("tmp_diskmap");
-    std::fs::create_dir_all(&tmp_dm_path).unwrap();
-    set_disk_map_temp_dir_root(tmp_dm_path);
     path.push(file_name);
 
     let cargo_pkg_version = std::env::var("CARGO_PKG_VERSION").unwrap();
