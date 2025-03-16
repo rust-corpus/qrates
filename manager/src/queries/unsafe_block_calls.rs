@@ -34,7 +34,7 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
 
     let thir_block_map = loader.load_thir_blocks_redb_map();
     let thir_block_to_span = |block| {
-        let (_parent, _, _, span) = thir_block_map.get_redb(block).unwrap();
+        let (_parent, _, _, span) = thir_block_map.get(block).unwrap();
         span
     };
 
@@ -46,14 +46,14 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
                 call_target_def_path,
                 call_target,
                 is_trait_item,
-            ) = if let Some(target) = fun_to_const_target_map.get_redb(fun) {
+            ) = if let Some(target) = fun_to_const_target_map.get(fun) {
                 let (crate_name, crate_hash, relative_def_path, _def_path_hash, summary_key) =
-                    def_paths.r(target);
+                    def_paths.get_unwrap(target);
                 (
-                    strings.r(crate_names.r(crate_name)),
+                    strings.get_unwrap(crate_names.get_unwrap(crate_name)),
                     format!("{:x}", crate_hash),
-                    strings.r(relative_def_paths.r(relative_def_path)),
-                    strings.r(summary_keys.r(summary_key)),
+                    strings.get_unwrap(relative_def_paths.get_unwrap(relative_def_path)),
+                    strings.get_unwrap(summary_keys.get_unwrap(summary_key)),
                     trait_items.contains(&target),
                 )
             } else {
@@ -73,7 +73,7 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
                 check_mode.to_string(),
                 call,
                 unsafety.to_string(),
-                strings.r(abis.r(abi)),
+                strings.get_unwrap(abis.get_unwrap(abi)),
                 target_crate_name,
                 target_crate_hash,
                 call_target_def_path,
@@ -103,12 +103,12 @@ fn new_report_all_calls(loader: &Loader, report_path: &Path) {
     let all_thir_calls = all_calls.map(
         |(call, _fun_type, fun, unsafety, abi, _return_ty)| {
             let (call_target, is_trait_item) = if let Some(target) =
-                fun_to_const_target_map.get_redb(fun)
+                fun_to_const_target_map.get(fun)
             {
                 let (_crate_name, _crate_hash, _relative_def_path, _def_path_hash, summary_key) =
-                    def_paths.r(target);
+                    def_paths.get_unwrap(target);
                 (
-                    strings.r(summary_keys.r(summary_key)),
+                    strings.get_unwrap(summary_keys.get_unwrap(summary_key)),
                     trait_items.contains(&target),
                 )
             } else {
@@ -118,7 +118,7 @@ fn new_report_all_calls(loader: &Loader, report_path: &Path) {
                 call,
                 fun,
                 unsafety.to_string(),
-                strings.r(abis.r(abi)).to_string(),
+                strings.get_unwrap(abis.get_unwrap(abi)).to_string(),
                 call_target,
                 is_trait_item,
             )

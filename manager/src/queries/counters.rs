@@ -56,7 +56,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
                 return None;
             }
             let (build, thir_body_def_path) = *map_selected_thir_bodies_to_data.get(&root_block).unwrap();
-            let (parent, safety, check_mode, span) = thir_block_data_map.r(block);
+            let (parent, safety, check_mode, span) = thir_block_data_map.get_unwrap(block);
             Some((build, thir_body_def_path, parent, block, safety, check_mode, span))
         },
     );
@@ -247,7 +247,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
                 module,
                 visibility.to_string(),
                 unsafety.to_string(),
-                strings.r(abis.r(abi)),
+                strings.get_unwrap(abis.get_unwrap(abi)),
                 uses_unsafe,
                 function_unsafe_thir_block_counts
                     .get(&item)

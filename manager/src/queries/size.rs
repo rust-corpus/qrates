@@ -41,7 +41,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
             *count += 1;
         }
         // order matters here, we want to only access redb if we already know the expr is a trailing expr
-        if thir_exprs_call_map.get_redb(expr).is_some() {
+        if thir_exprs_call_map.get(expr).is_some() {
             let count = unsafe_thir_blocks_to_call_expr_count.entry(closest_unsafe_block).or_insert(0);
             *count += 1;
         }

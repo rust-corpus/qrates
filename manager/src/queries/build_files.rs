@@ -46,9 +46,9 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .map(|&(build, package, version, krate, crate_hash)| {
             (
                 build,
-                package_names.r(package),
-                package_versions.r(version),
-                crate_names.r(krate),
+                package_names.get_unwrap(package),
+                package_versions.get_unwrap(version),
+                crate_names.get_unwrap(krate),
                 format!("{:x}", crate_hash),
             )
         })

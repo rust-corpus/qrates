@@ -35,7 +35,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 def_path,
                 name,
                 visibility,
-                types.r(typ),
+                types.get_unwrap(typ),
                 kind,
             )
         },
@@ -52,9 +52,9 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 item,
                 typ,
                 def_path_resolver.resolve(def_path),
-                strings.r(name),
+                strings.get_unwrap(name),
                 visibility.to_string(),
-                strings.r(type_kinds.r(type_kind)),
+                strings.get_unwrap(type_kinds.get_unwrap(type_kind)),
                 def_kind.to_string(),
             )
         },
@@ -75,7 +75,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .iter()
         .flat_map(
             |&(build, item, typ, def_path, name, visibility, type_kind, def_kind)| {
-                adts.get_redb(typ)
+                adts.get(typ)
                     .map(|(resolved_def_path, kind, c_repr, is_phantom)| {
                         (
                             build,
@@ -117,9 +117,9 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 typ,
                 def_path_resolver.resolve(def_path),
                 def_path_resolver.resolve(resolved_def_path),
-                strings.r(name),
+                strings.get_unwrap(name),
                 visibility.to_string(),
-                strings.r(type_kinds.r(type_kind)),
+                strings.get_unwrap(type_kinds.get_unwrap(type_kind)),
                 def_kind.to_string(),
                 kind.to_string(),
                 c_repr,
@@ -211,7 +211,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
                             field_name,
                             field_visibility,
                             field_type,
-                            types.r(field_type),
+                            types.get_unwrap(field_type),
                         )
                     },
                 )
@@ -252,18 +252,18 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 def_path_resolver.resolve(resolved_adt_def_path),
                 def_path_resolver.resolve(field_def_path),
                 (
-                    strings.r(name),
+                    strings.get_unwrap(name),
                     visibility.to_string(),
-                    strings.r(type_kinds.r(type_kind)),
+                    strings.get_unwrap(type_kinds.get_unwrap(type_kind)),
                     def_kind.to_string(),
                     kind.to_string(),
                     c_repr,
                     is_phantom,
                 ),
-                strings.r(field_name),
+                strings.get_unwrap(field_name),
                 field_visibility.to_string(),
                 field_type,
-                strings.r(type_kinds.r(field_type_kind)),
+                strings.get_unwrap(type_kinds.get_unwrap(field_type_kind)),
             )
         },
     );

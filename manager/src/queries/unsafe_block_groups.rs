@@ -74,7 +74,7 @@ fn new_count_called_functions(loader: &Loader) {
 
     let mut unsafe_thir_block_call_counts_map = HashMap::new();
     for (expr, _, closest_unsafe_block, _, _) in loader.load_iter_thir_exprs() {
-        let Some((ty, fun, unsafety, abi, return_ty)) = expr_to_call_data.get_redb(expr) else {
+        let Some((ty, fun, unsafety, abi, return_ty)) = expr_to_call_data.get(expr) else {
             continue;
         };
         let Some((build, check_mode)) = unsafe_blocks_to_data.get(&closest_unsafe_block) else {
@@ -88,7 +88,7 @@ fn new_count_called_functions(loader: &Loader) {
 
     // same as above, but for storing
     let iter_version = loader.load_iter_thir_exprs().flat_map(|(expr, _, closest_unsafe_block, _, _)| {
-        let (_ty, fun, unsafety, abi, return_ty) = expr_to_call_data.get_redb(expr)?;
+        let (_ty, fun, unsafety, abi, return_ty) = expr_to_call_data.get(expr)?;
         let (build, check_mode) = unsafe_blocks_to_data.get(&closest_unsafe_block)?;
         Some((*build, closest_unsafe_block, *check_mode, expr, fun, unsafety, abi, return_ty))
     });
@@ -141,7 +141,7 @@ fn new_report_called_functions(loader: &Loader, report_path: &Path) {
                 call,
                 fun,
                 unsafety.to_string(),
-                strings.r(abis.r(abi)),
+                strings.get_unwrap(abis.get_unwrap(abi)),
             )
         },
     );
@@ -198,7 +198,7 @@ fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
     let unsafe_thir_block_calls = loader.load_unsafe_thir_block_calls();
     let non_const_thir_calls = unsafe_thir_block_calls.tuple_iter().flat_map(
         |(build, block, _check_mode, call, fun, unsafety, abi, _return_ty)| {
-            if const_calls.get_redb(fun).is_some() {
+            if const_calls.get(fun).is_some() {
                 None
             } else {
                 Some((
@@ -208,7 +208,7 @@ fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
                     call,
                     fun,
                     unsafety.to_string(),
-                    strings.r(abis.r(abi)),
+                    strings.get_unwrap(abis.get_unwrap(abi)),
                 ))
             }
         },
@@ -232,7 +232,7 @@ fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
     let unsafe_thir_block_calls = loader.load_unsafe_thir_block_calls();
     let const_thir_calls = unsafe_thir_block_calls.tuple_iter().flat_map(
         |(build, block, check_mode, call, fun, unsafety, abi, _return_ty)| {
-            const_calls_map.get_redb(fun).map(|def_path| {
+            const_calls_map.get(fun).map(|def_path| {
                 Some((
                     build,
                     build_resolver.resolve(build),
@@ -242,7 +242,7 @@ fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
                     call,
                     fun,
                     unsafety.to_string(),
-                    strings.r(abis.r(abi)),
+                    strings.get_unwrap(abis.get_unwrap(abi)),
                 ))
             })
         },

@@ -28,9 +28,9 @@ fn report_unsafe_function_spans(loader: &Loader, report_path: &Path) {
                     build_resolver.resolve(build),
                     def_path_resolver.resolve(def_path),
                     visibility.to_string(),
-                    strings.r(abis.r(abi)),
+                    strings.get_unwrap(abis.get_unwrap(abi)),
                     uses_unsafe,
-                    span_resolver.resolve(def_path_spans.r(def_path)),
+                    span_resolver.resolve(def_path_spans.get_unwrap(def_path)),
                 ))
             } else {
                 None

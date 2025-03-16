@@ -137,13 +137,13 @@ where K: DiskMapKey,
     }
 
     #[track_caller]
-    pub fn get_redb(&self, key: K) -> Option<V> {
+    pub fn get(&self, key: K) -> Option<V> {
         self.map.get(key)
     }
 
     #[track_caller]
-    pub fn r(&self, key: K) -> V {
-        self.get_redb(key).unwrap()
+    pub fn get_unwrap(&self, key: K) -> V {
+        self.get(key).unwrap()
     }
 }
 
@@ -206,12 +206,12 @@ where
         self.contents.len()
     }
 
-    pub fn get_redb(&self, key: K) -> Option<V> {
+    pub fn get(&self, key: K) -> Option<V> {
         self.contents.get(key.into() as u64)
     }
 
-    pub fn r(&self, key: K) -> V {
-        self.get_redb(key).unwrap()
+    pub fn get_unwrap(&self, key: K) -> V {
+        self.get(key).unwrap()
     }
 
     pub fn create_override_in(path: impl AsRef<std::path::Path>) -> Self {

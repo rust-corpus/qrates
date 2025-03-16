@@ -72,13 +72,13 @@ impl<'b> BuildResolver<'b> {
         }
     }
     pub fn resolve(&self, build: types::Build) -> (String, String, String, String, String) {
-        let (package_name, package_version, crate_name, crate_hash, edition) = self.builds.r(build);
+        let (package_name, package_version, crate_name, crate_hash, edition) = self.builds.get_unwrap(build);
         (
-            self.strings.r(self.package_names.r(package_name)),
-            self.strings.r(self.package_versions.r(package_version)),
-            self.strings.r(self.crate_names.r(crate_name)),
+            self.strings.get_unwrap(self.package_names.get_unwrap(package_name)),
+            self.strings.get_unwrap(self.package_versions.get_unwrap(package_version)),
+            self.strings.get_unwrap(self.crate_names.get_unwrap(crate_name)),
             format!("{:x}", crate_hash),
-            self.strings.r(self.editions.r(edition)),
+            self.strings.get_unwrap(self.editions.get_unwrap(edition)),
         )
     }
 }
@@ -117,16 +117,16 @@ impl<'b> DefPathResolver<'b> {
     }
     pub fn resolve(&self, def_path: types::DefPath) -> (String, String, String, String, String) {
         let (crate_name, crate_hash, relative_def_path, def_path_hash, summary_key) =
-            self.def_paths.r(def_path);
-        let crate_name = self.crate_names.get_redb(crate_name).unwrap();
+            self.def_paths.get_unwrap(def_path);
+        let crate_name = self.crate_names.get(crate_name).unwrap();
         // TODO: Strings are not loaded/saved via our hooked functions, but rather serde.
         // let first_str = self.strings.get_redb(crate_name).unwrap();
         (
-            self.strings.r(crate_name),
+            self.strings.get_unwrap(crate_name),
             format!("{:x}", crate_hash),
-            self.strings.r(self.relative_def_paths.r(relative_def_path)),
+            self.strings.get_unwrap(self.relative_def_paths.get_unwrap(relative_def_path)),
             format!("{:x}", def_path_hash),
-            self.strings.r(self.summary_keys.r(summary_key)),
+            self.strings.get_unwrap(self.summary_keys.get_unwrap(summary_key)),
         )
     }
 }
@@ -185,18 +185,18 @@ impl<'b> SpanResolver<'b> {
         }
     }
     pub fn resolve(&self, span: types::Span) -> (types::Span, String, String, String, u16, u16) {
-        let (_parent, expansion_kind, expansion_kind_descr, file_name, line, col) = self.spans.r(span);
+        let (_parent, expansion_kind, expansion_kind_descr, file_name, line, col) = self.spans.get_unwrap(span);
         (
             span,
             format!("{:?}", expansion_kind),
-            self.strings.r(expansion_kind_descr),
-            self.strings.r(self.span_file_names.r(file_name)),
+            self.strings.get_unwrap(expansion_kind_descr),
+            self.strings.get_unwrap(self.span_file_names.get_unwrap(file_name)),
             line,
             col,
         )
     }
     pub fn get_expansion_kind(&self, span: types::Span) -> types::SpanExpansionKind {
-        let (_parent, expansion_kind, _expansion_kind_descr, _file_name, _line, _col) = self.spans.r(span);
+        let (_parent, expansion_kind, _expansion_kind_descr, _file_name, _line, _col) = self.spans.get_unwrap(span);
         expansion_kind
     }
 }
@@ -240,7 +240,7 @@ where
         .collect();
     iter.flat_map(|element| {
         let def_path = extract_def_path(element.clone());
-        let (krate, crate_hash, _, _, _) = def_paths.r(def_path);
+        let (krate, crate_hash, _, _, _) = def_paths.get_unwrap(def_path);
         selected_builds_set
             .get(&(krate, crate_hash))
             .map(|build| construct_result(*build, element))

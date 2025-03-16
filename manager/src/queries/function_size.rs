@@ -301,7 +301,7 @@ fn new_report_function_sizes(loader: &Loader, report_path: &Path) {
                 def_path_resolver.resolve(def_path),
                 visibility.to_string(),
                 unsafety.to_string(),
-                strings.r(abis.r(abi)),
+                strings.get_unwrap(abis.get_unwrap(abi)),
                 uses_unsafe,
                 stmt,
                 unsafe_stmt,
