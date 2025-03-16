@@ -43,7 +43,7 @@ pub(super) fn generate_loader_functions(
         function_tokens.extend(quote! {
             #[doc = #iter_doc_comment]
             pub fn #load_iter_fn_name(&self) -> impl Iterator<Item = #tuple_element_type> {
-                self.#load_fn_name().tuple_iter()
+                self.#load_fn_name().iter()
             }
             #[doc = #load_doc_comment]
             pub fn #load_fn_name(&self) -> std::cell::Ref<Relation<#relation_element_type>> {
