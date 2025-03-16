@@ -48,96 +48,36 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
         })
     };
 
-    // let unsafe_cell_types_relation: Vec<_> = loader
-    //     .load_types_adt_def()
-    //     .iter()
-    //     .flat_map(|&(typ, def_path, _, _, _)| {
-    //         let (_, _, _, _, def_path_summary) = def_paths.r(def_path);
-    //         if def_path_summary == unsafe_cell_summary_id {
-    //             Some((typ, def_path))
-    //         } else {
-    //             None
-    //         }
-    //     }).collect();
-    // TODO: inefficient .count()
-    // warn!("inefficient iter.count(), repeated iteration!");
-    // info!(
-    //     "Number of UnsafeCell types: {}",
-    //     get_unsafe_cell_types_relation().count()
-    // );
     let def_path_resolver = DefPathResolver::new(loader);
+    let mut count = 0;
     let unsafe_cell_types = get_unsafe_cell_types_relation()
-        .map(|(typ, def_path)| (typ, def_path_resolver.resolve(def_path)));
+        .map(|(typ, def_path)| {
+            count += 1;
+            (typ, def_path_resolver.resolve(def_path))
+        });
     write_csv!(report_path, unsafe_cell_types);
+    info!("Number of UnsafeCell types: {}", count);
     loader.store_iter_types_unsafe_cell(get_unsafe_cell_types_relation());
 }
 
 fn collect_union_types(loader: &Loader) {
-    let get_union_types = || {
-        loader
-            .load_iter_types_adt_def()
-            .flat_map(|(typ, def_path, kind, _, _)| {
-                if kind == types::AdtKind::Union {
-                    Some((typ, def_path))
-                } else {
-                    None
-                }
-            })
-    };
+    let mut count = 0;
+    let union_types = loader
+    .load_iter_types_adt_def()
+    .filter_map(|(typ, def_path, kind, _, _)| {
+        if kind == types::AdtKind::Union {
+            count += 1;
+            Some((typ, def_path))
+        } else {
+            None
+        }
+    });
 
-    // let union_types: Vec<_> = loader
-    //     .load_types_adt_def()
-    //     .iter()
-    //     .flat_map(|&(typ, def_path, kind, _, _)| {
-    //         if kind == types::AdtKind::Union {
-    //             Some((typ, def_path))
-    //         } else {
-    //             None
-    //         }
-    //     })
-    //     .collect();
-    warn!("TODO: inefficient iter.count()");
-    info!("Number of union types: {}", get_union_types().count());
-    loader.store_iter_types_union(get_union_types());
+    loader.store_iter_types_union(union_types);
+    info!("Number of union types: {}", count);
 }
 
 fn collect_unsafe_types(loader: &Loader) {
-    // let public_visibility = vec![(types::TyVisibility::Public,)];
-
-    // let unsafe_types;
-    // datapond_query! {
-    //     load loader {
-    //         relations(
-    //             types_unsafe_cell, types_union, types_raw_ptr, types_foreign,
-    //             types_adt_field, types_array, types_slice, types_ref, types_tuple_element),
-    //     }
-    //     input public_visibility(visibility: TyVisibility)
-    //     output unsafe_types(typ: Type)
-    //     unsafe_types(typ) :- types_unsafe_cell(.typ=typ).
-    //     unsafe_types(typ) :- types_union(.typ=typ).
-    //     unsafe_types(typ) :- types_raw_ptr(.typ=typ).
-    //     unsafe_types(typ) :- types_foreign(.typ=typ).
-
-    //     unsafe_types(typ) :-
-    //         public_visibility(visibility),
-    //         unsafe_types(field_type),
-    //         types_adt_field(.adt=typ, .visibility=visibility, .typ=field_type).
-
-    //     unsafe_types(typ) :-
-    //         unsafe_types(element_type),
-    //         types_array(typ, element_type).
-    //     unsafe_types(typ) :-
-    //         unsafe_types(element_type),
-    //         types_slice(typ, element_type).
-    //     unsafe_types(typ) :-
-    //         unsafe_types(target_type),
-    //         types_ref(typ, target_type, _).
-
-    //     unsafe_types(typ) :-
-    //         unsafe_types(element_type),
-    //         types_tuple_element(typ, _, element_type).
-    // }
-
     let mut unsafe_types = HashSet::new();
     // base cases
     unsafe_types.extend(loader.load_iter_types_unsafe_cell().map(|(typ, _)| typ));
@@ -302,15 +242,16 @@ fn collect_safe_wrapper_types(loader: &Loader) {
         }
     }
 
-    let get_safe_wrapper_types = || {
-        adt_with_unsafe_field
-            .difference(&adt_with_public_unsafe_field)
-            .map(|&typ| (typ,))
-    };
+    let mut count = 0;
+    let safe_wrapper_types = adt_with_unsafe_field
+    .difference(&adt_with_public_unsafe_field)
+    .map(|&typ| {
+        count += 1;
+        (typ,)
+    });
 
-    warn!("TODO: inefficient iter.count()");
-    info!("Number of safe wrapper types: {}", get_safe_wrapper_types().count());
-    loader.store_iter_safe_wrapper_types(get_safe_wrapper_types());
+    loader.store_iter_safe_wrapper_types(safe_wrapper_types);
+    info!("Number of safe wrapper types: {}", count);
 }
 
 fn report_safe_wrapper_type_defs(loader: &Loader, report_path: &Path) {

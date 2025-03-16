@@ -14,7 +14,6 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
 
     let def_paths = loader.load_def_paths();
     let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_relation_map();
-    // let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_as_map();
     let crate_names = loader.load_crate_names();
     let relative_def_paths = loader.load_relative_def_paths();
     let strings = loader.load_strings();
@@ -26,11 +25,6 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
         .collect();
     let summary_keys = loader.load_summary_keys();
     let unsafe_thir_block_calls = loader.load_iter_unsafe_thir_block_calls();
-
-    // let thir_block_to_span: HashMap<_, _> = loader
-    //     .load_iter_thir_blocks()
-    //     .map(|(_parent, block, _safety, _check_mode, span)| (block, span))
-    //     .collect();
 
     let thir_block_map = loader.load_thir_blocks_relation_map();
     let thir_block_to_span = |block| {
@@ -89,7 +83,6 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
 fn new_report_all_calls(loader: &Loader, report_path: &Path) {
     let def_paths = loader.load_def_paths();
     let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_relation_map();
-    // let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_as_map();
     let strings = loader.load_strings();
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
