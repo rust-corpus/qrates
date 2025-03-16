@@ -184,18 +184,17 @@ impl<'tcx> ConvertInto<types::AggregateKind> for mir::AggregateKind<'tcx> {
     }
 }
 
-// TODO - mir deletion: Rename ScopeSafety and 'scope' references to blocks
-impl ConvertInto<types::ScopeSafety> for Option<rustc_middle::thir::BlockSafety> {
-    fn convert_into(&self) -> types::ScopeSafety {
+impl ConvertInto<types::BlockSafety> for Option<rustc_middle::thir::BlockSafety> {
+    fn convert_into(&self) -> types::BlockSafety {
         match self {
-            Some(rustc_middle::thir::BlockSafety::Safe) => types::ScopeSafety::Safe,
+            Some(rustc_middle::thir::BlockSafety::Safe) => types::BlockSafety::Safe,
             Some(rustc_middle::thir::BlockSafety::BuiltinUnsafe) => {
-                types::ScopeSafety::BuiltinUnsafe
+                types::BlockSafety::BuiltinUnsafe
             }
             Some(rustc_middle::thir::BlockSafety::ExplicitUnsafe(_)) => {
-                types::ScopeSafety::ExplicitUnsafe
+                types::BlockSafety::ExplicitUnsafe
             }
-            None => types::ScopeSafety::Unknown,
+            None => types::BlockSafety::Unknown,
         }
     }
 }

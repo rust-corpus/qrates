@@ -63,7 +63,7 @@ relation selected_build_sizes(
 /// Selected THIR function bodies.
 relation selected_thir_bodies(build: Build, item: Item, thir_body_def_path: DefPath, body: ThirBlock);
 /// Selected THIR blocks
-relation selected_thir_blocks(build: Build, thir_body_def_path: DefPath, parent: ThirBlock, block: ThirBlock, safety: ScopeSafety, check_mode: BlockCheckMode, span: Span);
+relation selected_thir_blocks(build: Build, thir_body_def_path: DefPath, parent: ThirBlock, block: ThirBlock, safety: BlockSafety, check_mode: BlockCheckMode, span: Span);
 /// Unsafe (selected) thir blocks
 relation unsafe_thir_blocks(build: Build, thir_body_def_path: DefPath, block: ThirBlock, expansion_kind: SpanExpansionKind, check_mode: BlockCheckMode, span: Span);
 /// Unsafe thir statements

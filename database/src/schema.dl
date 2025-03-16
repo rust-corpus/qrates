@@ -155,13 +155,13 @@ enum ImplPolarity {
     Unknown,
 }
 
-/// The safety of a scope.
-enum ScopeSafety {
-    /// The scope is safe.
+/// The safety of a THIR block.
+enum BlockSafety {
+    /// The block is safe.
     Safe,
-    /// The scope is unsafe because of a PushUnsafeBlock.
+    /// The block is unsafe because of the compiler.
     BuiltinUnsafe,
-    /// The scope is unsafe because it is inside an unsafe block.
+    /// The block is unsafe because the user annotated it so.
     ExplicitUnsafe,
     /// Failed to obtain the safety information from the compiler.
     #[default]
@@ -497,7 +497,7 @@ relation function_unsafe_reasons(def_path: DefPath, index: u32, reason: Interned
 /// THIR body expressions
 relation thir_bodies(item: Item, def_path: DefPath, body: auto ThirBlock);
 /// THIR-level block information
-relation thir_blocks(parent: ThirBlock, block: auto ThirBlock, safety: ScopeSafety, check_mode: BlockCheckMode, span: Span) keyed by block;
+relation thir_blocks(parent: ThirBlock, block: auto ThirBlock, safety: BlockSafety, check_mode: BlockCheckMode, span: Span) keyed by block;
 
 // thir stmts
 // The closest unsafe block is the closest outer block that is unsafe. This should be used to

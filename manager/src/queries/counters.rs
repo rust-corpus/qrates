@@ -83,7 +83,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
         span,
     ) in selected_thir_blocks.iter().filter(
         |(_build, _thir_body_def_path, _parent, _block, safety, _check_mode, _span)| {
-            *safety == types::ScopeSafety::ExplicitUnsafe
+            *safety == types::BlockSafety::ExplicitUnsafe
         },
     ) {
         unsafe_thir_blocks_relation.push((
@@ -142,16 +142,16 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
     let functions_unsafe_thir_blocks = functions_unsafe_thir_blocks.elements;
     let function_unsafe_thir_block_counts: HashMap<_, _> = functions_unsafe_thir_blocks
         .iter()
-        .safe_group_by(|(_build, function, _scope, _expansion_kind, _check_mode)| *function)
+        .safe_group_by(|(_build, function, _block, _expansion_kind, _check_mode)| *function)
         .into_iter()
         .map(|(function, group)| (function, group.count()))
         .collect();
     let function_user_unsafe_thir_block_counts: HashMap<_, _> = functions_unsafe_thir_blocks
         .iter()
-        .filter(|(_build, _function, _scope, _expansion_kind, check_mode)| {
+        .filter(|(_build, _function, _block, _expansion_kind, check_mode)| {
             *check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
         })
-        .safe_group_by(|(_build, function, _scope, _expansion_kind, _check_mode)| *function)
+        .safe_group_by(|(_build, function, _block, _expansion_kind, _check_mode)| *function)
         .into_iter()
         .map(|(function, group)| (function, group.count()))
         .collect();

@@ -78,7 +78,7 @@ fn new_collect_function_sizes(loader: &Loader) {
                 let (build_stmt, build_unsafe_stmt, build_user_unsafe_stmt) =
                     selected_build_thir_sizes_map.entry(build).or_default();
                 *build_stmt += 1;
-                if safety != types::ScopeSafety::Safe {
+                if safety != types::BlockSafety::Safe {
                     *build_unsafe_stmt += 1;
                 }
                 if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
@@ -92,7 +92,7 @@ fn new_collect_function_sizes(loader: &Loader) {
                         .entry(thir_body_def_path)
                         .or_default();
                 *build_stmt += 1;
-                if safety != types::ScopeSafety::Safe {
+                if safety != types::BlockSafety::Safe {
                     *build_unsafe_stmt += 1;
                 }
                 if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
@@ -148,7 +148,7 @@ fn new_collect_function_sizes(loader: &Loader) {
                 let (build_stmt, build_unsafe_stmt, build_user_unsafe_stmt) =
                     selected_build_thir_sizes_map.entry(build).or_default();
                 *build_stmt += 1;
-                if safety != types::ScopeSafety::Safe {
+                if safety != types::BlockSafety::Safe {
                     *build_unsafe_stmt += 1;
                 }
                 if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
@@ -162,7 +162,7 @@ fn new_collect_function_sizes(loader: &Loader) {
                         .entry(thir_body_def_path)
                         .or_default();
                 *build_stmt += 1;
-                if safety != types::ScopeSafety::Safe {
+                if safety != types::BlockSafety::Safe {
                     *build_unsafe_stmt += 1;
                 }
                 if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
