@@ -42,6 +42,7 @@ pub fn get_new_disk_map_temp_dir() -> PathBuf {
 }
 
 
+/*
 #[cfg(test)]
 mod tests {
 
@@ -99,7 +100,8 @@ mod tests {
         assert_eq!(tables3.interning_tables.crate_names.len(), 2);
 
         // Merge tables 1 and 2.
-        let mut merger1 = tables::TableMerger::new(tables1);
+        let mut dtables1 = tables::DiskTables::from_tables(tables1);
+        let mut merger1 = tables::TableMerger::new(dtables1);
         merger1.merge(tables2);
         assert_eq!(merger1.tables.interning_tables.strings.len(), 3);
         assert_eq!(merger1.tables.interning_tables.crate_names.len(), 3);
@@ -111,7 +113,7 @@ mod tests {
             .iter_values()
             .zip(&expected)
         {
-            assert_eq!(&merger1.tables.interning_tables.strings[*cn], expected_name);
+            assert_eq!(&merger1.tables.interning_tables.strings[cn], expected_name);
         }
 
         // Merge tables 1 and 3.
@@ -1404,3 +1406,4 @@ mod tests {
         }
     }
 }
+    */

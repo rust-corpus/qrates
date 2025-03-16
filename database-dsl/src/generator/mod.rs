@@ -24,6 +24,7 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
     let (loader_functions, loader_cache_fields) = loader::generate_loader_functions(&schema);
     let merge_functions = merge::generate_merge_functions(&schema);
     let debug_functions = debug::generate_status_functions(&schema);
+    let mem_to_disk_functions = conversions::generate_mem_to_disk_functions(&schema);
     quote! {
         pub mod int_bytes_adapter {
             pub trait QratesBytesAdapter {
@@ -149,6 +150,14 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
                         interning_tables: DiskInterningTables::create_in(&root.join("interning"))?,
                     })
                 }
+
+                pub fn from_tables(tables: Tables) -> Self {
+                    Self {
+                        relations: relations_to_disk(tables.relations),
+                        counters: tables.counters,
+                        interning_tables: interning_tables_to_disk(tables.interning_tables),
+                    }
+                }
             }
 
             impl Tables {
@@ -166,6 +175,8 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
             #merge_functions
 
             #load_save_functions
+
+            #mem_to_disk_functions
 
             #[derive(Default)]
             pub struct Loader {

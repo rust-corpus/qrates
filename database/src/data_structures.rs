@@ -256,6 +256,27 @@ where
     }
 }
 
+impl<K, V> From<InterningTable<K, V>> for DiskInterningTable<K, V>
+where
+    K: DiskInterningKey + Copy,
+    V: DiskInterningValue,
+{
+    fn from(value: InterningTable<K, V>) -> Self {
+        let mut new_temp_contents = DiskVec::create_temp();
+        let mut new_temp_inv_map = DiskMap::create_temp();
+
+        for (k, v) in value.into_iter() {
+            new_temp_contents.push(v.clone());
+            new_temp_inv_map.insert(v, k);
+        }
+
+        Self {
+            contents: new_temp_contents,
+            inv_map: new_temp_inv_map,
+        }
+    }
+}
+
 pub trait InterningTableKey: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> + redb::Key {}
 impl<T> InterningTableKey for T where T: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> + redb::Key {}
 pub trait InterningTableValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key +  'static {}
