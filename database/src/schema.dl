@@ -161,8 +161,6 @@ enum ScopeSafety {
     Safe,
     /// The scope is unsafe because of a PushUnsafeBlock.
     BuiltinUnsafe,
-    /// The scope is unsafe because it is inside an unsafe function.
-    FnUnsafe,
     /// The scope is unsafe because it is inside an unsafe block.
     ExplicitUnsafe,
     /// Failed to obtain the safety information from the compiler.

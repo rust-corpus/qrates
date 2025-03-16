@@ -192,8 +192,6 @@ impl ConvertInto<types::ScopeSafety> for Option<rustc_middle::thir::BlockSafety>
             Some(rustc_middle::thir::BlockSafety::BuiltinUnsafe) => {
                 types::ScopeSafety::BuiltinUnsafe
             }
-            // TODO - mir deletion: Remove FnUnsafe downstream
-            // Some(rustc_middle::thir::BlockSafety::FnUnsafe) => types::ScopeSafety::FnUnsafe,
             Some(rustc_middle::thir::BlockSafety::ExplicitUnsafe(_)) => {
                 types::ScopeSafety::ExplicitUnsafe
             }

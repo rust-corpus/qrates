@@ -133,16 +133,6 @@ impl<'b> DefPathResolver<'b> {
 /// A helper struct for converting an interned `span` into human readable
 /// tuple of strings.
 pub struct SpanResolver<'b> {
-    // spans: HashMap<
-    //     types::Span,
-    //     (
-    //         types::SpanExpansionKind,
-    //         types::InternedString,
-    //         types::SpanFileName,
-    //         u16,
-    //         u16,
-    //     ),
-    // >,
     spans: Ref<'b, RelationMap<types::Span, (
         types::Span,
         types::SpanExpansionKind,
@@ -156,29 +146,8 @@ pub struct SpanResolver<'b> {
 
 impl<'b> SpanResolver<'b> {
     pub fn new(loader: &'b Loader) -> Self {
-        let spans = loader.load_spans_relation_map();
-
-        // let spans = loader
-        //     .load_iter_spans()
-        //     .map(
-        //         |(
-        //             span,
-        //             _call_site_span,
-        //             expansion_kind,
-        //             expansion_kind_descr,
-        //             file_name,
-        //             line,
-        //             col,
-        //         )| {
-        //             (
-        //                 span,
-        //                 (expansion_kind, expansion_kind_descr, file_name, line, col),
-        //             )
-        //         },
-        //     )
-        //     .collect();
         Self {
-            spans,
+            spans: loader.load_spans_relation_map(),
             span_file_names: loader.load_span_file_names(),
             strings: loader.load_strings(),
         }
