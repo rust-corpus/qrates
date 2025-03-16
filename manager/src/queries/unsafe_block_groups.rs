@@ -11,7 +11,7 @@ use std::convert::TryInto;
 use std::path::Path;
 
 /// Count how many functions are called from each unsafe thir block.
-fn new_count_called_functions(loader: &Loader) {
+fn count_called_functions(loader: &Loader) {
     // We join on `closest_unsafe_block`, because we don't want `unsafe { { foo(); } }` to be counted as a safe call.
 
     // too inefficient.
@@ -124,7 +124,7 @@ fn new_count_called_functions(loader: &Loader) {
 }
 
 /// Report how many function calls each unsafe thir block contains.
-fn new_report_called_functions(loader: &Loader, report_path: &Path) {
+fn report_called_functions(loader: &Loader, report_path: &Path) {
     let def_path_resolver = DefPathResolver::new(loader);
     let build_resolver = BuildResolver::new(loader);
     let strings = loader.load_strings();
@@ -183,7 +183,7 @@ fn new_report_called_functions(loader: &Loader, report_path: &Path) {
 
 /// Find all thir calls in unsafe functions that call non-constant targets. In other
 /// words, find all calls that call function pointers.
-fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
+fn report_non_const_call_targets(loader: &Loader, report_path: &Path) {
     // let const_calls: HashSet<_> = loader
     //     .load_thir_exprs_call_const_target()
     //     .tuple_iter()
@@ -223,7 +223,7 @@ fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
 /// 2. Static method calls.
 /// 3. Dynamic calls on trait objects.
 /// 4. Calls of closures.
-fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
+fn report_const_call_targets(loader: &Loader, report_path: &Path) {
     let const_calls_map = loader.load_thir_exprs_call_const_target_relation_map();
     let def_path_resolver = DefPathResolver::new(loader);
     let build_resolver = BuildResolver::new(loader);
@@ -250,9 +250,9 @@ fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
     write_csv!(report_path, const_thir_calls);
 }
 
-pub fn new_query(loader: &Loader, report_path: &Path) {
-    new_count_called_functions(loader);
-    new_report_called_functions(loader, report_path);
-    new_report_non_const_call_targets(loader, report_path);
-    new_report_const_call_targets(loader, report_path);
+pub fn query(loader: &Loader, report_path: &Path) {
+    count_called_functions(loader);
+    report_called_functions(loader, report_path);
+    report_non_const_call_targets(loader, report_path);
+    report_const_call_targets(loader, report_path);
 }

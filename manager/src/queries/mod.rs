@@ -56,16 +56,13 @@ pub fn run_query(
         }
         "closure-kinds" => closure_kinds::query(&loader, &report_path.join("closure-kinds")),
         "counters" => {
-            // counters::query(&loader, &report_path.join("q-counters"));
-            counters::new_query(&loader, &report_path.join("q-counters"));
+            counters::query(&loader, &report_path.join("q-counters"));
         }
         "size" => {
-            // size::query(&loader, &report_path.join("q-size"));
-            size::new_query(&loader, &report_path.join("q-size"));
+            size::query(&loader, &report_path.join("q-size"));
         }
         "function-size" => {
-            // function_size::query(&loader, &report_path.join("function-size"));
-            function_size::new_query(&loader, &report_path.join("function-size"));
+            function_size::query(&loader, &report_path.join("function-size"));
         }
         "build-files" => build_files::query(&loader, &report_path.join("build-files")),
         "traits" => traits::query(&loader, &report_path.join("traits")),
@@ -73,13 +70,11 @@ pub fn run_query(
         "resolved-calls" => resolved_calls::query(&loader, &report_path.join("resolved-calls")),
         "unsafe-types" => unsafe_types::query(&loader, &report_path.join("unsafe-types")),
         "unsafe-block-groups" => {
-            // unsafe_block_groups::query(&loader, &report_path.join("unsafe-block-groups"));
-            unsafe_block_groups::new_query(&loader, &report_path.join("unsafe-block-groups"));
+            unsafe_block_groups::query(&loader, &report_path.join("unsafe-block-groups"));
         }
         "unsafe-reasons" => unsafe_reasons::query(&loader, &report_path.join("unsafe-reasons")),
         "unsafe-block-calls" => {
-            // unsafe_block_calls::query(&loader, &report_path.join("unsafe-block-calls"));
-            unsafe_block_calls::new_query(&loader, &report_path.join("unsafe-block-calls"));
+            unsafe_block_calls::query(&loader, &report_path.join("unsafe-block-calls"));
         }
         "unsafe-spans" => unsafe_spans::query(&loader, &report_path.join("unsafe-spans")),
         "build-meta" => build_meta::query(&loader, &report_path.join("build-meta")),

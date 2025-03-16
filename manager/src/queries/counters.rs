@@ -10,7 +10,7 @@ use log::info;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-pub fn new_query(loader: &Loader, report_path: &Path) {
+pub fn query(loader: &Loader, report_path: &Path) {
     // We create a temporary DiskMap here because the amount of data is too large to fit in memory.
     let mut thir_block_parent_to_children: DiskMap<_, Vec<_>> = DiskMap::create_temp();
     for (parent, child, _safety, _check_mode, _span) in loader.load_iter_thir_blocks() {

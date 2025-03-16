@@ -10,7 +10,7 @@ use corpus_queries_derive::datapond_query;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
-pub fn new_query(loader: &Loader, report_path: &Path) {
+pub fn query(loader: &Loader, report_path: &Path) {
     let build_resolver = BuildResolver::new(loader);
     let mut unsafe_thir_blocks_sizes_by_stmts_map: HashMap<ThirBlock, usize> = HashMap::new();
     for (_build, _stmt, block, _index, _check_mode) in loader.load_iter_unsafe_thir_stmts() {

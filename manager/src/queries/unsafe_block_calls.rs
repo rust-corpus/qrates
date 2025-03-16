@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 /// Report information about calls from unsafe thir blocks.
-fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
+fn report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
     let build_resolver = BuildResolver::new(loader);
     let span_resolver = SpanResolver::new(loader);
 
@@ -80,7 +80,7 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
 }
 
 /// Report information about all thir calls in our codebase.
-fn new_report_all_calls(loader: &Loader, report_path: &Path) {
+fn report_all_calls(loader: &Loader, report_path: &Path) {
     let def_paths = loader.load_def_paths();
     let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_relation_map();
     let strings = loader.load_strings();
@@ -120,7 +120,7 @@ fn new_report_all_calls(loader: &Loader, report_path: &Path) {
     write_csv!(report_path, all_thir_calls);
 }
 
-pub fn new_query(loader: &Loader, report_path: &Path) {
-    new_report_unsafe_block_calls(loader, report_path);
-    new_report_all_calls(loader, report_path);
+pub fn query(loader: &Loader, report_path: &Path) {
+    report_unsafe_block_calls(loader, report_path);
+    report_all_calls(loader, report_path);
 }

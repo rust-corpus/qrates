@@ -10,7 +10,7 @@ use std::path::Path;
 
 // Compute the derived relations `selected_function_thir_sizes` and
 // `selected_build_thir_sizes`.
-fn new_collect_function_sizes(loader: &Loader) {
+fn collect_function_sizes(loader: &Loader) {
     // block to associated data mapping
     let function_thir_blocks: HashMap<_, _> = {
         let selected_blocks = loader.load_iter_selected_thir_blocks();
@@ -216,7 +216,7 @@ fn new_collect_function_sizes(loader: &Loader) {
     loader.store_iter_selected_function_thir_sizes(selected_function_thir_sizes);
 }
 
-fn new_report_function_sizes(loader: &Loader, report_path: &Path) {
+fn report_function_sizes(loader: &Loader, report_path: &Path) {
     let build_resolver = BuildResolver::new(loader);
     let def_path_resolver = DefPathResolver::new(loader);
     let abis = loader.load_abis();
@@ -268,7 +268,7 @@ fn new_report_function_sizes(loader: &Loader, report_path: &Path) {
     write_csv!(report_path, selected_function_thir_sizes);
 }
 
-pub fn new_query(loader: &Loader, report_path: &Path) {
-    new_collect_function_sizes(loader);
-    new_report_function_sizes(loader, report_path);
+pub fn query(loader: &Loader, report_path: &Path) {
+    collect_function_sizes(loader);
+    report_function_sizes(loader, report_path);
 }
