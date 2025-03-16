@@ -59,14 +59,15 @@ impl<T: Copy + DiskMapValue> Relation<T> {
     /// loading relations that were saved with a different schema.
     /// ``path`` – the path **without** the extension.
     pub fn save(&mut self, relation_hash: u64, path: std::path::PathBuf) {
-        // TODO: use relation_hash
+        self.facts.map.set_expected_hash(relation_hash);
         self.facts.save(path);
     }
 
     /// Also, ``relation_hash`` must be correctly initialized.
     pub fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
-        // TODO: use expected_relation_hash
         let vec = DiskVec::load(path)?;
+        let loaded_hash = vec.map.read_stored_hash();
+        assert_eq!(loaded_hash, Some(expected_relation_hash), "DiskVec hash check failed. The database was likely generated with a different version of your schema.");
         Ok(Self::from_disk_vec(vec))
     }
 }
@@ -95,11 +96,14 @@ V: DiskMapValue,
 for<'a>&'a K: Borrow<<K as redb::Value>::SelfType<'a>>
 {
     pub fn save(&mut self, relation_hash: u64, path: std::path::PathBuf) {
+        self.map.set_expected_hash(relation_hash);
         self.map.save(path);
     }
 
     pub fn load(expected_relation_hash: u64, path: std::path::PathBuf) -> Result<Self> {
         let map = DiskMap::load(path)?;
+        let relation_hash = map.read_stored_hash();
+        assert_eq!(relation_hash, Some(expected_relation_hash), "DiskMap hash check failed. The database was likely generated with a different version of your schema.");
         Ok(Self { map })
     }
 
@@ -134,7 +138,11 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         }
 
         // create a new database at path and store self into it.
-        let saved_dm = DiskMap::from_iter_override(path, self.iter());
+        let mut saved_dm = DiskMap::from_iter_override(path, self.iter());
+        if let Some(expected_hash) = self.read_stored_hash() {
+            // Need to copy the expected hash to the new database in case we're storing to a new location.
+            saved_dm.set_expected_hash(expected_hash);
+        }
         assert_eq!(saved_dm.len(), self.len());
     }
 

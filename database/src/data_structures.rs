@@ -428,6 +428,7 @@ pub(crate) const DISK_MAP_REDB_CACHE_SIZE: usize = 50_000_000;
 
 impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     const HASH_TABLE_NAME: &str = "hash";
+    const EXPECTED_HASH_KEY: u64 = 0;
     const DATA_TABLE_NAME: &str = "table";
 
     pub fn create_temp() -> Self {
@@ -482,15 +483,26 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         read_txn.open_table(table_def).unwrap()
     }
 
-    fn open_hash_table_ro(&self) -> redb::ReadOnlyTable<K, V> {
+    fn open_hash_table_ro(&self) -> Option<redb::ReadOnlyTable<u64, u64>> {
         let read_txn = self.db.begin_read().unwrap();
-        let table_def: TableDefinition<K, V> = TableDefinition::new(Self::HASH_TABLE_NAME);
-        read_txn.open_table(table_def).unwrap()
+        let table_def: TableDefinition<u64, u64> = TableDefinition::new(Self::HASH_TABLE_NAME);
+        read_txn.open_table(table_def).ok()
     }
 
+    pub fn set_expected_hash(&mut self, expected_hash: u64) {
+        let write_txn = self.db.begin_write().unwrap();
+        {
+            let table_def: TableDefinition<u64, u64> = TableDefinition::new(Self::HASH_TABLE_NAME);
+            let mut table = write_txn.open_table(table_def).unwrap();
+            table.insert(Self::EXPECTED_HASH_KEY, expected_hash).unwrap();
+        }
+        write_txn.commit().unwrap();
+    }
 
-    pub fn check_hash(&self, expected_hash: u64) {
-        
+    pub fn read_stored_hash(&self) -> Option<u64> {
+        let hash_table = self.open_hash_table_ro()?;
+        let hash = hash_table.get(Self::EXPECTED_HASH_KEY).ok()??;
+        Some(hash.value())
     }
 
     pub fn set_write_cache_size(&mut self, size: usize) {
