@@ -5,6 +5,7 @@ use std::path::Path;
 mod build_files;
 mod build_meta;
 mod counters;
+mod closure_kinds;
 mod function_size;
 mod non_tree_types;
 mod prepare_builds;
@@ -53,6 +54,7 @@ pub fn run_query(
                 sources_list_path,
             );
         }
+        "closure-kinds" => closure_kinds::query(&loader, &report_path.join("closure-kinds")),
         "counters" => {
             // counters::query(&loader, &report_path.join("q-counters"));
             counters::new_query(&loader, &report_path.join("q-counters"));
