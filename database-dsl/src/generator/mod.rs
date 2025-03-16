@@ -12,8 +12,7 @@ mod relations;
 mod storage;
 mod types;
 mod utils;
-
-// mod disktables;
+mod conversions;
 
 pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
     let types = types::generate_types(&schema);

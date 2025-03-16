@@ -5,7 +5,7 @@
 //! Helper functions for serializing and deserializing.
 
 use crate::data_structures::{DiskInterningKey, DiskInterningTable, DiskInterningValue, DiskMapKey, DiskMapValue, InterningTableValue, Relation, RelationMap};
-use crate::tables::Tables;
+use crate::tables::{DiskTables, Tables};
 use crate::{DiskMap, DiskVec};
 use anyhow::{Context, Result};
 use log::trace;

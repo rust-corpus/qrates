@@ -42,16 +42,25 @@ pub fn get_new_disk_map_temp_dir() -> PathBuf {
 }
 
 
-// TODO: fix
-/*
 #[cfg(test)]
 mod tests {
 
     use super::*;
 
+    fn init() {
+        let mut t = std::env::temp_dir();
+        t.push("tmp_diskmap");
+        // create
+        std::fs::create_dir_all(&t).unwrap();
+        set_disk_map_temp_dir_root(t);
+    }
+
     #[test]
     fn test_crate_names() {
+        init();
+
         // Create and populate with crate names tables 1.
+        let mut tables1  = tables::DiskTables::create_in(&get_new_disk_map_temp_dir()).unwrap();
         let mut tables1 = tables::Tables::default();
         assert_eq!(tables1.interning_tables.strings.len(), 0);
         let crate_name_1_1 = tables1.register_crate_names(String::from("crate1"));
@@ -1395,4 +1404,3 @@ mod tests {
         }
     }
 }
-*/

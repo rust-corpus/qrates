@@ -195,7 +195,11 @@ where
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (K, V)> {
-        self.contents.iter().enumerate().map(|(k, v)| (k.into(), v))
+        self.contents.iter_enumerated().map(|(k, v)| (k.into(), v))
+    }
+
+    pub fn iter_values(&self) -> impl Iterator<Item = V> {
+        self.contents.iter()
     }
 
     pub fn len(&self) -> usize {
@@ -645,5 +649,9 @@ impl<V: DiskMapValue> DiskVec<V> {
 
     pub fn iter(&self) -> impl Iterator<Item = V> {
         self.map.iter().map(|(_, v)| v)
+    }
+
+    pub fn iter_enumerated(&self) -> impl Iterator<Item = (usize, V)> {
+        self.map.iter().map(|(k, v)| (k as usize, v))
     }
 }
