@@ -11,12 +11,12 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 pub fn new_query(loader: &Loader, report_path: &Path) {
+    // We create a temporary DiskMap here because the amount of data is too large to fit in memory.
     let mut thir_block_parent_to_children: DiskMap<_, Vec<_>> = DiskMap::create_temp();
     for (parent, child, _safety, _check_mode, _span) in loader.load_iter_thir_blocks() {
         let mut children = thir_block_parent_to_children.get(parent).unwrap_or_default();
         children.push(child);
         thir_block_parent_to_children.insert(parent, children);
-        // thir_block_parent_to_children.entry(parent).or_insert_with(Vec::new).push(child);
     }
 
     // map a root block to build and thir_body_def_path
@@ -61,43 +61,8 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
         },
     );
     loader.store_iter_selected_thir_blocks(full_selected_thir_blocks);
-
-
-    // let selected_thir_blocks;
-
-    // // TODO: optimize away transitive closure somehow?
-    // datapond_query!(
-    //     load loader {
-    //         relations(selected_thir_bodies, thir_blocks),
-    //     }
-    //     output selected_thir_blocks(
-    //         build: Build,
-    //         thir_body_def_path: DefPath,
-    //         parent: ThirBlock,
-    //         block: ThirBlock,
-    //         safety: ScopeSafety,
-    //         check_mode: BlockCheckMode,
-    //         span: Span,
-    //     )
-    //     selected_thir_blocks(
-    //         build, thir_body_def_path, parent, block, safety, check_mode, span
-    //     ) :-
-    //         thir_blocks(parent, block, safety, check_mode, span),
-    //         selected_thir_bodies(build, _, thir_body_def_path, parent).
-
-    //     selected_thir_blocks(
-    //         build, thir_body_def_path, parent, block, safety, check_mode, span
-    //     ) :-
-    //         selected_thir_blocks(.build=build, .thir_body_def_path=thir_body_def_path, .block=parent),
-    //         thir_blocks(parent, block, safety, check_mode, span).
-    // );
-    // info!("selected_thir_blocks.len = {}", selected_thir_blocks.len());
-    // loader.store_selected_thir_blocks(selected_thir_blocks.elements);
+   
     let selected_thir_blocks = loader.load_selected_thir_blocks();
-    // {
-    //     let selected_thir_blocks = selected_thir_blocks.tuple_iter();
-    //     write_csv!(report_path, selected_thir_blocks);
-    // }
 
     let def_path_resolver = DefPathResolver::new(loader);
     let span_resolver = SpanResolver::new(loader);
@@ -145,9 +110,6 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
     write_csv!(report_path, unsafe_thir_blocks);
     info!("Saved unsafe thir block report.");
 
-    // let unsafe_thir_blocks_relation = loader.load_unsafe_thir_blocks();
-
-    // unsafe thir statements
 
     let unsafe_thir_statements = || {
         let thir_statements = loader.load_iter_thir_stmts();
@@ -158,36 +120,6 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
                 Some((build, stmt, closest_unsafe_block, index, check_mode))
             })
     };
-
-    // let thir_statements = loader.load_iter_thir_stmts();
-    // let unsafe_thir_statements: Vec<_> = thir_statements
-    //     .flat_map(|(stmt, _block, closest_unsafe_block, index)| {
-    //         unsafe_thir_blocks_relation
-    //             .iter()
-    //             .filter(
-    //                 move |&(
-    //                     build,
-    //                     _thir_body_def_path,
-    //                     unsafe_block,
-    //                     _expansion_kind,
-    //                     _check_mode,
-    //                     _span,
-    //                 )| { *unsafe_block == closest_unsafe_block },
-    //             )
-    //             .map(
-    //                 move |&(
-    //                     build,
-    //                     _thir_body_def_path,
-    //                     _unsafe_block,
-    //                     _expansion_kind,
-    //                     check_mode,
-    //                     span,
-    //                 )| {
-    //                     (build, stmt, closest_unsafe_block, index, check_mode)
-    //                 },
-    //             )
-    //     })
-    //     .collect();
 
     loader.store_iter_unsafe_thir_stmts(unsafe_thir_statements());
     info!("Saved unsafe thir statements.");

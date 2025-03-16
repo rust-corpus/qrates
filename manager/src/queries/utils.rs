@@ -120,7 +120,6 @@ impl<'b> DefPathResolver<'b> {
             self.def_paths.get_unwrap(def_path);
         let crate_name = self.crate_names.get(crate_name).unwrap();
         // TODO: Strings are not loaded/saved via our hooked functions, but rather serde.
-        // let first_str = self.strings.get_redb(crate_name).unwrap();
         (
             self.strings.get_unwrap(crate_name),
             format!("{:x}", crate_hash),
@@ -202,7 +201,6 @@ impl<'b> SpanResolver<'b> {
 }
 
 /// From relation `iter` filters the facts that belong only to `selected_builds`.
-// TODO: can we make this return an iterator? would it help if we streamed this?
 pub fn filter_selected<F1, F2, I, O>(
     iter: impl Iterator<Item = I>,
     selected_builds: impl Iterator<Item = (

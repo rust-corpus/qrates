@@ -51,7 +51,6 @@ pub(super) fn generate_interning_tables(schema: &ast::DatabaseSchema) -> TokenSt
         });
         if i == 0 {
             // don't generate for length 1 tuples
-            // TODO: after we switch to diskmap, reenable this
             continue;
         }
         conversions.extend(quote! {

@@ -27,6 +27,8 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
     let mem_to_disk_functions = conversions::generate_mem_to_disk_functions(&schema);
     quote! {
         pub mod int_bytes_adapter {
+            /// Trait for converting between bytes and integers.
+            /// Glue code for redb byte conversions.
             pub trait QratesBytesAdapter {
                 fn qrates_from_bytes(bytes: &[u8]) -> Self;
                 fn qrates_as_bytes(&self) -> Vec<u8>;
@@ -117,8 +119,6 @@ pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
             use crate::data_structures::RelationMap;
             use crate::data_structures::DiskMap;
             use crate::data_structures::RelationElement;
-            // TODO: do I need QratesBytesAdapter?
-            use super::int_bytes_adapter::QratesBytesAdapter;
             #tables
             #relations
             #counters
