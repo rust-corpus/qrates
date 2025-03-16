@@ -13,7 +13,7 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
     let span_resolver = SpanResolver::new(loader);
 
     let def_paths = loader.load_def_paths();
-    let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_redb_map();
+    let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_relation_map();
     // let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_as_map();
     let crate_names = loader.load_crate_names();
     let relative_def_paths = loader.load_relative_def_paths();
@@ -32,7 +32,7 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
     //     .map(|(_parent, block, _safety, _check_mode, span)| (block, span))
     //     .collect();
 
-    let thir_block_map = loader.load_thir_blocks_redb_map();
+    let thir_block_map = loader.load_thir_blocks_relation_map();
     let thir_block_to_span = |block| {
         let (_parent, _, _, span) = thir_block_map.get(block).unwrap();
         span
@@ -88,7 +88,7 @@ fn new_report_unsafe_block_calls(loader: &Loader, report_path: &Path) {
 /// Report information about all thir calls in our codebase.
 fn new_report_all_calls(loader: &Loader, report_path: &Path) {
     let def_paths = loader.load_def_paths();
-    let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_redb_map();
+    let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_relation_map();
     // let fun_to_const_target_map = loader.load_thir_exprs_call_const_target_as_map();
     let strings = loader.load_strings();
     let abis = loader.load_abis();

@@ -136,13 +136,13 @@ pub struct RelationKey {
 }
 
 #[derive(Hash)]
-pub struct RelationInternKey {
+pub struct RelationMapKey {
     pub source: syn::Ident,
     /// Index into the relation's parameters vec.
     pub source_idx: usize,
 }
 
-impl RelationInternKey {
+impl RelationMapKey {
     pub fn get_value_type(&self, params: &[RelationParameter]) -> syn::Type {
         // construct a tuple with every type except self.source_idx
         let mut punctuated = syn::punctuated::Punctuated::new();
@@ -164,8 +164,8 @@ pub struct Relation {
     /// merging databases. That is, any duplicate entries having the same `key.source`
     /// should be dropped and `key.target` should be remapped.
     pub key: Option<RelationKey>,
-    /// The key field to be used for a generated intern table
-    pub intern_key: Option<RelationInternKey>,
+    /// The key field to be used for a generated RelationMap.
+    pub relation_map_key: Option<RelationMapKey>,
 }
 
 impl Relation {

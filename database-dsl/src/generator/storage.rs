@@ -83,16 +83,14 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
         store_fields.extend(quote! {
             { relations.#name.save(#relation_hash, path.join(#file_name)) }
         });
-        if let Some(intern_key@ast::RelationInternKey { source, source_idx }) = &relation.intern_key {
+        if let Some(intern_key@ast::RelationMapKey { source, source_idx }) = &relation.relation_map_key {
             // save by into_iter the relations vec
 
             let key = &relation.parameters[*source_idx].typ;
             let value = intern_key.get_value_type(&relation.parameters);
 
-            let intern_table_name = syn::Ident::new(&format!("{}_redb_map", name), Span::call_site());
             let intern_table_hash = relation_hash;
             let intern_table_file_name = format!("{}_relation_map", name);
-
 
             let source_idx_str = TokenStream::from_str(&format!("{}", source_idx)).unwrap();
 
@@ -145,19 +143,12 @@ fn load_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStream
     let mut load_fields = TokenStream::new();
     for table in &schema.interning_tables {
         let ast::InterningTable { name, value, .. } = table;
-        // if is_copy_type(value, schema) {
-            let table_hash = table.get_hash();
-            let file_name = name.to_string();
-            load_fields.extend(quote! {
-                #name: { DiskInterningTable::load(path.join(#file_name))? },
-            });
-        // } 
-        // else {
-        //     let file_name = format!("{}.bincode", name);
-        //     load_fields.extend(quote! {
-        //         #name: crate::storage::load(&path.join(#file_name))?,
-        //     });
-        // }
+        let table_hash = table.get_hash();
+        let file_name = name.to_string();
+        load_fields.extend(quote! {
+            #name: { DiskInterningTable::load(#table_hash, path.join(#file_name))? },
+        });
+
     }
     quote! {
         fn load_interning_tables(path: &Path) -> Result<DiskInterningTables> {
@@ -176,7 +167,7 @@ fn store_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStrea
             let table_hash = table.get_hash();
             let file_name = name.to_string();
             store_fields.extend(quote! {
-                { interning_tables.#name.save(path.join(#file_name)); }
+                { interning_tables.#name.save(#table_hash, path.join(#file_name)); }
             });
         // } else {
         //     let file_name = format!("{}.bincode", name);

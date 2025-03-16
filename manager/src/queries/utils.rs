@@ -157,7 +157,7 @@ pub struct SpanResolver<'b> {
 
 impl<'b> SpanResolver<'b> {
     pub fn new(loader: &'b Loader) -> Self {
-        let spans = loader.load_spans_redb_map();
+        let spans = loader.load_spans_relation_map();
 
         // let spans = loader
         //     .load_iter_spans()

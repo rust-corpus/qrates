@@ -73,18 +73,24 @@ impl<T: Copy + DiskMapValue> Relation<T> {
 }
 
 impl<K: DiskInterningKey, V: DiskInterningValue> DiskInterningTable<K, V> {
-    pub fn save(&mut self, path: std::path::PathBuf) {
+    pub fn save(&mut self, relation_hash: u64, path: std::path::PathBuf) {
         let contents_path = Self::get_contents_path(path.clone());
         let inv_map_path = Self::get_inv_map_path(path.clone());
+        self.contents.map.set_expected_hash(relation_hash);
+        self.inv_map.set_expected_hash(relation_hash);
         self.contents.save(contents_path);
         self.inv_map.save(inv_map_path);
     }
 
-    pub fn load(path: std::path::PathBuf) -> Result<Self> {
+    pub fn load(expected_hash: u64, path: std::path::PathBuf) -> Result<Self> {
         let contents_path = Self::get_contents_path(path.clone());
         let inv_map_path = Self::get_inv_map_path(path.clone());
         let contents = DiskVec::load(contents_path)?;
         let inv_map = DiskMap::load(inv_map_path)?;
+        let contents_hash = contents.map.read_stored_hash();
+        let inv_map_hash = inv_map.read_stored_hash();
+        assert_eq!(contents_hash, Some(expected_hash), "DiskVec hash check failed. The database was likely generated with a different version of your schema.");
+        assert_eq!(inv_map_hash, Some(expected_hash), "DiskMap hash check failed. The database was likely generated with a different version of your schema.");
         Ok(Self { contents, inv_map })
     }
 }

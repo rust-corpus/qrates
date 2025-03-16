@@ -69,7 +69,7 @@ fn new_count_called_functions(loader: &Loader) {
     // for (call, ty, fun, unsafety, abi, return_ty) in loader.load_iter_thir_exprs_call() {
     //     expr_to_call_data.insert(call, (fun, unsafety, abi, return_ty));
     // }
-    let expr_to_call_data = loader.load_thir_exprs_call_redb_map();
+    let expr_to_call_data = loader.load_thir_exprs_call_relation_map();
 
 
     let mut unsafe_thir_block_call_counts_map = HashMap::new();
@@ -190,7 +190,7 @@ fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
     //     .map(|(fun, _def_path)| fun)
     //     .collect();
 
-    let const_calls = loader.load_thir_exprs_call_const_target_redb_map();
+    let const_calls = loader.load_thir_exprs_call_const_target_relation_map();
 
     let build_resolver = BuildResolver::new(loader);
     let strings = loader.load_strings();
@@ -224,7 +224,7 @@ fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
 /// 3. Dynamic calls on trait objects.
 /// 4. Calls of closures.
 fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
-    let const_calls_map = loader.load_thir_exprs_call_const_target_redb_map();
+    let const_calls_map = loader.load_thir_exprs_call_const_target_relation_map();
     let def_path_resolver = DefPathResolver::new(loader);
     let build_resolver = BuildResolver::new(loader);
     let strings = loader.load_strings();

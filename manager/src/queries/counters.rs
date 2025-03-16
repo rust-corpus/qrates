@@ -48,7 +48,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
         }
     }
 
-    let thir_block_data_map = loader.load_thir_blocks_redb_map();
+    let thir_block_data_map = loader.load_thir_blocks_relation_map();
     let full_selected_thir_blocks = selected_thir_blocks.iter().filter_map(
         |&(root_block, block)| {
             if root_block == block {

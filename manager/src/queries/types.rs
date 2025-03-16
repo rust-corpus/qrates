@@ -15,7 +15,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let strings = loader.load_strings();
     let type_defs = loader.load_type_defs();
     let type_kinds = loader.load_type_kinds();
-    let types = loader.load_types_redb_map();
+    let types = loader.load_types_relation_map();
     // let types: HashMap<_, _> = loader.load_iter_types().collect();
 
     info!(
@@ -69,7 +69,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
     //     })
     //     .collect();
 
-    let adts = loader.load_types_adt_def_redb_map();
+    let adts = loader.load_types_adt_def_relation_map();
 
     let selected_adts_relation: Vec<_> = selected_type_defs_relation
         .iter()

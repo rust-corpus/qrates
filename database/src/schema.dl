@@ -478,7 +478,7 @@ intern thir_unary_op_kind<InternedString as ThirUnOp<u8>>;
 
 // Relations.
 
-relation def_path_span(def_path: DefPath, span: Span) intern key def_path;
+relation def_path_span(def_path: DefPath, span: Span) keyed by def_path;
 relation type_description(ty: Type, description: InternedString, generics: InternedString);
 /// The crate types associated with the build.
 relation build_crate_types(build: Build, crate_type: InternedString);
@@ -499,7 +499,7 @@ relation function_unsafe_reasons(def_path: DefPath, index: u32, reason: Interned
 /// THIR body expressions
 relation thir_bodies(item: Item, def_path: DefPath, body: auto ThirBlock);
 /// THIR-level block information
-relation thir_blocks(parent: ThirBlock, block: auto ThirBlock, safety: ScopeSafety, check_mode: BlockCheckMode, span: Span) intern key block;
+relation thir_blocks(parent: ThirBlock, block: auto ThirBlock, safety: ScopeSafety, check_mode: BlockCheckMode, span: Span) keyed by block;
 
 // thir stmts
 // The closest unsafe block is the closest outer block that is unsafe. This should be used to
@@ -509,7 +509,7 @@ relation thir_stmts_expr(stmt: auto ThirStmt, expr: ThirExpr);
 relation thir_stmts_let(stmt: auto ThirStmt, initializer: ThirExpr, else_block: ThirBlock, span: Span);
 
 // link a block's expression to its parent block
-relation thir_block_expr(block: ThirBlock, expr: ThirExpr) intern key expr;
+relation thir_block_expr(block: ThirBlock, expr: ThirExpr) keyed by expr;
 
 // thir expressions
 relation thir_exprs(expr: ThirExpr, block: ThirBlock, closest_unsafe_block: ThirBlock, ty: Type, span: Span);
@@ -517,9 +517,9 @@ relation thir_exprs_scope(expr: auto ThirExpr, inner: ThirExpr);
 relation thir_exprs_box(expr: auto ThirExpr, inner: ThirExpr);
 relation thir_exprs_if(expr: auto ThirExpr, cond: ThirExpr, then_expr: ThirExpr, else_expr: ThirExpr);
 
-relation thir_exprs_call(expr: auto ThirExpr, ty: Type, fun: ThirExpr, unsafety: Safety, abi: Abi, return_ty: Type) intern key expr;
+relation thir_exprs_call(expr: auto ThirExpr, ty: Type, fun: ThirExpr, unsafety: Safety, abi: Abi, return_ty: Type) keyed by expr;
 relation thir_exprs_call_arg(call: ThirExpr, index: ThirCallArgIndex, arg: ThirExpr);
-relation thir_exprs_call_const_target(fun: ThirExpr, def_id: DefPath) intern key fun;
+relation thir_exprs_call_const_target(fun: ThirExpr, def_id: DefPath) keyed by fun;
 relation thir_exprs_call_const_target_desc(fun: ThirExpr, target: InternedString, function_generics: InternedString, type_generics: InternedString);
 relation thir_exprs_call_const_target_self(fun: ThirExpr, typ: Type);
 
@@ -598,7 +598,7 @@ relation spans(
     file_name: SpanFileName,
     line: u16,
     col: u16,
-) intern key span;
+) keyed by span;
 /// Additional information about a span that was created by a macro expansion.
 relation macro_expansions(
     span: Span,
@@ -621,9 +621,9 @@ relation type_defs(item: auto Item, typ: Type, def_path: DefPath, name: Interned
 ///
 /// **Note:** the fact that `typ` refers to a monomorphized type means that
 /// DefId in many cases is not a key (DefId + substitutions is a key).
-relation types(typ: auto Type, kind: TyKind) intern key typ;
+relation types(typ: auto Type, kind: TyKind) keyed by typ;
 relation types_primitive(typ: Type, primitive_kind: TyPrimitive);
-relation types_adt_def(typ: Type, def_path: DefPath, kind: AdtKind, c_repr: bool, is_phantom: bool) intern key typ;
+relation types_adt_def(typ: Type, def_path: DefPath, kind: AdtKind, c_repr: bool, is_phantom: bool) keyed by typ;
 relation types_adt_variant(adt: Type, index: AdtVariantIndex, def_path: DefPath, ident: InternedString);
 relation types_adt_field(field: auto Field, adt: Type, index: AdtVariantIndex, def_path: DefPath, ident: InternedString, visibility: TyVisibility, typ: Type);
 /// The given field is visible only in the given module and its children.
