@@ -476,6 +476,18 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         diskmap
     }
 
+    fn open_data_table_ro(&self) -> redb::ReadOnlyTable<K, V> {
+        let read_txn = self.db.begin_read().unwrap();
+        let table_def: TableDefinition<K, V> = TableDefinition::new(Self::DATA_TABLE_NAME);
+        read_txn.open_table(table_def).unwrap()
+    }
+
+    fn open_hash_table_ro(&self) -> redb::ReadOnlyTable<K, V> {
+        let read_txn = self.db.begin_read().unwrap();
+        let table_def: TableDefinition<K, V> = TableDefinition::new(Self::HASH_TABLE_NAME);
+        read_txn.open_table(table_def).unwrap()
+    }
+
 
     pub fn check_hash(&self, expected_hash: u64) {
         
@@ -551,27 +563,21 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
             return Some(value.clone());
         }
 
-        let read_txn = self.db.begin_read().unwrap();
-
-        let table_def: TableDefinition<K, V> = TableDefinition::new(Self::DATA_TABLE_NAME);
-        let table = read_txn.open_table(table_def).unwrap();
+        let table = self.open_data_table_ro();
 
         let result = table.get(key).ok()?;
 
         result.map(|v| v.value())
     }
 
-    pub fn r(&self, key: K) -> V {
+    pub fn get_unwrap(&self, key: K) -> V {
         self.get(key).unwrap()
     }
 
     pub fn len(&self) -> u64 {
         assert!(self.write_cache.is_empty(), "DiskMap write cache not empty during len() call");
 
-        let read_txn = self.db.begin_read().unwrap();
-
-        let table_def: TableDefinition<K, V> = TableDefinition::new(Self::DATA_TABLE_NAME);
-        let table = read_txn.open_table(table_def).unwrap();
+        let table = self.open_data_table_ro();
 
         table.len().unwrap()
     }
@@ -580,10 +586,8 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         #[cfg(not(test))]
         assert!(self.write_cache.is_empty(), "DiskMap write cache not empty during iter() call");
 
-        let read_txn = self.db.begin_read().unwrap();
-
-        let table_def: TableDefinition<K, V> = TableDefinition::new(Self::DATA_TABLE_NAME);
-        let mut persistent_iter = read_txn.open_table(table_def).unwrap().range::<K>(..).unwrap().map(|res| {
+        let table = self.open_data_table_ro();
+        let mut persistent_iter = table.range::<K>(..).unwrap().map(|res| {
             let (k, v) = res.unwrap();
             (k.value(), v.value())
         });
