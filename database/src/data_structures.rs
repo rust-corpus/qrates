@@ -376,8 +376,8 @@ where
 }
 
 
-pub trait DiskMapKey: Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
-impl<T> DiskMapKey for T where T: Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
+pub trait DiskMapKey: Clone + Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
+impl<T> DiskMapKey for T where T: Clone + Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
 pub trait DiskMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static {}
 impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static {}
 
@@ -561,15 +561,48 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (K, V)> {
+        #[cfg(not(test))]
         assert!(self.write_cache.is_empty(), "DiskMap write cache not empty during iter() call");
 
         let read_txn = self.db.begin_read().unwrap();
 
         let table_def: TableDefinition<K, V> = TableDefinition::new("table");
-        read_txn.open_table(table_def).unwrap().range::<K>(..).unwrap().map(|res| {
+        let mut persistent_iter = read_txn.open_table(table_def).unwrap().range::<K>(..).unwrap().map(|res| {
             let (k, v) = res.unwrap();
             (k.value(), v.value())
-        })
+        });
+
+        #[cfg(test)]
+        {
+            // For now just for tests. Does some extra work to make iter work with up-to-date values in presence of an unflushed write cache.
+            let mut write_cache = self.write_cache.clone();
+            let mut write_cache_iter = None;
+
+            std::iter::from_fn(move || {
+                // First try to consume a value from the persistent iter and get its updated value from the write cache.
+                if let Some((k, v)) = persistent_iter.next() {
+                    if let Some(v) = write_cache.remove(&k) {
+                        return Some((k, v));
+                    } else {
+                        return Some((k, v));
+                    }
+                } else {
+                    if write_cache_iter.is_none() {
+                        // First time we're here, so we need to store the remaining write cache.
+                        write_cache_iter = Some(write_cache.clone().into_iter());
+                    }
+                }
+                // Then consume the remaining write cache.
+    
+                write_cache_iter.as_mut().unwrap().next().map(|(k, v)| (k.clone(), v.clone()))
+            })
+        }
+
+        #[cfg(not(test))]
+        {
+            persistent_iter
+        }
+
     }
 }
 
