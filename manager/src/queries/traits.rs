@@ -15,7 +15,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let def_path_resolver = DefPathResolver::new(loader);
     info!("Loaded relations.");
 
-    let all_traits = all_traits_relation.tuple_iter().map(
+    let all_traits = all_traits_relation.iter().map(
         |(item, def_path, _name, visibility, is_auto, is_marker, unsafety)| {
             (
                 def_path_resolver.resolve(def_path),
@@ -31,8 +31,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
     write_csv!(report_path, all_traits);
 
     let selected_traits_relation = super::utils::filter_selected(
-        all_traits_relation.tuple_iter(),
-        selected_builds.tuple_iter(),
+        all_traits_relation.iter(),
+        selected_builds.iter(),
         &def_paths,
         |(_item, def_path, _name, _visibility, _is_auto, _is_marker, _unsafety)| def_path,
         |build, (item, def_path, name, visibility, is_auto, is_marker, unsafety)| {
@@ -46,7 +46,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let trait_impls = loader.load_trait_impls();
     let trait_impl_counts: HashMap<_, _> = trait_impls
-        .tuple_iter()
+        .iter()
         .safe_group_by(|&(_item, _typ, trait_def_path)| trait_def_path)
         .into_iter()
         .map(|(key, group)| (key, group.count()))
@@ -75,7 +75,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let selected_impl_definitions_relation = super::utils::filter_selected(
         loader.load_iter_impl_definitions(),
-        selected_builds.tuple_iter(),
+        selected_builds.iter(),
         &def_paths,
         |(
             def_path,
@@ -123,7 +123,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
     );
 
     let impl_traits: HashMap<_, _> = trait_impls
-        .tuple_iter()
+        .iter()
         .map(|(item, _typ, trait_def_path)| (item, trait_def_path))
         .collect();
     let selected_impl_definitions = selected_impl_definitions_relation.into_iter().flat_map(

@@ -270,7 +270,7 @@ fn new_report_function_sizes(loader: &Loader, report_path: &Path) {
 
     let selected_build_thir_sizes =
         selected_build_thir_sizes
-            .tuple_iter()
+            .iter()
             .map(|(build, stmt, unsafe_stmt, user_unsafe_stmt)| {
                 (
                     build_resolver.resolve(build),
@@ -282,7 +282,7 @@ fn new_report_function_sizes(loader: &Loader, report_path: &Path) {
     write_csv!(report_path, selected_build_thir_sizes);
 
     let selected_function_thir_sizes = loader.load_selected_function_thir_sizes();
-    let selected_function_thir_sizes = selected_function_thir_sizes.tuple_iter().map(
+    let selected_function_thir_sizes = selected_function_thir_sizes.iter().map(
         |(
             build,
             item,

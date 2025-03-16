@@ -116,7 +116,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
         _safety, // for unsafe_thir_blocks, safety will always be ExplicitUnsafe
         check_mode,
         span,
-    ) in selected_thir_blocks.tuple_iter().filter(
+    ) in selected_thir_blocks.iter().filter(
         |(_build, _thir_body_def_path, _parent, _block, safety, _check_mode, _span)| {
             *safety == types::ScopeSafety::ExplicitUnsafe
         },
@@ -233,11 +233,11 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
     let abis = loader.load_abis();
     let trait_items = loader.load_trait_items();
     let trait_items: HashSet<_> = trait_items
-        .tuple_iter()
+        .iter()
         .map(|(_trait_id, def_path, _defaultness)| def_path)
         .collect();
     let selected_function_definitions = loader.load_selected_function_definitions();
-    let selected_function_definitions_thir_counts = selected_function_definitions.tuple_iter().map(
+    let selected_function_definitions_thir_counts = selected_function_definitions.iter().map(
         |(build, item, def_path, module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
             (
                 build,
@@ -269,7 +269,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
     let mut fn_count = 0;
     let mut fnmut_count = 0;
     let mut fnonce_count = 0;
-    for (_, kind) in closure_kinds.tuple_iter() {
+    for (_, kind) in closure_kinds.iter() {
         match kind {
             types::ClosureKind::Fn => fn_count += 1,
             types::ClosureKind::FnMut => fnmut_count += 1,

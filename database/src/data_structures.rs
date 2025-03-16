@@ -29,9 +29,6 @@ impl<T: DiskMapValue> Relation<T> {
     pub fn insert(&mut self, fact: T) {
         self.facts.push(fact);
     }
-    pub fn iter(&self) -> impl Iterator<Item = T> {
-        self.facts.iter()
-    }
     pub fn len(&self) -> usize {
         self.facts.len()
     }
@@ -62,10 +59,13 @@ impl<T> Relation<RelationElement<T>>
         self.facts.iter().map(|re| re.into_inner()).collect()
     }
     pub fn to_tuple_vec(&self) -> Vec<T> {
-        self.tuple_iter().collect()
+        self.iter().collect()
     }
-    pub fn tuple_iter(&self) -> impl Iterator<Item = T> {
+    pub fn iter(&self) -> impl Iterator<Item = T> {
         self.facts.iter().map(|re| re.into_inner())
+    }
+    pub fn iter_re(&self) -> impl Iterator<Item = RelationElement<T>> {
+        self.facts.iter()
     }
 
     pub fn from_tuple_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = T>) -> Self {
@@ -74,11 +74,11 @@ impl<T> Relation<RelationElement<T>>
     }
 }
 
-impl<T: DiskMapValue> Into<Vec<T>> for Relation<T> {
-    fn into(self) -> Vec<T> {
-        self.iter().collect()
-    }
-}
+// impl<T: DiskMapValue> Into<Vec<T>> for Relation<T> {
+//     fn into(self) -> Vec<T> {
+//         self.iter_re().collect()
+//     }
+// }
 
 impl<T: DiskMapValue> Into<Vec<T>> for Relation<RelationElement<T>>
 where RelationElement<T>: DiskMapValue

@@ -106,7 +106,7 @@ fn new_count_called_functions(loader: &Loader) {
 
     let unsafe_thir_block_no_calls_relation: Vec<_> = loader
         .load_unsafe_thir_blocks()
-        .tuple_iter()
+        .iter()
         .filter(
             |(_build, _thir_body_def_path, block, _expansion_kind, _check_mode, _span)| {
                 !unsafe_blocks_with_calls.contains(block)
@@ -131,7 +131,7 @@ fn new_report_called_functions(loader: &Loader, report_path: &Path) {
     let abis = loader.load_abis();
 
     let unsafe_thir_block_calls = loader.load_unsafe_thir_block_calls();
-    let unsafe_thir_block_calls = unsafe_thir_block_calls.tuple_iter().map(
+    let unsafe_thir_block_calls = unsafe_thir_block_calls.iter().map(
         |(build, block, check_mode, call, fun, unsafety, abi, _return_ty)| {
             (
                 build,
@@ -151,7 +151,7 @@ fn new_report_called_functions(loader: &Loader, report_path: &Path) {
     let unsafe_thir_block_call_counts = loader.load_unsafe_thir_block_call_counts();
     let unsafe_thir_block_call_counts =
         unsafe_thir_block_call_counts
-            .tuple_iter()
+            .iter()
             .map(|(build, block, check_mode, call_count)| {
                 (
                     build,
@@ -165,7 +165,7 @@ fn new_report_called_functions(loader: &Loader, report_path: &Path) {
     info!("reported unsafe_thir_block_call_counts");
 
     let unsafe_thir_block_no_calls = loader.load_unsafe_thir_block_no_calls();
-    let unsafe_thir_block_no_calls = unsafe_thir_block_no_calls.tuple_iter().map(
+    let unsafe_thir_block_no_calls = unsafe_thir_block_no_calls.iter().map(
         |(build, thir_body_def_path, block, expansion_kind, check_mode, _span)| {
             (
                 build,
@@ -196,7 +196,7 @@ fn new_report_non_const_call_targets(loader: &Loader, report_path: &Path) {
     let strings = loader.load_strings();
     let abis = loader.load_abis();
     let unsafe_thir_block_calls = loader.load_unsafe_thir_block_calls();
-    let non_const_thir_calls = unsafe_thir_block_calls.tuple_iter().flat_map(
+    let non_const_thir_calls = unsafe_thir_block_calls.iter().flat_map(
         |(build, block, _check_mode, call, fun, unsafety, abi, _return_ty)| {
             if const_calls.get(fun).is_some() {
                 None
@@ -230,7 +230,7 @@ fn new_report_const_call_targets(loader: &Loader, report_path: &Path) {
     let strings = loader.load_strings();
     let abis = loader.load_abis();
     let unsafe_thir_block_calls = loader.load_unsafe_thir_block_calls();
-    let const_thir_calls = unsafe_thir_block_calls.tuple_iter().flat_map(
+    let const_thir_calls = unsafe_thir_block_calls.iter().flat_map(
         |(build, block, check_mode, call, fun, unsafety, abi, _return_ty)| {
             const_calls_map.get(fun).map(|def_path| {
                 Some((
@@ -256,7 +256,7 @@ pub fn new_query(loader: &Loader, report_path: &Path) {
     let def_path_resolver = DefPathResolver::new(loader);
     let trait_items = loader.load_trait_items();
     let trait_items_debug: Vec<_> = trait_items
-        .tuple_iter()
+        .iter()
         .map(|(trait_id, def_path, defaultness)| {
             (trait_id, def_path_resolver.resolve(def_path), defaultness)
         })

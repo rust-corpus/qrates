@@ -23,8 +23,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
         type_defs.len()
     );
     let selected_type_defs_relation = super::utils::filter_selected(
-        type_defs.tuple_iter(),
-        selected_builds.tuple_iter(),
+        type_defs.iter(),
+        selected_builds.iter(),
         &def_paths,
         |(_item, _typ, def_path, _name, _visibility, _kind)| def_path,
         |build, (item, typ, def_path, name, visibility, kind)| {
@@ -168,7 +168,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let types_adt_field = loader.load_types_adt_field();
     let selected_adt_field_types_relation: Vec<_> = types_adt_field
-        .tuple_iter()
+        .iter()
         .flat_map(
             |(
                 _field,

@@ -3,6 +3,8 @@ use quote::quote;
 
 use crate::ast;
 
+// Turns extraction-time data structures (backed by Vec/HashMap) into query-time structures (backed by DiskMap).
+// Only used for testing. <<-- TODO: add #[cfg(test)]?
 pub fn generate_mem_to_disk_functions(schema: &ast::DatabaseSchema) -> TokenStream {
     let relations_to_disk = relations_to_disk_function(schema);
     let interning_tables_to_disk = interning_tables_to_disk_function(schema);
@@ -12,7 +14,6 @@ pub fn generate_mem_to_disk_functions(schema: &ast::DatabaseSchema) -> TokenStre
     }
 }
 
-// Turns extraction-time relations (Vec) into query-time relations (backed by DiskMap).
 fn relations_to_disk_function(schema: &ast::DatabaseSchema) -> TokenStream {
     let store_fields = schema.relations.iter().map(|relation| {
         let name = &relation.name;

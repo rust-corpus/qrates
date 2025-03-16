@@ -44,7 +44,7 @@ fn report_non_tree_types(loader: &Loader, report_path: &Path) {
         },
     ).collect();
 
-    let non_tree_adts = selected_adts.tuple_iter().flat_map(
+    let non_tree_adts = selected_adts.iter().flat_map(
         |(
             build,
             item,

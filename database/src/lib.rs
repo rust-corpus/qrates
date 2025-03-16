@@ -42,7 +42,6 @@ pub fn get_new_disk_map_temp_dir() -> PathBuf {
 }
 
 
-/*
 #[cfg(test)]
 mod tests {
 
@@ -113,7 +112,7 @@ mod tests {
             .iter_values()
             .zip(&expected)
         {
-            assert_eq!(&merger1.tables.interning_tables.strings[cn], expected_name);
+            assert_eq!(&merger1.tables.interning_tables.strings.get_unwrap(cn), expected_name);
         }
 
         // Merge tables 1 and 3.
@@ -128,7 +127,7 @@ mod tests {
             .iter_values()
             .zip(&expected)
         {
-            assert_eq!(&merger1.tables.interning_tables.strings[*cn], expected_name);
+            assert_eq!(&merger1.tables.interning_tables.strings.get_unwrap(cn), expected_name);
         }
     }
     #[test]
@@ -267,7 +266,7 @@ mod tests {
         assert_eq!(tables3.relations.build_crate_types.len(), 2);
 
         // Merge tables 1 and 2.
-        let mut merger1 = tables::TableMerger::new(tables1);
+        let mut merger1 = tables::TableMerger::new(tables::DiskTables::from_tables(tables1));
         merger1.merge(tables2);
         assert_eq!(merger1.tables.interning_tables.builds.len(), 3);
         assert_eq!(merger1.tables.interning_tables.strings.len(), 9);
@@ -287,7 +286,7 @@ mod tests {
             .iter_values()
             .zip(&expected)
         {
-            let &(package, version, krate, crate_hash, edition) = build;
+            let (package, version, krate, crate_hash, edition) = build;
             let (package_e, version_e, krate_e, crate_hash_e, edition_e) = expected_uild;
             let p = merger1.tables.interning_tables.package_names[package];
             assert_eq!(&merger1.tables.interning_tables.strings[p], package_e);
@@ -322,7 +321,7 @@ mod tests {
             .iter_values()
             .zip(&expected)
         {
-            let &(package, version, krate, crate_hash, edition) = build;
+            let (package, version, krate, crate_hash, edition) = build;
             let (package_e, version_e, krate_e, crate_hash_e, edition_e) = expected_uild;
             let p = merger1.tables.interning_tables.package_names[package];
             assert_eq!(&merger1.tables.interning_tables.strings[p], package_e);
@@ -359,7 +358,7 @@ mod tests {
                 String::from("crate1"),
                 1u128.into(),
                 String::from("relative_def_id1"),
-                (1u64, 2u64).into(),
+                (1u128).into(),
                 String::from("summary_1"),
             );
             assert_eq!(tables1.interning_tables.def_paths.len(), 1);
@@ -370,7 +369,7 @@ mod tests {
                 String::from("crate1"),
                 1u128.into(),
                 String::from("relative_def_id2"),
-                (3u64, 4u64).into(),
+                (2u128).into(),
                 String::from("summary_2"),
             );
             assert_eq!(tables1.interning_tables.def_paths.len(), 2);
@@ -426,7 +425,7 @@ mod tests {
                 String::from("crate2"),
                 1u128.into(),
                 String::from("relative_def_id1"),
-                (1u64, 2u64).into(),
+                (1u128).into(),
                 String::from("summary_1"),
             );
             assert_eq!(tables2.interning_tables.def_paths.len(), 1);
@@ -437,7 +436,7 @@ mod tests {
                 String::from("crate2"),
                 1u128.into(),
                 String::from("relative_def_id2"),
-                (3u64, 4u64).into(),
+                (2u128).into(),
                 String::from("summary_2"),
             );
             assert_eq!(tables2.interning_tables.def_paths.len(), 2);
@@ -470,7 +469,7 @@ mod tests {
         }
         let tables3 = create_table_3();
 
-        let mut merger1 = tables::TableMerger::new(tables1);
+        let mut merger1 = tables::TableMerger::new(tables::DiskTables::from_tables(tables1));
         merger1.merge(tables2);
         assert_eq!(merger1.tables.counters.modules, 6);
         assert_eq!(merger1.tables.interning_tables.builds.len(), 1);
@@ -1406,4 +1405,3 @@ mod tests {
         }
     }
 }
-    */

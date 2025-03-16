@@ -13,7 +13,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
 
     let function_unsafe_reasons: Vec<_> = loader
         .load_function_unsafe_reasons()
-        .tuple_iter()
+        .iter()
         .map(|(def_path, _index, reason)| (def_path, reason))
         .collect::<HashSet<_>>()
         .into_iter()
