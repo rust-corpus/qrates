@@ -16,6 +16,7 @@
 
 # Queries
 
+- [Performance Tradeoffs](./performance-tradeoffs.md)
 - [Running Existing Queries](./queries_run_existing.md)
 - [Add a New Query](./queries_add_new.md)
 

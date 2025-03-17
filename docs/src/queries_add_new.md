@@ -9,6 +9,11 @@ This chapter shows how to define your own query. Adding a new query typically in
 
 Each of the following sections discuss each step in more detail. As an example, we use a query that finds the definitions of types that have raw pointers as fields and are not annotated as `#[repr(C)]` (`manager/src/queries/non_tree_types.rs`).
 
+## Performance
+
+Below sections primarily decide the performance vs. ease of implementation tradeoff in favor of ease of implementation.
+At the end of this chapter there is an explanation of how to perform the query in favor of reduced memory usage.
+
 ## Database Structure
 
 Before we can define a new query, we need to understand the database structure. The database schema is defined in two files:
@@ -112,3 +117,45 @@ write_csv!(report_path, non_tree_adts);
 ```
 
 The results will be written to a file `../workspace/reports/<query-name>/<iterator-variable>.csv`.
+
+## Alternative Implementation With Smaller Memory Footprint
+
+Depending on the size of our corpus, we might find that we are running out of memory with the Datalog approach above.
+As discussed in the [Performance Tradeoffs](./performance-tradeoffs.md) chapter, we can instead use a native Rust implementation that makes use of streaming and considers the relative sizes of the relation we're consuming.
+
+For example, a corpus consisting of 2000 crates gives us the following:
+- `9.9M    relations/selected_adts`
+- `21M     relations/types_raw_ptr`
+- `973M    relations/types_adt_field`
+
+Extrapolating this to 200k crates, that's roughly 100GB just for `types_adt_field`. Clearly, we want to avoid loading the entirety of `types_adt_field` into memory if we want to scale this query to larger datasets.
+
+An important insight is that while the relation `types_adt_field` may be large, if we can filter the relation _before_ its entirety is loaded into memory, it may be small enough for keeping in memory.
+We believe that raw pointer types are rare in Rust, so we hope to filter away a good chunk.
+
+Indeed, we can rephrase the query as "find the set of `types_adt_field.adt` where the corresponding `types_adt_field.typ` exists in `types_raw_ptr.typ`".
+So if we have an efficient way to determine the question "does `types_adt_field.typ` exist in `types_raw_ptr.typ`?", then we can directly filter the relation when loading from disk and only store the part we're interested in ("find the set of `types_adt_field.adt`").
+
+Because `types_raw_ptr` is small, and we only need a subset of its columns (just `.typ`), we can load it into a `HashSet` to efficiently answer our question from before:
+
+```rust,no_run,noplayground
+let raw_ptr_types: HashSet<_> = loader.load_iter_types_raw_ptr().map(|(typ, _, _)| typ).collect();
+```
+
+Now we can load _only the rows and columns of `types_adt_field` that we need_ efficiently into memory:
+
+```rust,no_run,noplayground
+let non_tree_types: HashSet<_> = loader.load_iter_types_adt_field().filter_map(
+    |(_field, adt, _index, _def_path, _ident, _visibility, typ)| {
+        if raw_ptr_types.contains(&typ) {
+            Some(adt) // We are only loading some rows, and for those rows only 1/7 columns into memory.
+        } else {
+            None
+        }
+    },
+).collect();
+```
+
+The remainder is the same as before.
+
+
