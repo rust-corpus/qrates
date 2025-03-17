@@ -53,7 +53,7 @@ pub fn is_public(def_id: DefId, tcx: TyCtxt<'_>) -> bool {
                 is_public(parent_def_id, tcx)
             }
             Node::Item(item) => match item.kind {
-                ItemKind::Fn {..} | ItemKind::Const(..) | ItemKind::Static(..) => {
+                ItemKind::Fn { .. } | ItemKind::Const(..) | ItemKind::Static(..) => {
                     visibility == ty::Visibility::Public
                 }
                 _ => {

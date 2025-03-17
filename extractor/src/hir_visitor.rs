@@ -25,8 +25,8 @@ use rustc_span::Span;
 use std::collections::HashMap;
 use std::mem;
 
-extern crate rustc_ast_ir;
 extern crate rustc_abi;
+extern crate rustc_ast_ir;
 
 pub(crate) struct HirVisitor<'a, 'tcx> {
     tcx: TyCtxt<'tcx>,
@@ -306,7 +306,11 @@ impl<'a, 'tcx> Visitor<'tcx> for HirVisitor<'a, 'tcx> {
                     let trait_item_def_path = self
                         .filler
                         .resolve_local_def_id(trait_item.id.owner_id.def_id);
-                    let defaultness = self.tcx.hir().expect_trait_item(trait_item.id.owner_id.def_id).defaultness;
+                    let defaultness = self
+                        .tcx
+                        .hir()
+                        .expect_trait_item(trait_item.id.owner_id.def_id)
+                        .defaultness;
                     self.filler.tables.register_trait_items(
                         item_id,
                         trait_item_def_path,

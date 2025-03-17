@@ -32,17 +32,23 @@ fn report_non_tree_types(loader: &Loader, report_path: &Path) {
 
     // let non_tree_types: HashSet<_> = non_tree_types.elements.iter().map(|&(typ,)| typ).collect();
 
-    let raw_ptr_types: HashSet<_> = loader.load_iter_types_raw_ptr().map(|(typ, _, _)| typ).collect();
+    let raw_ptr_types: HashSet<_> = loader
+        .load_iter_types_raw_ptr()
+        .map(|(typ, _, _)| typ)
+        .collect();
 
-    let non_tree_types: HashSet<_> = loader.load_iter_types_adt_field().filter_map(
-        |(_field, adt, _index, _def_path, _ident, _visibility, typ)| {
-            if raw_ptr_types.contains(&typ) {
-                Some(adt)
-            } else {
-                None
-            }
-        },
-    ).collect();
+    let non_tree_types: HashSet<_> = loader
+        .load_iter_types_adt_field()
+        .filter_map(
+            |(_field, adt, _index, _def_path, _ident, _visibility, typ)| {
+                if raw_ptr_types.contains(&typ) {
+                    Some(adt)
+                } else {
+                    None
+                }
+            },
+        )
+        .collect();
 
     let non_tree_adts = selected_adts.iter().flat_map(
         |(

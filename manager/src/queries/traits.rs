@@ -27,7 +27,10 @@ pub fn query(loader: &Loader, report_path: &Path) {
             )
         },
     );
-    info!("Writing CSV of all_traits.len={}", all_traits_relation.len());
+    info!(
+        "Writing CSV of all_traits.len={}",
+        all_traits_relation.len()
+    );
     write_csv!(report_path, all_traits);
 
     let selected_traits_relation = super::utils::filter_selected(

@@ -66,8 +66,7 @@ fn compute_selected_functions_and_mir_cfgs(loader: &Loader) {
     info!("selected_thir_bodies.len = {}", selected_thir_bodies.len());
     loader.store_selected_thir_bodies(selected_thir_bodies);
 
-    let function_unsafe_use: HashMap<_, _> =
-        loader.load_iter_function_unsafe_use().collect();
+    let function_unsafe_use: HashMap<_, _> = loader.load_iter_function_unsafe_use().collect();
 
     let selected_functions = super::utils::filter_selected(
         loader.load_iter_function_definitions(),

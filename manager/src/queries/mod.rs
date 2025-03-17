@@ -4,8 +4,8 @@ use std::path::Path;
 
 mod build_files;
 mod build_meta;
-mod counters;
 mod closure_kinds;
+mod counters;
 mod function_size;
 mod non_tree_types;
 mod prepare_builds;
@@ -39,14 +39,16 @@ pub fn run_query(
         ),
         "prepare-items" => prepare_items::query(&loader),
         "prepare-all" => {
-            run_query(&loader,
+            run_query(
+                &loader,
                 "prepare-builds",
                 database_root,
                 report_path,
                 workspace_path,
                 sources_list_path,
             );
-            run_query(&loader,
+            run_query(
+                &loader,
                 "prepare-items",
                 database_root,
                 report_path,

@@ -136,7 +136,7 @@ pub struct RelationKey {
 }
 
 /// A key for a relations, indicating that a RelationMap should be generated.
-/// 
+///
 /// Syntax: `relation <relation_name>(...) keyed by <key_column>;`
 #[derive(Hash)]
 pub struct RelationMapKey {
@@ -154,7 +154,10 @@ impl RelationMapKey {
                 punctuated.push(param.typ.clone());
             }
         }
-        syn::Type::Tuple(syn::TypeTuple { paren_token: Default::default(), elems: punctuated })
+        syn::Type::Tuple(syn::TypeTuple {
+            paren_token: Default::default(),
+            elems: punctuated,
+        })
     }
 }
 

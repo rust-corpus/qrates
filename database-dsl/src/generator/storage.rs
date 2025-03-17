@@ -78,7 +78,9 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
         store_fields.extend(quote! {
             { relations.#name.save(#relation_hash, path.join(#file_name)) }
         });
-        if let Some(intern_key@ast::RelationMapKey { source, source_idx }) = &relation.relation_map_key {
+        if let Some(intern_key @ ast::RelationMapKey { source, source_idx }) =
+            &relation.relation_map_key
+        {
             // save by into_iter the relations vec
 
             let key = &relation.parameters[*source_idx].typ;
@@ -91,9 +93,7 @@ fn store_multifile_relations_function(schema: &ast::DatabaseSchema) -> TokenStre
 
             let non_source_idxs: Vec<TokenStream> = (0..relation.parameters.len())
                 .filter(|idx| *idx != *source_idx)
-                .map(|idx| {
-                    TokenStream::from_str(&format!("{idx}")).unwrap()
-                })
+                .map(|idx| TokenStream::from_str(&format!("{idx}")).unwrap())
                 .collect();
 
             store_fields.extend(quote! {
@@ -143,7 +143,6 @@ fn load_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStream
         load_fields.extend(quote! {
             #name: { DiskInterningTable::load(#table_hash, path.join(#file_name))? },
         });
-
     }
     quote! {
         fn load_interning_tables(path: &Path) -> Result<DiskInterningTables> {
@@ -163,7 +162,6 @@ fn store_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStrea
         store_fields.extend(quote! {
             { interning_tables.#name.save(#table_hash, path.join(#file_name)); }
         });
-
     }
     quote! {
         fn store_multifile_interning_tables(

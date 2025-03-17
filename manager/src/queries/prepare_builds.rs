@@ -94,11 +94,16 @@ pub fn query(loader: &Loader, report_path: &Path, workspace_path: &Path, sources
 
     info!("Number of builds in total: {}", builds.len());
 
-
     for &(build, package, version, krate, crate_hash, edition) in builds.iter() {
-        let krate_str = strings.get_unwrap(crate_names.get_unwrap(krate)).to_string();
-        let package_str = strings.get_unwrap(package_names.get_unwrap(package)).clone();
-        let version_str = strings.get_unwrap(package_versions.get_unwrap(version)).clone();
+        let krate_str = strings
+            .get_unwrap(crate_names.get_unwrap(krate))
+            .to_string();
+        let package_str = strings
+            .get_unwrap(package_names.get_unwrap(package))
+            .clone();
+        let version_str = strings
+            .get_unwrap(package_versions.get_unwrap(version))
+            .clone();
         let edition_str = strings.get_unwrap(editions.get_unwrap(edition)).to_string();
         all_builds.push((
             build,

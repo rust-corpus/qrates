@@ -3,8 +3,8 @@
 use super::utils::{DefPathResolver, GroupByIterator, SpanResolver};
 use crate::queries::utils::BuildResolver;
 use crate::write_csv;
-use corpus_database::{tables::Loader, types};
 use corpus_database::DiskMap;
+use corpus_database::{tables::Loader, types};
 use corpus_queries_derive::datapond_query;
 use log::info;
 use std::collections::{HashMap, HashSet};
@@ -14,25 +14,25 @@ pub fn query(loader: &Loader, report_path: &Path) {
     // We create a temporary DiskMap here because the amount of data is too large to fit in memory.
     let mut thir_block_parent_to_children: DiskMap<_, Vec<_>> = DiskMap::create_temp();
     for (parent, child, _safety, _check_mode, _span) in loader.load_iter_thir_blocks() {
-        let mut children = thir_block_parent_to_children.get(parent).unwrap_or_default();
+        let mut children = thir_block_parent_to_children
+            .get(parent)
+            .unwrap_or_default();
         children.push(child);
         thir_block_parent_to_children.insert(parent, children);
     }
 
     // map a root block to build and thir_body_def_path
-    let mut map_selected_thir_bodies_to_data: HashMap<_, _> = loader.load_iter_selected_thir_bodies().map(
-        |(build, item, thir_body_def_path, body)| {
-            (body, (build, thir_body_def_path))
-        },
-    ).collect();
+    let mut map_selected_thir_bodies_to_data: HashMap<_, _> = loader
+        .load_iter_selected_thir_bodies()
+        .map(|(build, item, thir_body_def_path, body)| (body, (build, thir_body_def_path)))
+        .collect();
 
     // root_block = key into map_selected_thir_bodies_to_data
     // (root_block, block)
-    let mut selected_thir_blocks: HashSet<_> = loader.load_iter_selected_thir_bodies().map(
-        |(build, item, thir_body_def_path, body)| {
-            (body, body)
-        },
-    ).collect();
+    let mut selected_thir_blocks: HashSet<_> = loader
+        .load_iter_selected_thir_bodies()
+        .map(|(build, item, thir_body_def_path, body)| (body, body))
+        .collect();
 
     let mut stack: Vec<_> = selected_thir_blocks.iter().cloned().collect();
     while let Some((key, block)) = stack.pop() {
@@ -49,19 +49,29 @@ pub fn query(loader: &Loader, report_path: &Path) {
     }
 
     let thir_block_data_map = loader.load_thir_blocks_relation_map();
-    let full_selected_thir_blocks = selected_thir_blocks.iter().filter_map(
-        |&(root_block, block)| {
-            if root_block == block {
-                // we're looking at a block from selected_thir_bodies. this block has no parent or other data, and we also skipped it in the datapond query.
-                return None;
-            }
-            let (build, thir_body_def_path) = *map_selected_thir_bodies_to_data.get(&root_block).unwrap();
-            let (parent, safety, check_mode, span) = thir_block_data_map.get_unwrap(block);
-            Some((build, thir_body_def_path, parent, block, safety, check_mode, span))
-        },
-    );
+    let full_selected_thir_blocks =
+        selected_thir_blocks
+            .iter()
+            .filter_map(|&(root_block, block)| {
+                if root_block == block {
+                    // we're looking at a block from selected_thir_bodies. this block has no parent or other data, and we also skipped it in the datapond query.
+                    return None;
+                }
+                let (build, thir_body_def_path) =
+                    *map_selected_thir_bodies_to_data.get(&root_block).unwrap();
+                let (parent, safety, check_mode, span) = thir_block_data_map.get_unwrap(block);
+                Some((
+                    build,
+                    thir_body_def_path,
+                    parent,
+                    block,
+                    safety,
+                    check_mode,
+                    span,
+                ))
+            });
     loader.store_iter_selected_thir_blocks(full_selected_thir_blocks);
-   
+
     let selected_thir_blocks = loader.load_selected_thir_blocks();
 
     let def_path_resolver = DefPathResolver::new(loader);
@@ -110,15 +120,14 @@ pub fn query(loader: &Loader, report_path: &Path) {
     write_csv!(report_path, unsafe_thir_blocks);
     info!("Saved unsafe thir block report.");
 
-
     let unsafe_thir_statements = || {
         let thir_statements = loader.load_iter_thir_stmts();
-        thir_statements
-            .filter_map(|(stmt, _block, closest_unsafe_block, index)| {
-                let &(build, check_mode) = unsafe_thir_block_to_build_and_checkmode.get(&closest_unsafe_block)?;
-                
-                Some((build, stmt, closest_unsafe_block, index, check_mode))
-            })
+        thir_statements.filter_map(|(stmt, _block, closest_unsafe_block, index)| {
+            let &(build, check_mode) =
+                unsafe_thir_block_to_build_and_checkmode.get(&closest_unsafe_block)?;
+
+            Some((build, stmt, closest_unsafe_block, index, check_mode))
+        })
     };
 
     loader.store_iter_unsafe_thir_stmts(unsafe_thir_statements());

@@ -93,30 +93,26 @@ fn report_all_calls(loader: &Loader, report_path: &Path) {
     let summary_keys = loader.load_summary_keys();
 
     let all_calls = loader.load_iter_thir_exprs_call();
-    let all_thir_calls = all_calls.map(
-        |(call, _fun_type, fun, unsafety, abi, _return_ty)| {
-            let (call_target, is_trait_item) = if let Some(target) =
-                fun_to_const_target_map.get(fun)
-            {
-                let (_crate_name, _crate_hash, _relative_def_path, _def_path_hash, summary_key) =
-                    def_paths.get_unwrap(target);
-                (
-                    strings.get_unwrap(summary_keys.get_unwrap(summary_key)),
-                    trait_items.contains(&target),
-                )
-            } else {
-                ("non-const".into(), false)
-            };
+    let all_thir_calls = all_calls.map(|(call, _fun_type, fun, unsafety, abi, _return_ty)| {
+        let (call_target, is_trait_item) = if let Some(target) = fun_to_const_target_map.get(fun) {
+            let (_crate_name, _crate_hash, _relative_def_path, _def_path_hash, summary_key) =
+                def_paths.get_unwrap(target);
             (
-                call,
-                fun,
-                unsafety.to_string(),
-                strings.get_unwrap(abis.get_unwrap(abi)).to_string(),
-                call_target,
-                is_trait_item,
+                strings.get_unwrap(summary_keys.get_unwrap(summary_key)),
+                trait_items.contains(&target),
             )
-        },
-    );
+        } else {
+            ("non-const".into(), false)
+        };
+        (
+            call,
+            fun,
+            unsafety.to_string(),
+            strings.get_unwrap(abis.get_unwrap(abi)).to_string(),
+            call_target,
+            is_trait_item,
+        )
+    });
     write_csv!(report_path, all_thir_calls);
 }
 

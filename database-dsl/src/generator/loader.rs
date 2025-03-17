@@ -20,7 +20,10 @@ pub(super) fn generate_loader_functions(
 
         // names to provide basic doc comments
         let names = parameters.iter().map(|param| &param.name);
-        let names = names.map(|name| name.to_string()).collect::<Vec<_>>().join(", ");
+        let names = names
+            .map(|name| name.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
         let iter_doc_comment = format!("Stream over the relation with idents `({})`.", names);
         let load_doc_comment = format!("Load the relation with idents `({})`.", names);
         let store_doc_comment = format!("Store the relation with idents `({})`. Note that any RelationMaps derived from this relation will not be updated during this run.", names);
@@ -30,7 +33,8 @@ pub(super) fn generate_loader_functions(
         let load_fn_name = syn::Ident::new(&format!("load_{}", name), Span::call_site());
         let load_iter_fn_name = syn::Ident::new(&format!("load_iter_{}", name), Span::call_site());
         let store_fn_name = syn::Ident::new(&format!("store_{}", name), Span::call_site());
-        let store_iter_fn_name = syn::Ident::new(&format!("store_iter_{}", name), Span::call_site());
+        let store_iter_fn_name =
+            syn::Ident::new(&format!("store_iter_{}", name), Span::call_site());
         let mut types = TokenStream::new();
         for ast::RelationParameter { typ, .. } in parameters {
             types.extend(quote! {#typ,});
@@ -104,12 +108,11 @@ pub(super) fn generate_loader_functions(
             let value_ident_names = value_ident_names.join(", ");
             let load_relation_map_doc_comment = format!(
                 "Load the map `{} => ({})` as a map.",
-                key_ident_name,
-                value_ident_names
+                key_ident_name, value_ident_names
             );
 
-
-            let relation_map_name = syn::Ident::new(&format!("{}_relation_map", name), Span::call_site());
+            let relation_map_name =
+                syn::Ident::new(&format!("{}_relation_map", name), Span::call_site());
             let relation_map_hash = relation_hash;
             let relation_map_file_name = format!("relations/{}_relation_map", name);
             let load_relation_map_fn_name =

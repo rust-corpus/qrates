@@ -13,9 +13,12 @@ pub fn query(loader: &Loader, report_path: &Path) {
             types::ClosureKind::Fn => fn_count += 1,
             types::ClosureKind::FnMut => fnmut_count += 1,
             types::ClosureKind::FnOnce => fnonce_count += 1,
-            types::ClosureKind::Unknown => {},
+            types::ClosureKind::Unknown => {}
         }
     }
     // Note: This query counts over _all_ builds, not just the selected builds.
-    info!("[all builds] fn_count = {}, fnmut_count = {}, fnonce_count = {}", fn_count, fnmut_count, fnonce_count);
+    info!(
+        "[all builds] fn_count = {}, fnmut_count = {}, fnonce_count = {}",
+        fn_count, fnmut_count, fnonce_count
+    );
 }

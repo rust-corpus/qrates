@@ -1,7 +1,10 @@
 //! This module provides a whole bunch of implementations for RelationElement<T>, where T is a tuple of a large length.
 //! In particular, the tuple may be longer that stdlib's limit of 12 elements for default trait implementations.
 
-use std::{fmt::Debug, ops::{Deref, DerefMut}};
+use std::{
+    fmt::Debug,
+    ops::{Deref, DerefMut},
+};
 
 use serde_derive::{Deserialize, Serialize};
 
@@ -17,8 +20,6 @@ impl<T> VecOfRelationElementAdapter<T> for Vec<RelationElement<T>> {
     fn vec_into_inner(self) -> Vec<T> {
         self.into_iter().map(|x| x.into_inner()).collect()
     }
-
-
 }
 
 impl<T> VecIntoRelationElementAdapter<T> for Vec<T> {
@@ -26,7 +27,6 @@ impl<T> VecIntoRelationElementAdapter<T> for Vec<T> {
         self.into_iter().map(|x| x.into()).collect()
     }
 }
-
 
 // This is unfortunately needed because we need trait impls for tuples of length > 12.
 #[derive(Copy, Clone, Deserialize, Serialize)]
@@ -64,26 +64,26 @@ impl<T> From<T> for RelationElement<T> {
 
 // Stolen from redb/src/tuple_types.rs: https://github.com/cberner/redb/blob/0358e491c007429d4c6bab227d03d8b0398bf5dd/src/tuple_types.rs
 mod redb_key_value_impls {
+    use super::RelationElement;
     use redb::{Key, TypeName, Value};
     use std::borrow::Borrow;
     use std::cmp::Ordering;
     use std::mem::size_of;
-    use super::RelationElement;
-    
+
     fn serialize_tuple_elements_variable(slices: &[&[u8]]) -> Vec<u8> {
         let total_len: usize = slices.iter().map(|x| x.len()).sum();
         let mut output = Vec::with_capacity((slices.len() - 1) * size_of::<u32>() + total_len);
         for len in slices.iter().map(|x| x.len()).take(slices.len() - 1) {
             output.extend_from_slice(&(u32::try_from(len).unwrap()).to_le_bytes());
         }
-    
+
         for slice in slices {
             output.extend_from_slice(slice);
         }
-    
+
         output
     }
-    
+
     fn serialize_tuple_elements_fixed(slices: &[&[u8]]) -> Vec<u8> {
         let total_len: usize = slices.iter().map(|x| x.len()).sum();
         let mut output = Vec::with_capacity(total_len);
@@ -92,7 +92,7 @@ mod redb_key_value_impls {
         }
         output
     }
-    
+
     fn parse_lens<const N: usize>(data: &[u8]) -> [usize; N] {
         let mut result = [0; N];
         for i in 0..N {
@@ -100,7 +100,7 @@ mod redb_key_value_impls {
         }
         result
     }
-    
+
     fn not_equal<T: Key>(data1: &[u8], data2: &[u8]) -> Option<Ordering> {
         match T::compare(data1, data2) {
             Ordering::Less => Some(Ordering::Less),
@@ -108,7 +108,7 @@ mod redb_key_value_impls {
             Ordering::Greater => Some(Ordering::Greater),
         }
     }
-    
+
     macro_rules! fixed_width_impl {
         ( $( $t:ty ),+ ) => {
             {
@@ -120,7 +120,7 @@ mod redb_key_value_impls {
             }
         };
     }
-    
+
     macro_rules! as_bytes_impl {
         ( $value:expr, $( $t:ty, $i:tt ),+ ) => {{
             if Self::fixed_width().is_some() {
@@ -138,7 +138,7 @@ mod redb_key_value_impls {
             }
         }};
     }
-    
+
     // Using TypeName's Debug impl because .name() is private.
     macro_rules! type_name_impl {
         ( $head:ty $(,$tail:ty)* ) => {
@@ -151,12 +151,12 @@ mod redb_key_value_impls {
                     result.push_str(&format!("{:?}", <$tail>::type_name()));
                 )*
                 result.push_str(")>");
-    
+
                 TypeName::new(&result)
             }
         };
     }
-    
+
     macro_rules! from_bytes_variable_impl {
         ( $data:expr $(,$t:ty, $v:ident, $i:literal )+ | $t_last:ty, $v_last:ident, $i_last:literal ) => {
             #[allow(clippy::manual_bits)]
@@ -177,7 +177,7 @@ mod redb_key_value_impls {
             }
         };
     }
-    
+
     macro_rules! from_bytes_fixed_impl {
         ( $data:expr $(,$t:ty, $v:ident )+ ) => {
             {
@@ -190,14 +190,14 @@ mod redb_key_value_impls {
                         offset += len;
                     }
                 )+
-    
+
                 ($(
                     $v,
                 )+).into()
             }
         };
     }
-    
+
     macro_rules! compare_variable_impl {
         ( $data0:expr, $data1:expr $(,$t:ty, $i:literal )+ | $t_last:ty, $i_last:literal ) => {
             #[allow(clippy::manual_bits)]
@@ -219,12 +219,12 @@ mod redb_key_value_impls {
                     offset0 += len0;
                     offset1 += len1;
                 )+
-    
+
                 <$t_last>::compare(&$data0[offset0..], &$data1[offset1..])
             }
         };
     }
-    
+
     macro_rules! compare_fixed_impl {
         ( $data0:expr, $data1:expr, $($t:ty),+ ) => {
             {
@@ -244,12 +244,12 @@ mod redb_key_value_impls {
                         offset1 += len;
                     }
                 )+
-    
+
                 Ordering::Equal
             }
         };
     }
-    
+
     macro_rules! tuple_impl {
         ( $($t:ident, $v:ident, $i:tt ),+ | $t_last:ident, $v_last:ident, $i_last:tt ) => {
             impl<$($t: Value,)+ $t_last: Value> Value for RelationElement<($($t,)+ $t_last)> {
@@ -262,11 +262,11 @@ mod redb_key_value_impls {
                 type AsBytes<'a> = Vec<u8>
                 where
                     Self: 'a;
-    
+
                 fn fixed_width() -> Option<usize> {
                     fixed_width_impl!($($t,)+ $t_last)
                 }
-    
+
                 fn from_bytes<'a>(data: &'a [u8]) -> Self::SelfType<'a>
                 where
                     Self: 'a,
@@ -277,7 +277,7 @@ mod redb_key_value_impls {
                         from_bytes_variable_impl!(data $(,$t,$v,$i)+ | $t_last, $v_last, $i_last)
                     }
                 }
-    
+
                 fn as_bytes<'a, 'b: 'a>(value: &'a Self::SelfType<'b>) -> Vec<u8>
                 where
                     Self: 'a,
@@ -285,12 +285,12 @@ mod redb_key_value_impls {
                 {
                     as_bytes_impl!(value, $($t,$i,)+ $t_last, $i_last)
                 }
-    
+
                 fn type_name() -> TypeName {
                     type_name_impl!($($t,)+ $t_last)
                 }
             }
-    
+
             impl<$($t: Key,)+ $t_last: Key> Key for RelationElement<($($t,)+ $t_last)> {
                 fn compare(data1: &[u8], data2: &[u8]) -> Ordering {
                     if Self::fixed_width().is_some() {
@@ -302,25 +302,25 @@ mod redb_key_value_impls {
             }
         };
     }
-    
+
     tuple_impl! {
         T0, t0, 0
         | T1, t1, 1
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1
         | T2, t2, 2
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1,
         T2, t2, 2
         | T3, t3, 3
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1,
@@ -328,7 +328,7 @@ mod redb_key_value_impls {
         T3, t3, 3
         | T4, t4, 4
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1,
@@ -337,7 +337,7 @@ mod redb_key_value_impls {
         T4, t4, 4
         | T5, t5, 5
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1,
@@ -347,7 +347,7 @@ mod redb_key_value_impls {
         T5, t5, 5
         | T6, t6, 6
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1,
@@ -358,7 +358,7 @@ mod redb_key_value_impls {
         T6, t6, 6
         | T7, t7, 7
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1,
@@ -370,7 +370,7 @@ mod redb_key_value_impls {
         T7, t7, 7
         | T8, t8, 8
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1,
@@ -383,7 +383,7 @@ mod redb_key_value_impls {
         T8, t8, 8
         | T9, t9, 9
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1,
@@ -397,7 +397,7 @@ mod redb_key_value_impls {
         T9, t9, 9
         | T10, t10, 10
     }
-    
+
     tuple_impl! {
         T0, t0, 0,
         T1, t1, 1,
@@ -619,24 +619,26 @@ mod redb_key_value_impls {
     }
 
     impl<T0: Value> Value for RelationElement<(T0,)> {
-        type SelfType<'a> = RelationElement<(T0::SelfType<'a>,)>
+        type SelfType<'a>
+            = RelationElement<(T0::SelfType<'a>,)>
         where
             Self: 'a;
-        type AsBytes<'a> = Vec<u8>
+        type AsBytes<'a>
+            = Vec<u8>
         where
             Self: 'a;
-    
+
         fn fixed_width() -> Option<usize> {
             T0::fixed_width()
         }
-    
+
         fn from_bytes<'a>(data: &'a [u8]) -> Self::SelfType<'a>
         where
             Self: 'a,
         {
             (T0::from_bytes(data),).into()
         }
-    
+
         fn as_bytes<'a, 'b: 'a>(value: &'a Self::SelfType<'b>) -> Vec<u8>
         where
             Self: 'a,
@@ -644,19 +646,18 @@ mod redb_key_value_impls {
         {
             as_bytes_impl!(value, T0, 0)
         }
-    
+
         fn type_name() -> TypeName {
             type_name_impl!(T0)
         }
     }
-    
+
     impl<T0: Key> Key for RelationElement<(T0,)> {
         fn compare(data1: &[u8], data2: &[u8]) -> Ordering {
             not_equal::<T0>(data1, data2).unwrap_or(Ordering::Equal)
         }
     }
 }
-
 
 // Stolen from rust stdlib src/fmt/mod.rs
 macro_rules! peel {
@@ -681,7 +682,6 @@ macro_rules! tuple {
         peel! { $($name,)+ }
     )
 }
-
 
 // up to 25
 tuple! { T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, T23, T24, T25, }
@@ -776,7 +776,6 @@ mod eq_impls {
         }
     }
 
-
     // Constructs an expression that performs a lexical ordering using method `$rel`.
     // The values are interleaved, so the macro invocation for
     // `(a1, a2, a3) < (b1, b2, b3)` would be `lexical_ord!(lt, opt_is_lt, a1, b1,
@@ -816,7 +815,6 @@ mod eq_impls {
         ($a:expr, $b:expr) => { ($a).cmp(&$b) };
     }
 
-
     tuple_impls! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 T20 T21 T22 T23 T24 T25 }
 }
 
@@ -837,7 +835,6 @@ mod hash_impls {
                 }
         );
     }
-
 
     impl_hash_tuple! { T1 }
     impl_hash_tuple! { T1 T2 }
@@ -860,5 +857,4 @@ mod hash_impls {
     impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 }
     impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 T20 }
     impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 T20 T21 }
-
 }

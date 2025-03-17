@@ -140,7 +140,10 @@ fn generate_enum_types(schema: &ast::DatabaseSchema) -> TokenStream {
             ));
         }
         let item_names = new_item.variants.iter().map(|variant| &variant.ident);
-        let item_discriminants = new_item.variants.iter().map(|variant| variant.discriminant.as_ref().unwrap().1.clone());
+        let item_discriminants = new_item
+            .variants
+            .iter()
+            .map(|variant| variant.discriminant.as_ref().unwrap().1.clone());
         let enum_tokens = quote! {
 
             #[repr(u8)]

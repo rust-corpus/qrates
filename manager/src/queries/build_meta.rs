@@ -11,8 +11,13 @@ fn report_build_categories(loader: &Loader, report_path: &Path) {
     let strings = loader.load_strings();
 
     let categories = loader.load_iter_crate_categories();
-    let categories = categories
-        .map(|(build, category)| (build, build_resolver.resolve(build), strings.get_unwrap(category)));
+    let categories = categories.map(|(build, category)| {
+        (
+            build,
+            build_resolver.resolve(build),
+            strings.get_unwrap(category),
+        )
+    });
 
     write_csv!(report_path, categories);
 }
@@ -22,8 +27,13 @@ fn report_build_keywords(loader: &Loader, report_path: &Path) {
     let strings = loader.load_strings();
 
     let keywords = loader.load_iter_crate_keywords();
-    let keywords = keywords
-        .map(|(build, keyword)| (build, build_resolver.resolve(build), strings.get_unwrap(keyword)));
+    let keywords = keywords.map(|(build, keyword)| {
+        (
+            build,
+            build_resolver.resolve(build),
+            strings.get_unwrap(keyword),
+        )
+    });
 
     write_csv!(report_path, keywords);
 }

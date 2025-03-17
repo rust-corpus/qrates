@@ -53,7 +53,7 @@ fn count_called_functions(loader: &Loader) {
             (build, block, check_mode, group.count().try_into().unwrap())
         })
         .collect();
-    
+
     info!(
         "Number of unsafe thir blocks with calls: {}",
         unsafe_thir_block_call_counts_relation.len()
@@ -71,7 +71,6 @@ fn count_called_functions(loader: &Loader) {
     // }
     let expr_to_call_data = loader.load_thir_exprs_call_relation_map();
 
-
     let mut unsafe_thir_block_call_counts_map = HashMap::new();
     for (expr, _, closest_unsafe_block, _, _) in loader.load_iter_thir_exprs() {
         let Some((ty, fun, unsafety, abi, return_ty)) = expr_to_call_data.get(expr) else {
@@ -81,18 +80,30 @@ fn count_called_functions(loader: &Loader) {
             continue;
         };
 
-
-        let count = unsafe_thir_block_call_counts_map.entry((*build, closest_unsafe_block, *check_mode)).or_insert(0);
+        let count = unsafe_thir_block_call_counts_map
+            .entry((*build, closest_unsafe_block, *check_mode))
+            .or_insert(0);
         *count += 1;
     }
 
     // same as above, but for storing
-    let iter_version = loader.load_iter_thir_exprs().flat_map(|(expr, _, closest_unsafe_block, _, _)| {
-        let (_ty, fun, unsafety, abi, return_ty) = expr_to_call_data.get(expr)?;
-        let (build, check_mode) = unsafe_blocks_to_data.get(&closest_unsafe_block)?;
-        Some((*build, closest_unsafe_block, *check_mode, expr, fun, unsafety, abi, return_ty))
-    });
-
+    let iter_version =
+        loader
+            .load_iter_thir_exprs()
+            .flat_map(|(expr, _, closest_unsafe_block, _, _)| {
+                let (_ty, fun, unsafety, abi, return_ty) = expr_to_call_data.get(expr)?;
+                let (build, check_mode) = unsafe_blocks_to_data.get(&closest_unsafe_block)?;
+                Some((
+                    *build,
+                    closest_unsafe_block,
+                    *check_mode,
+                    expr,
+                    fun,
+                    unsafety,
+                    abi,
+                    return_ty,
+                ))
+            });
 
     info!(
         "Number of unsafe thir blocks with calls: {}",
@@ -119,7 +130,11 @@ fn count_called_functions(loader: &Loader) {
     );
 
     loader.store_iter_unsafe_thir_block_calls(iter_version);
-    loader.store_iter_unsafe_thir_block_call_counts(unsafe_thir_block_call_counts_map.into_iter().map(|((build, block, check_mode), count)| (build, block, check_mode, count)));
+    loader.store_iter_unsafe_thir_block_call_counts(
+        unsafe_thir_block_call_counts_map
+            .into_iter()
+            .map(|((build, block, check_mode), count)| (build, block, check_mode, count)),
+    );
     loader.store_unsafe_thir_block_no_calls(unsafe_thir_block_no_calls_relation);
 }
 

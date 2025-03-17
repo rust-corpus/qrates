@@ -2,6 +2,7 @@ use crate::ast;
 use proc_macro2::TokenStream;
 use quote::quote;
 
+mod conversions;
 mod counters;
 mod debug;
 mod interning_tables;
@@ -12,7 +13,6 @@ mod relations;
 mod storage;
 mod types;
 mod utils;
-mod conversions;
 
 pub(crate) fn generate_tokens(schema: ast::DatabaseSchema) -> TokenStream {
     let types = types::generate_types(&schema);

@@ -6,14 +6,12 @@
 
 extern crate rustc_driver;
 extern crate rustc_interface;
-extern crate rustc_session;
 extern crate rustc_middle;
+extern crate rustc_session;
 
 use corpus_extractor::{analyse, override_queries, save_cfg_configuration};
 use rustc_driver::Compilation;
-use rustc_interface::{
-    interface::{Compiler, Config},
-};
+use rustc_interface::interface::{Compiler, Config};
 use rustc_middle::ty::TyCtxt;
 use rustc_session::EarlyDiagCtxt;
 use std::process;
@@ -25,11 +23,7 @@ impl rustc_driver::Callbacks for CorpusCallbacks {
         config.override_queries = Some(override_queries);
     }
 
-    fn after_analysis<'tcx>(
-        &mut self,
-        compiler: &Compiler,
-        tcx: TyCtxt<'tcx>,
-    ) -> Compilation {
+    fn after_analysis<'tcx>(&mut self, compiler: &Compiler, tcx: TyCtxt<'tcx>) -> Compilation {
         save_cfg_configuration(&compiler.sess.psess.config);
         analyse(compiler, tcx);
         Compilation::Continue

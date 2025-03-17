@@ -353,7 +353,6 @@ impl<'a, 'tcx> TableFiller<'a, 'tcx> {
                     interned_type
                 }
                 ty::TyKind::UnsafeBinder(_unsafe_binder) => {
-                    
                     let interned_type = self.insert_new_type_into_table("UnsafeBinder", typ);
                     self.tables.register_types_unsafe_binder(interned_type);
                     interned_type

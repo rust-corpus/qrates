@@ -4,7 +4,10 @@
 
 //! Helper functions for serializing and deserializing.
 
-use crate::data_structures::{DiskInterningKey, DiskInterningTable, DiskInterningValue, DiskMapKey, DiskMapValue, InterningTableValue, Relation, RelationMap};
+use crate::data_structures::{
+    DiskInterningKey, DiskInterningTable, DiskInterningValue, DiskMapKey, DiskMapValue,
+    InterningTableValue, Relation, RelationMap,
+};
 use crate::tables::{DiskTables, Tables};
 use crate::{DiskMap, DiskVec};
 use anyhow::{Context, Result};
@@ -95,11 +98,11 @@ impl<K: DiskInterningKey, V: DiskInterningValue> DiskInterningTable<K, V> {
     }
 }
 
-
 impl<K, V> RelationMap<K, V>
-where K: DiskMapKey,
-V: DiskMapValue,
-for<'a>&'a K: Borrow<<K as redb::Value>::SelfType<'a>>
+where
+    K: DiskMapKey,
+    V: DiskMapValue,
+    for<'a> &'a K: Borrow<<K as redb::Value>::SelfType<'a>>,
 {
     pub fn save(&mut self, relation_hash: u64, path: std::path::PathBuf) {
         self.map.set_expected_hash(relation_hash);
@@ -112,8 +115,6 @@ for<'a>&'a K: Borrow<<K as redb::Value>::SelfType<'a>>
         assert_eq!(relation_hash, Some(expected_relation_hash), "DiskMap hash check failed. The database was likely generated with a different version of your schema.");
         Ok(Self { map })
     }
-
-
 }
 
 impl Tables {
@@ -139,7 +140,10 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         if path == self.path() {
             // already saved
             // TODO: could remove this restriction.
-            assert!(!self.is_temp_map, "Cannot save a temporary map to its temporary path");
+            assert!(
+                !self.is_temp_map,
+                "Cannot save a temporary map to its temporary path"
+            );
             return;
         }
 
@@ -173,7 +177,10 @@ impl<V: DiskMapValue> DiskVec<V> {
 #[cfg(test)]
 mod tests {
 
-    use crate::{data_structures::{DiskMapValue, Relation}, set_disk_map_temp_dir_root};
+    use crate::{
+        data_structures::{DiskMapValue, Relation},
+        set_disk_map_temp_dir_root,
+    };
 
     fn init() {
         let mut t = std::env::temp_dir();

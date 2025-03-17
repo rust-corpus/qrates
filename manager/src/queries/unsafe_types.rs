@@ -37,24 +37,23 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
         .unwrap();
     let get_unsafe_cell_types_relation = || {
         loader
-        .load_iter_types_adt_def()
-        .filter_map(|(typ, def_path, _, _, _)| {
-            let (_, _, _, _, def_path_summary) = def_paths.get_unwrap(def_path);
-            if def_path_summary == unsafe_cell_summary_id {
-                Some((typ, def_path))
-            } else {
-                None
-            }
-        })
+            .load_iter_types_adt_def()
+            .filter_map(|(typ, def_path, _, _, _)| {
+                let (_, _, _, _, def_path_summary) = def_paths.get_unwrap(def_path);
+                if def_path_summary == unsafe_cell_summary_id {
+                    Some((typ, def_path))
+                } else {
+                    None
+                }
+            })
     };
 
     let def_path_resolver = DefPathResolver::new(loader);
     let mut count = 0;
-    let unsafe_cell_types = get_unsafe_cell_types_relation()
-        .map(|(typ, def_path)| {
-            count += 1;
-            (typ, def_path_resolver.resolve(def_path))
-        });
+    let unsafe_cell_types = get_unsafe_cell_types_relation().map(|(typ, def_path)| {
+        count += 1;
+        (typ, def_path_resolver.resolve(def_path))
+    });
     write_csv!(report_path, unsafe_cell_types);
     info!("Number of UnsafeCell types: {}", count);
     loader.store_iter_types_unsafe_cell(get_unsafe_cell_types_relation());
@@ -63,15 +62,15 @@ fn collect_unsafe_cell_types(loader: &Loader, report_path: &Path) {
 fn collect_union_types(loader: &Loader) {
     let mut count = 0;
     let union_types = loader
-    .load_iter_types_adt_def()
-    .filter_map(|(typ, def_path, kind, _, _)| {
-        if kind == types::AdtKind::Union {
-            count += 1;
-            Some((typ, def_path))
-        } else {
-            None
-        }
-    });
+        .load_iter_types_adt_def()
+        .filter_map(|(typ, def_path, kind, _, _)| {
+            if kind == types::AdtKind::Union {
+                count += 1;
+                Some((typ, def_path))
+            } else {
+                None
+            }
+        });
 
     loader.store_iter_types_union(union_types);
     info!("Number of union types: {}", count);
@@ -97,7 +96,9 @@ fn collect_unsafe_types(loader: &Loader) {
     let mut modified = true;
     while modified {
         modified = false;
-        for (field, adt, index, def_path, ident, visibility, typ) in loader.load_iter_types_adt_field() {
+        for (field, adt, index, def_path, ident, visibility, typ) in
+            loader.load_iter_types_adt_field()
+        {
             if visibility == types::TyVisibility::Public && unsafe_types.contains(&typ) {
                 modified |= unsafe_types.insert(adt);
             }
@@ -123,7 +124,6 @@ fn collect_unsafe_types(loader: &Loader) {
             }
         }
     }
-
 
     info!("Number of unsafe types: {}", unsafe_types.len());
     loader.store_iter_unsafe_types(unsafe_types.into_iter().map(|typ| (typ,)));
@@ -164,10 +164,7 @@ fn report_unsafe_type_defs(loader: &Loader, report_path: &Path) {
 }
 
 fn collect_safe_wrapper_types(loader: &Loader) {
-    let unsafe_types: HashSet<_> = loader
-        .load_iter_unsafe_types()
-        .map(|(typ,)| typ)
-        .collect();
+    let unsafe_types: HashSet<_> = loader.load_iter_unsafe_types().map(|(typ,)| typ).collect();
 
     // Datapond way: (1.1GB)
 
@@ -233,7 +230,8 @@ fn collect_safe_wrapper_types(loader: &Loader) {
     let mut adt_with_unsafe_field = HashSet::new();
     let mut adt_with_public_unsafe_field = HashSet::new();
 
-    for (field, adt, index, def_path, ident, visibility, typ) in loader.load_iter_types_adt_field() {
+    for (field, adt, index, def_path, ident, visibility, typ) in loader.load_iter_types_adt_field()
+    {
         if unsafe_types.contains(&typ) {
             adt_with_unsafe_field.insert(adt);
             if visibility == types::TyVisibility::Public {
@@ -244,11 +242,11 @@ fn collect_safe_wrapper_types(loader: &Loader) {
 
     let mut count = 0;
     let safe_wrapper_types = adt_with_unsafe_field
-    .difference(&adt_with_public_unsafe_field)
-    .map(|&typ| {
-        count += 1;
-        (typ,)
-    });
+        .difference(&adt_with_public_unsafe_field)
+        .map(|&typ| {
+            count += 1;
+            (typ,)
+        });
 
     loader.store_iter_safe_wrapper_types(safe_wrapper_types);
     info!("Number of safe wrapper types: {}", count);

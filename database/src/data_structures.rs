@@ -52,14 +52,18 @@ impl<T: DiskMapValue> Relation<T> {
         Self { facts }
     }
 
-    pub fn from_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = T>) -> Self {
+    pub fn from_iter_override(
+        path: impl AsRef<std::path::Path>,
+        iter: impl IntoIterator<Item = T>,
+    ) -> Self {
         let facts = DiskVec::from_iter_override(path, iter);
         Self { facts }
     }
 }
 
 impl<T> Relation<RelationElement<T>>
-    where RelationElement<T>: DiskMapValue
+where
+    RelationElement<T>: DiskMapValue,
 {
     pub fn into_tuple_vec(self) -> Vec<T> {
         self.iter().collect()
@@ -71,8 +75,12 @@ impl<T> Relation<RelationElement<T>>
         self.facts.iter().map(|re| re.into_inner())
     }
 
-    pub fn from_tuple_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = T>) -> Self {
-        let facts: DiskVec<RelationElement<T>> = DiskVec::from_iter_override(path, iter.into_iter().map(RelationElement));
+    pub fn from_tuple_iter_override(
+        path: impl AsRef<std::path::Path>,
+        iter: impl IntoIterator<Item = T>,
+    ) -> Self {
+        let facts: DiskVec<RelationElement<T>> =
+            DiskVec::from_iter_override(path, iter.into_iter().map(RelationElement));
         Self { facts }
     }
 }
@@ -84,13 +92,13 @@ impl<T: DiskMapValue> Into<Vec<T>> for Relation<T> {
 }
 
 impl<T: DiskMapValue> Into<Vec<T>> for Relation<RelationElement<T>>
-where RelationElement<T>: DiskMapValue
+where
+    RelationElement<T>: DiskMapValue,
 {
     fn into(self) -> Vec<T> {
         self.into_tuple_vec()
     }
 }
-
 
 impl<T: DiskMapValue> From<Vec<T>> for Relation<T> {
     fn from(facts: Vec<T>) -> Self {
@@ -112,29 +120,33 @@ where
 }
 
 pub struct RelationMap<K, V>
-where K: DiskMapKey,
-        V: DiskMapValue,
+where
+    K: DiskMapKey,
+    V: DiskMapValue,
 {
     pub(crate) map: DiskMap<K, V>,
 }
 
 impl<K, V> Default for RelationMap<K, V>
-where K: DiskMapKey,
-        V: DiskMapValue,
+where
+    K: DiskMapKey,
+    V: DiskMapValue,
 {
     fn default() -> Self {
         let map = DiskMap::create_temp();
-        Self {
-            map,
-        }
+        Self { map }
     }
 }
 
 impl<K, V> RelationMap<K, V>
-where K: DiskMapKey,
-        V: DiskMapValue,
+where
+    K: DiskMapKey,
+    V: DiskMapValue,
 {
-    pub fn from_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = (K, V)>) -> Self {
+    pub fn from_iter_override(
+        path: impl AsRef<std::path::Path>,
+        iter: impl IntoIterator<Item = (K, V)>,
+    ) -> Self {
         let map = DiskMap::from_iter_override(path, iter);
         Self { map }
     }
@@ -157,8 +169,9 @@ pub trait DiskInterningValue: DiskMapValue + DiskMapKey {}
 impl<T> DiskInterningValue for T where T: DiskMapValue + DiskMapKey {}
 
 pub struct DiskInterningTable<K, V>
-where K: DiskInterningKey,
-        V: DiskInterningValue
+where
+    K: DiskInterningKey,
+    V: DiskInterningValue,
 {
     // TODO: optimization: Instead of using two DiskMaps (DiskVec is backed by DiskMap), could we just add a second index to a single diskmap?
     // The only reason we need `contents` is for `get`ting the value from the key.
@@ -222,10 +235,7 @@ where
         let inv_map_path = Self::get_inv_map_path(path.as_ref());
         let contents = DiskVec::create_override(contents_path);
         let inv_map = DiskMap::create_override(inv_map_path);
-        Self {
-            contents,
-            inv_map,
-        }
+        Self { contents, inv_map }
     }
 
     pub(crate) fn get_contents_path(path: impl AsRef<std::path::Path>) -> PathBuf {
@@ -371,22 +381,49 @@ where
     V: InterningTableValue,
 {
     fn into(self) -> Vec<(K, V)> {
-        self.contents.iter().enumerate().map(|(k, v)| (k.into(), v.clone())).collect()
+        self.contents
+            .iter()
+            .enumerate()
+            .map(|(k, v)| (k.into(), v.clone()))
+            .collect()
     }
 }
 
-
-pub trait DiskMapKey: Clone + Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
-impl<T> DiskMapKey for T where T: Clone + Eq + std::hash::Hash + redb::Key + 'static + for<'a> Borrow<Self::SelfType<'a>> + for<'a> redb::Value<SelfType<'a> = Self> {}
-pub trait DiskMapValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static {}
-impl<T> DiskMapValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static {}
+pub trait DiskMapKey:
+    Clone
+    + Eq
+    + std::hash::Hash
+    + redb::Key
+    + 'static
+    + for<'a> Borrow<Self::SelfType<'a>>
+    + for<'a> redb::Value<SelfType<'a> = Self>
+{
+}
+impl<T> DiskMapKey for T where
+    T: Clone
+        + Eq
+        + std::hash::Hash
+        + redb::Key
+        + 'static
+        + for<'a> Borrow<Self::SelfType<'a>>
+        + for<'a> redb::Value<SelfType<'a> = Self>
+{
+}
+pub trait DiskMapValue:
+    Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static
+{
+}
+impl<T> DiskMapValue for T where
+    T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static
+{
+}
 
 /// DiskMap<K, V> is essentially a HashMap<K, V> that is backed by a disk file.
-/// 
+///
 /// Currently it uses a redb::Database backend, and as such it needs a file path to live.
 /// If no path is provided (e.g., from `DiskMap::create_temp()` or various std traits like Default or FromIterator),
-/// then the DiskMap will be created in a temporary directory that will be deleted when the DiskMap is dropped. 
-/// 
+/// then the DiskMap will be created in a temporary directory that will be deleted when the DiskMap is dropped.
+///
 /// The functions panic whenever an unexpected database-related error occurs.
 pub struct DiskMap<K, V>
 where
@@ -486,7 +523,9 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         {
             let table_def: TableDefinition<u64, u64> = TableDefinition::new(Self::HASH_TABLE_NAME);
             let mut table = write_txn.open_table(table_def).unwrap();
-            table.insert(Self::EXPECTED_HASH_KEY, expected_hash).unwrap();
+            table
+                .insert(Self::EXPECTED_HASH_KEY, expected_hash)
+                .unwrap();
         }
         write_txn.commit().unwrap();
     }
@@ -509,14 +548,20 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     /// Create a new DiskMap from an iterator of key-value pairs. Destroys the file at path if it exists.
-    pub fn from_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = (K, V)>) -> Self {
+    pub fn from_iter_override(
+        path: impl AsRef<std::path::Path>,
+        iter: impl IntoIterator<Item = (K, V)>,
+    ) -> Self {
         let mut map = Self::create_override(path);
         map.insert_iter(iter);
         map
     }
 
     /// Create a new DiskMap from an iterator of key-value pairs. If the file at path exists, it will be opened.
-    pub fn from_iter_append(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = (K, V)>) -> Self {
+    pub fn from_iter_append(
+        path: impl AsRef<std::path::Path>,
+        iter: impl IntoIterator<Item = (K, V)>,
+    ) -> Self {
         let mut map = Self::create_or_open(path);
         map.insert_iter(iter);
         map
@@ -527,7 +572,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         self.flush();
 
         let write_txn = self.db.begin_write().unwrap();
-        
+
         {
             let table_def: TableDefinition<K, V> = TableDefinition::new(Self::DATA_TABLE_NAME);
             let mut table = write_txn.open_table(table_def).unwrap();
@@ -549,7 +594,7 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
 
     pub(crate) fn flush(&mut self) {
         let write_txn = self.db.begin_write().unwrap();
-        
+
         {
             let table_def: TableDefinition<K, V> = TableDefinition::new(Self::DATA_TABLE_NAME);
             let mut table = write_txn.open_table(table_def).unwrap();
@@ -579,7 +624,10 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     }
 
     pub fn len(&self) -> u64 {
-        assert!(self.write_cache.is_empty(), "DiskMap write cache not empty during len() call");
+        assert!(
+            self.write_cache.is_empty(),
+            "DiskMap write cache not empty during len() call"
+        );
 
         let table = self.open_data_table_ro();
 
@@ -588,7 +636,10 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
 
     pub fn iter(&self) -> impl Iterator<Item = (K, V)> {
         #[cfg(not(test))]
-        assert!(self.write_cache.is_empty(), "DiskMap write cache not empty during iter() call");
+        assert!(
+            self.write_cache.is_empty(),
+            "DiskMap write cache not empty during iter() call"
+        );
 
         let table = self.open_data_table_ro();
         let mut persistent_iter = table.range::<K>(..).unwrap().map(|res| {
@@ -617,8 +668,12 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
                     }
                 }
                 // Then consume the remaining write cache.
-    
-                write_cache_iter.as_mut().unwrap().next().map(|(k, v)| (k.clone(), v.clone()))
+
+                write_cache_iter
+                    .as_mut()
+                    .unwrap()
+                    .next()
+                    .map(|(k, v)| (k.clone(), v.clone()))
             })
         }
 
@@ -626,7 +681,6 @@ impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
         {
             persistent_iter
         }
-
     }
 }
 
@@ -638,10 +692,9 @@ impl<K: DiskMapKey, V: DiskMapValue> FromIterator<(K, V)> for DiskMap<K, V> {
     }
 }
 
-
 /// DiskVec<V> is essentially a Vec<V> that is backed by a disk file.
 /// It is currently backed by DiskMap<u64, V>, where the key is the index of the value in the Vec.
-/// 
+///
 /// An important invariant is that the indices are compact and go from 0..length, i.e. there are no "holes" in the Vec.
 /// Otherwise pushes will overwrite existing values, because the new index is computed from the 'length', and will
 /// overwrite the value at that index in the table.
@@ -653,35 +706,23 @@ pub struct DiskVec<V: DiskMapValue> {
 impl<V: DiskMapValue> DiskVec<V> {
     pub(crate) fn from_map(map: DiskMap<u64, V>) -> Self {
         let length = map.len();
-        Self {
-            map,
-            length,
-        }
+        Self { map, length }
     }
 
     pub fn create_temp() -> Self {
         let map = DiskMap::create_temp();
-        Self {
-            map,
-            length: 0,
-        }
+        Self { map, length: 0 }
     }
 
     pub fn create_override(path: impl AsRef<std::path::Path>) -> Self {
         let map = DiskMap::create_override(path);
-        Self {
-            map,
-            length: 0,
-        }
+        Self { map, length: 0 }
     }
 
     pub fn create_or_open(path: impl AsRef<std::path::Path>) -> Self {
         let map = DiskMap::create_or_open(path);
         let length = map.len();
-        Self {
-            map,
-            length,
-        }
+        Self { map, length }
     }
 
     #[track_caller]
@@ -690,32 +731,43 @@ impl<V: DiskMapValue> DiskVec<V> {
         self.length as usize
     }
 
-    pub fn from_iter_override(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = V>) -> Self {
-        let map = DiskMap::from_iter_override(path, iter.into_iter().enumerate().map(|(k, v)| (k as u64, v)));
+    pub fn from_iter_override(
+        path: impl AsRef<std::path::Path>,
+        iter: impl IntoIterator<Item = V>,
+    ) -> Self {
+        let map = DiskMap::from_iter_override(
+            path,
+            iter.into_iter().enumerate().map(|(k, v)| (k as u64, v)),
+        );
         let length = map.len();
-        Self {
-            map,
-            length,
-        }
+        Self { map, length }
     }
 
-    pub fn from_iter_append(path: impl AsRef<std::path::Path>, iter: impl IntoIterator<Item = V>) -> Self {
+    pub fn from_iter_append(
+        path: impl AsRef<std::path::Path>,
+        iter: impl IntoIterator<Item = V>,
+    ) -> Self {
         let mut map: DiskMap<u64, V> = DiskMap::create_or_open(path);
-        // need to shift the enumerate indices by the old length 
+        // need to shift the enumerate indices by the old length
         let old_length = map.len();
 
-        map.insert_iter(iter.into_iter().enumerate().map(|(k, v)| (k as u64 + old_length as u64, v)));
+        map.insert_iter(
+            iter.into_iter()
+                .enumerate()
+                .map(|(k, v)| (k as u64 + old_length as u64, v)),
+        );
 
         let length = map.len();
-        Self {
-            map,
-            length,
-        }
+        Self { map, length }
     }
 
     pub fn insert_iter(&mut self, iter: impl IntoIterator<Item = V>) {
         let old_length = self.length;
-        self.map.insert_iter(iter.into_iter().enumerate().map(|(k, v)| (k as u64 + old_length, v)));
+        self.map.insert_iter(
+            iter.into_iter()
+                .enumerate()
+                .map(|(k, v)| (k as u64 + old_length, v)),
+        );
         self.length = self.map.len();
     }
 

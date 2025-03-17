@@ -140,7 +140,6 @@ impl Parse for ast::RelationMapKey {
             // Will be filled in later.
             source_idx: 0,
         })
-
     }
 }
 

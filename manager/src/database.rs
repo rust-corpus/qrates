@@ -49,7 +49,10 @@ impl DatabaseManager {
                 .expect("Failed to create the directory for the database relations");
             fs::create_dir_all(&database_root.join("interning"))
                 .expect("Failed to create the directory for the database interning tables");
-            (HashSet::new(), tables::DiskTables::create_in(&database_root).unwrap())
+            (
+                HashSet::new(),
+                tables::DiskTables::create_in(&database_root).unwrap(),
+            )
         };
         Self {
             loaded_crates_path,

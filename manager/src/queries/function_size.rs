@@ -81,8 +81,7 @@ fn collect_function_sizes(loader: &Loader) {
                 if safety != types::BlockSafety::Safe {
                     *build_unsafe_stmt += 1;
                 }
-                if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
-                {
+                if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided {
                     *build_user_unsafe_stmt += 1;
                 }
             }
@@ -95,8 +94,7 @@ fn collect_function_sizes(loader: &Loader) {
                 if safety != types::BlockSafety::Safe {
                     *build_unsafe_stmt += 1;
                 }
-                if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
-                {
+                if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided {
                     *build_user_unsafe_stmt += 1;
                 }
             }
@@ -121,17 +119,18 @@ fn collect_function_sizes(loader: &Loader) {
     //         thir_exprs(.expr=expr, .closest_unsafe_block=closest_unsafe_block).
     // }
 
-    let thir_trailing_expr_to_block: HashMap<_, _> = loader.load_iter_thir_block_expr().flat_map(
-        |(block, expr)| {
+    let thir_trailing_expr_to_block: HashMap<_, _> = loader
+        .load_iter_thir_block_expr()
+        .flat_map(|(block, expr)| {
             if expr == no_thir_expr {
                 None
             } else {
                 Some((expr, block))
             }
-        },
-    ).collect();
+        })
+        .collect();
 
-    for (expr, _, closest_unsafe_block, _, _,) in loader.load_iter_thir_exprs() {
+    for (expr, _, closest_unsafe_block, _, _) in loader.load_iter_thir_exprs() {
         let Some(&block) = thir_trailing_expr_to_block.get(&expr) else {
             continue;
         };
@@ -151,8 +150,7 @@ fn collect_function_sizes(loader: &Loader) {
                 if safety != types::BlockSafety::Safe {
                     *build_unsafe_stmt += 1;
                 }
-                if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
-                {
+                if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided {
                     *build_user_unsafe_stmt += 1;
                 }
             }
@@ -165,53 +163,50 @@ fn collect_function_sizes(loader: &Loader) {
                 if safety != types::BlockSafety::Safe {
                     *build_unsafe_stmt += 1;
                 }
-                if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided
-                {
+                if check_mode == types::BlockCheckMode::UnsafeBlockUserProvided {
                     *build_user_unsafe_stmt += 1;
                 }
             }
         }
     }
 
-    let selected_build_thir_sizes = selected_build_thir_sizes_map
-        .into_iter()
-        .map(|(build, (stmt, unsafe_stmt, user_unsafe_stmt))| {
+    let selected_build_thir_sizes = selected_build_thir_sizes_map.into_iter().map(
+        |(build, (stmt, unsafe_stmt, user_unsafe_stmt))| {
             (build, stmt, unsafe_stmt, user_unsafe_stmt)
-        });
+        },
+    );
     loader.store_iter_selected_build_thir_sizes(selected_build_thir_sizes);
 
-    let selected_function_thir_sizes = selected_function_thir_sizes_map
-        .into_iter()
-        .flat_map(
-            |(thir_body_def_path, (stmt, unsafe_stmt, user_unsafe_stmt))| {
-                function_definitions.get(&thir_body_def_path).map(
-                    |&(
+    let selected_function_thir_sizes = selected_function_thir_sizes_map.into_iter().flat_map(
+        |(thir_body_def_path, (stmt, unsafe_stmt, user_unsafe_stmt))| {
+            function_definitions.get(&thir_body_def_path).map(
+                |&(
+                    build,
+                    item,
+                    def_path,
+                    _module,
+                    visibility,
+                    unsafety,
+                    abi,
+                    _return_ty,
+                    uses_unsafe,
+                )| {
+                    (
                         build,
                         item,
                         def_path,
-                        _module,
                         visibility,
                         unsafety,
                         abi,
-                        _return_ty,
                         uses_unsafe,
-                    )| {
-                        (
-                            build,
-                            item,
-                            def_path,
-                            visibility,
-                            unsafety,
-                            abi,
-                            uses_unsafe,
-                            stmt,
-                            unsafe_stmt,
-                            user_unsafe_stmt,
-                        )
-                    },
-                )
-            },
-        );
+                        stmt,
+                        unsafe_stmt,
+                        user_unsafe_stmt,
+                    )
+                },
+            )
+        },
+    );
 
     loader.store_iter_selected_function_thir_sizes(selected_function_thir_sizes);
 }
