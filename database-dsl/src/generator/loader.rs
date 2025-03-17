@@ -65,7 +65,8 @@ pub(super) fn generate_loader_functions(
             pub fn #store_iter_fn_name(&self, facts: impl IntoIterator<Item = #tuple_element_type>) {
                 // Note: Below restriction could potentially be lifted with enough tests. But we have no use for it right now.
                 assert!(self.#name.borrow().is_none(), "Cannot store a relation that has already been loaded.");
-                let relation = Relation::from_tuple_iter_override(self.database_root.join(#file_name), facts);
+                let mut relation = Relation::from_tuple_iter_override(self.database_root.join(#file_name), facts);
+                relation.save(#relation_hash, self.database_root.join(#file_name));
                 *self.#name.borrow_mut() = Some(relation);
             }
         });
