@@ -41,6 +41,8 @@ Now, if we want to join data from `thir_blocks` and some other relation that has
 
 Note: At the moment there is a restriction of at most one `RelationMap` per relation.
 
+**Warning**: The key for a `RelationMap` should be a primary key. If there are duplicate entries in the key column, only one row will be stored in the `RelationMap`. 
+
 ### `DiskMap`/`DiskVec`
 
 Qrates provides alternative data structures to the `HashMap<K, V>` and `Vec<T>`: The `DiskMap<K, V>` and `DiskVec<T>`.
