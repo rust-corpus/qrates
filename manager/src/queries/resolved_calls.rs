@@ -25,6 +25,7 @@ use std::path::Path;
 /// Further, and perhaps unexpectedly, the path to the target includes generic parameters, but they are simply what the corresponding `impl` block calls them, not the actual types used---these are found in the type generics (here, `&str` is the value of `T`).
 pub fn query(loader: &Loader, report_path: &Path) {
     // TODO: Update this query to use THIR information.
+    // It is not used by the paper.
 
     // let call_target = loader.load_terminators_call_const_target_as_map();
     // let call_target_self = loader.load_terminators_call_const_target_self_as_map();

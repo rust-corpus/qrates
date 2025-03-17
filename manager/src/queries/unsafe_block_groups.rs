@@ -184,12 +184,6 @@ fn report_called_functions(loader: &Loader, report_path: &Path) {
 /// Find all thir calls in unsafe functions that call non-constant targets. In other
 /// words, find all calls that call function pointers.
 fn report_non_const_call_targets(loader: &Loader, report_path: &Path) {
-    // let const_calls: HashSet<_> = loader
-    //     .load_thir_exprs_call_const_target()
-    //     .tuple_iter()
-    //     .map(|(fun, _def_path)| fun)
-    //     .collect();
-
     let const_calls = loader.load_thir_exprs_call_const_target_relation_map();
 
     let build_resolver = BuildResolver::new(loader);

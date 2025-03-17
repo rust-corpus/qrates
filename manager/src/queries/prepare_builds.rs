@@ -94,11 +94,6 @@ pub fn query(loader: &Loader, report_path: &Path, workspace_path: &Path, sources
 
     info!("Number of builds in total: {}", builds.len());
 
-    // use corpus_database::types;
-    // let builds2 = loader.load_builds();
-    // let vec: Vec<((types::Build), (types::Package, types::PackageVersion, types::Krate, types::CrateHash, types::Edition))> = builds2.into();
-
-
 
     for &(build, package, version, krate, crate_hash, edition) in builds.iter() {
         let krate_str = strings.get_unwrap(crate_names.get_unwrap(krate)).to_string();
