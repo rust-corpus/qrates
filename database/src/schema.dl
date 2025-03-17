@@ -49,12 +49,6 @@ inc_id ThirStmt: u64 {
 
 /// The hash of the crate as reported by the compiler.
 custom_id CrateHash: u128 {
-//    impl From<u128> for CrateHash {
-//        fn from(value: u128) -> Self {
-//            Self(value)
-//        }
-//    }
-
     impl std::fmt::LowerHex for CrateHash {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(f, "{:x}", self.0)
@@ -63,11 +57,6 @@ custom_id CrateHash: u128 {
 }
 
 custom_id DefPathHash: u128 {
-//    impl From<u128> for DefPathHash {
-//        fn from(value: u128) -> Self {
-//            Self(value)
-//        }
-//    }
     impl std::fmt::LowerHex for DefPathHash {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             write!(f, "{:x}", self.0)

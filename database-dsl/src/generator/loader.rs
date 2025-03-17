@@ -130,31 +130,6 @@ pub(super) fn generate_loader_functions(
                     std::cell::Ref::map(self.#relation_map_name.borrow(), |option| option.as_ref().unwrap())
                 }
             });
-
-            // let source_idx_str = TokenStream::from_str(&format!("{}", source_idx)).unwrap();
-
-            // let non_source_idxs: Vec<TokenStream> = (0..parameters.len())
-            //     .filter(|idx| *idx != *source_idx)
-            //     .map(|idx| {
-            //         TokenStream::from_str(&format!("{idx}")).unwrap()
-            //     })
-            //     .collect();
-
-            // // also create a storer function for the relation map
-            // let store_relation_map_fn_name =
-            //     syn::Ident::new(&format!("store_{}", relation_map_name), Span::call_site());
-            // function_tokens.extend(quote! {
-            //     pub fn #store_relation_map_fn_name(&self, facts: impl IntoIterator<Item = (#types)>) {
-            //         // create a relation map
-            //         let path = self.database_root.join(#relation_map_file_name);
-            //         let iter = facts.into_iter().map(|fact| {
-            //             (fact.#source_idx_str, (#(fact.#non_source_idxs),*))
-            //         });
-            //         let mut map: RelationMap<#key, #value> = RelationMap::from_iter_override(&path, iter);
-            //         map.save(#relation_map_hash, path);
-
-            //     }
-            // });
         }
     }
     for table in &schema.interning_tables {

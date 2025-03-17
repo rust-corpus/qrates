@@ -303,14 +303,6 @@ fn merge_relations(
             &mut relation_without_target_remap_tokens
         };
         target_tokens.extend(quote! {
-            // for (#params) in other.relations.#name.iter() {
-            //     #params_remap
-            //     #filter_tokens
-            //     self.tables
-            //         .relations
-            //         .#name
-            //         .insert(RelationElement((#new_params)));
-            // }
             self.tables
                     .relations
                     .#name

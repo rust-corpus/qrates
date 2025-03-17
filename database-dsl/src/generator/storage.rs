@@ -26,11 +26,6 @@ pub(super) fn generate_load_save_functions(schema: &ast::DatabaseSchema) -> Toke
                     interning_tables,
                 })
             }
-            // pub fn load_single_file(
-            //     tables_file: &Path
-            // ) -> Result<Tables> {
-            //     Self::load(tables_file)
-            // }
             pub fn store_multifile(&mut self, database_root: &Path) -> Result<()> {
                 let relations_path = database_root.join("relations");
                 std::fs::create_dir_all(&relations_path)?;
@@ -163,18 +158,12 @@ fn store_multifle_interning_function(schema: &ast::DatabaseSchema) -> TokenStrea
     let mut store_fields = TokenStream::new();
     for table in &schema.interning_tables {
         let ast::InterningTable { name, value, .. } = table;
-        // if is_copy_type(value, schema) {
-            let table_hash = table.get_hash();
-            let file_name = name.to_string();
-            store_fields.extend(quote! {
-                { interning_tables.#name.save(#table_hash, path.join(#file_name)); }
-            });
-        // } else {
-        //     let file_name = format!("{}.bincode", name);
-        //     store_fields.extend(quote! {
-        //         crate::storage::save(&interning_tables.#name, &path.join(#file_name));
-        //     });
-        // }
+        let table_hash = table.get_hash();
+        let file_name = name.to_string();
+        store_fields.extend(quote! {
+            { interning_tables.#name.save(#table_hash, path.join(#file_name)); }
+        });
+
     }
     quote! {
         fn store_multifile_interning_tables(

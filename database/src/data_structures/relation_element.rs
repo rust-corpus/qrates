@@ -1,3 +1,6 @@
+//! This module provides a whole bunch of implementations for RelationElement<T>, where T is a tuple of a large length.
+//! In particular, the tuple may be longer that stdlib's limit of 12 elements for default trait implementations.
+
 use std::{fmt::Debug, ops::{Deref, DerefMut}};
 
 use serde_derive::{Deserialize, Serialize};
@@ -770,15 +773,6 @@ mod eq_impls {
                         RE(($($T,)+))
                     }
                 }
-
-                // impl<T> From<($(${ignore($T)} T,)+)> for [T; ${count($T)}] {
-                //     #[inline]
-                //     #[allow(non_snake_case)]
-                //     fn from(tuple: ($(${ignore($T)} T,)+)) -> Self {
-                //         let ($($T,)+) = tuple;
-                //         [$($T,)+]
-                //     }
-                // }
         }
     }
 

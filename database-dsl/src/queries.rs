@@ -184,9 +184,6 @@ fn load_relations(
         });
         let name = &relation.name;
         let load_fn_name = syn::Ident::new(&format!("load_{}", name), Span::call_site());
-        // pre_tokens.extend(quote! {
-        //     let #name = #loader.#load_fn_name().clone().vec_into_inner();
-        // });
         pre_tokens.extend(quote! {
             let #name = #loader.#load_fn_name().to_tuple_vec();
         });

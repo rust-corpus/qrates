@@ -418,14 +418,6 @@ impl<K: DiskMapKey, V: DiskMapValue> Drop for DiskMap<K, V> {
 pub(crate) const DISK_MAP_WRITE_CACHE_SIZE: usize = 100_000;
 pub(crate) const DISK_MAP_REDB_CACHE_SIZE: usize = 50_000_000;
 
-// pub enum DiskMapLoadOptions {
-//     /// If this variant is used, the hash of the file will not be checked and no hash will be created.
-//     NoHashCheck,
-//     /// If this variant is used, the DiskMap will store this hash as the expected hash for future loads
-//     CreateWithHash(u64),
-//     LoadWithHash(u64),
-// }
-
 impl<K: DiskMapKey, V: DiskMapValue> DiskMap<K, V> {
     const HASH_TABLE_NAME: &str = "hash";
     const EXPECTED_HASH_KEY: u64 = 0;
