@@ -280,10 +280,10 @@ where
     }
 }
 
-pub trait InterningTableKey: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> + redb::Key {}
-impl<T> InterningTableKey for T where T: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> + redb::Key {}
-pub trait InterningTableValue: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key +  'static {}
-impl<T> InterningTableValue for T where T: Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + redb::Key + 'static {}
+pub trait InterningTableKey: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> {}
+impl<T> InterningTableKey for T where T: Copy + Eq + std::hash::Hash + From<usize> + Into<usize> {}
+pub trait InterningTableValue: Eq + std::hash::Hash + Clone {}
+impl<T> InterningTableValue for T where T: Eq + std::hash::Hash + Clone {}
 
 #[derive(Deserialize, Serialize)]
 #[serde(from = "Vec<V>")]
@@ -333,7 +333,7 @@ where
 impl<K, V> InterningTable<K, V>
 where
     K: InterningTableKey,
-    V: for<'a> InterningTableValue<SelfType<'a> = V>,
+    V: InterningTableValue,
 {
     pub(crate) fn intern(&mut self, value: V) -> K {
         if self.inv_contents.contains_key(&value) {

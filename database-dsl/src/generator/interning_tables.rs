@@ -49,25 +49,25 @@ pub(super) fn generate_interning_tables(schema: &ast::DatabaseSchema) -> TokenSt
         disk_type_constraints.extend(quote! {
             #type_arg: crate::data_structures::DiskInterningValue,
         });
-        if i == 0 {
-            // don't generate for length 1 tuples
-            continue;
-        }
         conversions.extend(quote! {
-            impl<K, #type_args> Into<Vec<(K, #type_args)>> for &InterningTable<K, (#type_args)>
+            impl<K, #type_args> Into<Vec<(K, #type_args)>> for InterningTable<K, (#type_args)>
                 where
                     K: crate::data_structures::InterningTableKey,
                     #type_constraints
             {
                 fn into(self) -> Vec<(K, #type_args)> {
-                    let contents: Vec<(K, (#type_args))> = self.iter().collect();
-                    contents.into_iter().map(|(i, (#args))| {
-                        (i, #args)
+                    self.contents.into_iter().enumerate().map(|(i, (#args))| {
+                        (i.into(), #args)
                     }).collect()
                 }
             }
 
         });
+        if i == 0 {
+            // don't generate for length 1 tuples, because `redb` does not impl redb::Key for (K,) in 2.4.0.
+            // The next update should include this, but for now we don't need this.
+            continue;
+        }
         disk_conversions.extend(quote! {
             impl<K, #type_args> Into<Vec<(K, #type_args)>> for &DiskInterningTable<K, (#type_args)>
                 where
