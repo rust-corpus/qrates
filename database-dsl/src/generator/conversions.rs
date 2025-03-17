@@ -4,7 +4,7 @@ use quote::quote;
 use crate::ast;
 
 // Turns extraction-time data structures (backed by Vec/HashMap) into query-time structures (backed by DiskMap).
-// Only used for testing. <<-- TODO: add #[cfg(test)]?
+// Only used for testing.
 pub fn generate_mem_to_disk_functions(schema: &ast::DatabaseSchema) -> TokenStream {
     let relations_to_disk = relations_to_disk_function(schema);
     let interning_tables_to_disk = interning_tables_to_disk_function(schema);

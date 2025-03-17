@@ -135,6 +135,9 @@ pub struct RelationKey {
     pub target: Option<syn::Ident>,
 }
 
+/// A key for a relations, indicating that a RelationMap should be generated.
+/// 
+/// Syntax: `relation <relation_name>(...) keyed by <key_column>;`
 #[derive(Hash)]
 pub struct RelationMapKey {
     pub source: syn::Ident,
