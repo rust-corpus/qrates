@@ -11,6 +11,10 @@
 Qrates was updated in 2025 to use less memory. Analyzing 2000 crates took 3.5GB RAM, but larger runs have not been tested yet.
 Please let us know your findings if you run Qrates on a larger dataset!
 
+## Future Work
+
+Please see [FUTURE_WORK.md](./FUTURE_WORK.md).
+
 ## History
 
 ### 2020
