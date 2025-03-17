@@ -29,7 +29,7 @@ The second step is to select the packages[^package] from which we want to extrac
 }
 ```
 
-If you want to analyse all packages on crates.io, you can rename `CrateList-all-2020-01-14.json` to `CrateList.json`. That file contains the latest versions of all packages that were published on crates.io on 2020-01-14. Please note that compiling all packages requires at least 1 TB of hard drive space and running queries on so large dataset may require up to 200 GB of RAM. The dataset `CrateList-top-200-2020-01-17.json` 200 packages that were the most downloaded on crates.io; this dataset should be analysable on a laptop with 8 GB of RAM.
+If you want to analyse all packages on crates.io, you can rename `CrateList-all-2020-01-14.json` to `CrateList.json`. That file contains the latest versions of all packages that were published on crates.io on 2020-01-14. Please note that compiling all packages from that time requires at least 1 TB of hard drive space. The dataset `CrateList-top-200-2020-01-17.json` consists of the top 200 packages that were the most downloaded on crates.io; this dataset should be analysable on a laptop.
 
 You can also create the list with the latest versions of all packages by running the following command:
 
