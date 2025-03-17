@@ -80,6 +80,8 @@ In particular, during querying, everything accessible from the `Loader` struct (
 This includes relations, relation maps, and interning tables.
 Our abstraction for this is the `DiskMap`, as described above.
 
+To gain some speedup at the cost of very little memory, there is a static cache size setting for `DiskMap`s, configured by the associated constants `DiskMap::DISK_MAP_WRITE_CACHE_SIZE` and `DiskMap::DISK_MAP_REDB_CACHE_SIZE`.
+
 Internally, the `DiskMap` uses the pure Rust key-value store [redb](https://github.com/cberner/redb).
 
 Due to this, there are a few constraints on how `DiskMap` is used:
