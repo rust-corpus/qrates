@@ -17,8 +17,6 @@ pub use self::data_structures::DiskVec;
 pub use self::data_structures::InterningTable;
 pub use self::data_structures::RelationElement;
 pub use self::data_structures::RelationMap;
-pub use self::data_structures::VecIntoRelationElementAdapter;
-pub use self::data_structures::VecOfRelationElementAdapter;
 
 // Temporary directory for all diskvecs/diskmaps
 static DISK_MAP_TEMP_DIR_ROOT: OnceLock<PathBuf> = OnceLock::new();

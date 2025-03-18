@@ -17,8 +17,6 @@ pub(crate) fn generate(schema: ast::DatabaseSchema, input: TokenStream) -> Token
         {
             use corpus_database::types::*;
             use corpus_database::RelationElement;
-            use corpus_database::VecOfRelationElementAdapter;
-            use corpus_database::VecIntoRelationElementAdapter;
             #tokens
         }
     };
