@@ -858,3 +858,45 @@ mod hash_impls {
     impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 T20 }
     impl_hash_tuple! { T1 T2 T3 T4 T5 T6 T7 T8 T9 T10 T11 T12 T13 T14 T15 T16 T17 T18 T19 T20 T21 }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{cmp::Ordering, hash::{DefaultHasher, Hash, Hasher}};
+
+    use redb::{Key, Value};
+
+    use super::*;
+
+    type RelationElement13 = super::RelationElement<(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)>;
+
+
+    #[test]
+    fn test_relation_element() {
+        // Test 13 elements, that's more than the standard library permits
+        let x = RelationElement((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13));
+        let y = RelationElement((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13));
+        assert_eq!(x, y);
+        
+        let mut hasher_x = DefaultHasher::new();
+        x.hash(&mut hasher_x);
+        let mut hasher_y = DefaultHasher::new();
+        y.hash(&mut hasher_y);
+        assert_eq!(hasher_x.finish(), hasher_y.finish());
+
+        let z = RelationElement((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14));
+        assert_ne!(x, z);
+
+        let mut hasher_z = DefaultHasher::new();
+        z.hash(&mut hasher_z);
+        assert_ne!(hasher_x.finish(), hasher_z.finish());
+
+        let bytes_x: Vec<u8> = RelationElement13::as_bytes(&x);
+        let x_from_bytes = RelationElement13::from_bytes(&bytes_x);
+        assert_eq!(x, x_from_bytes);
+
+        let bytes_y: Vec<u8> = RelationElement13::as_bytes(&y);
+
+        let order = RelationElement13::compare(&bytes_x, &bytes_y);
+        assert_eq!(order, Ordering::Equal);
+    }
+}
