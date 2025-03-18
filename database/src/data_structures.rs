@@ -14,6 +14,11 @@ mod relation_element;
 pub use relation_element::*;
 
 /// A table that expresses a relation between elements.
+/// 
+/// Supports streaming iteration over the elements and streaming inserts.
+/// Typically this should be a `Relation<RelationElement<(Column1, Column2, ... ColumnN)>>`.
+/// 
+/// Disk-backed.
 pub struct Relation<T: DiskMapValue> {
     pub(crate) facts: DiskVec<T>,
 }
@@ -119,6 +124,11 @@ where
     }
 }
 
+/// A relation converted into a pre-computed key-value map by taking a specific column as a key.
+/// 
+/// Created in the schema with `keyed by <column name>` syntax.
+/// 
+/// Disk-backed.
 pub struct RelationMap<K, V>
 where
     K: DiskMapKey,
@@ -162,12 +172,21 @@ where
     }
 }
 
+/// The type of keys used in disk-backed interning tables.
+/// 
+/// Because we intern into a vec, the key type must be a usize.
 pub trait DiskInterningKey: DiskMapKey + DiskMapValue + Into<usize> + From<usize> + Clone {}
 impl<T> DiskInterningKey for T where T: DiskMapKey + DiskMapValue + Into<usize> + From<usize> {}
 
+/// The type of values used in disk-backed interning tables.
+/// 
+/// Because values can be looked up to get the corresponding key, the value type must also support being a key.
 pub trait DiskInterningValue: DiskMapValue + DiskMapKey {}
 impl<T> DiskInterningValue for T where T: DiskMapValue + DiskMapKey {}
 
+/// A table that holds interned values.
+/// 
+/// Disk-backed.
 pub struct DiskInterningTable<K, V>
 where
     K: DiskInterningKey,
@@ -298,6 +317,8 @@ impl<T> InterningTableValue for T where T: Eq + std::hash::Hash + Clone {}
 #[derive(Deserialize, Serialize)]
 #[serde(from = "Vec<V>")]
 /// A table that holds the interned values.
+/// 
+/// Memory-only. Used during extraction.
 pub struct InterningTable<K, V>
 where
     K: InterningTableKey,
@@ -389,6 +410,11 @@ where
     }
 }
 
+/// The type of keys used in `DiskMap`.
+/// 
+/// Because `DiskMap` is the backend for `Relation`, `RelationMap`, and `DiskInterningTable`, their key types must implement this trait.
+/// 
+/// Because `DiskInterningTable` is a two-way map behind the scenes, the value type must also implement this trait.
 pub trait DiskMapKey:
     Clone
     + Eq
@@ -409,6 +435,10 @@ impl<T> DiskMapKey for T where
         + for<'a> redb::Value<SelfType<'a> = Self>
 {
 }
+
+/// The type of keys used in `DiskMap`.
+/// 
+/// Because `DiskMap` is the backend for `Relation`, `RelationMap`, and `DiskInterningTable`, their value types must implement this trait.
 pub trait DiskMapValue:
     Eq + std::hash::Hash + Clone + for<'a> redb::Value<SelfType<'a> = Self> + 'static
 {
