@@ -24,9 +24,6 @@ use std::path::Path;
 /// Note that function references & closures are always reported as `$fn`.
 /// Further, and perhaps unexpectedly, the path to the target includes generic parameters, but they are simply what the corresponding `impl` block calls them, not the actual types used---these are found in the type generics (here, `&str` is the value of `T`).
 pub fn query(loader: &Loader, report_path: &Path) {
-    // TODO: Update this query to use THIR information.
-    // It is not used by the paper.
-
     let call_target = loader.load_thir_exprs_call_const_target_as_map();
     let call_target_self = loader.load_thir_exprs_call_const_target_self_as_map();
     let call_target_desc: HashMap<_, _> = loader
@@ -36,7 +33,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
             (call, (desc, function_generics, type_generics))
         })
         .collect();
-    let call_target_macro = loader.load_thir_exprs_call_macro_backtrace_relation_map();
+    let call_target_macro = loader.load_thir_exprs_call_macro_backtrace_as_map();
 
     let strings = loader.load_strings();
     let def_paths = loader.load_def_paths();
@@ -48,17 +45,24 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .map(|(ty, desc, generics)| (ty, (desc, generics)))
         .collect();
 
+    let exprs_to_body_map = loader.load_thir_exprs_to_thir_body_relation_map();
+    let thir_body_to_bodies = loader.load_thir_bodies_relation_map();
+    let expr_to_def_path = |expr| {
+        let body = exprs_to_body_map.get_unwrap(expr);
+        let (_, def_path) = thir_body_to_bodies.get_unwrap(body);
+        def_path
+    };
+
 
     let all_calls = loader.load_thir_exprs_call();
     let all_calls = all_calls.iter().filter_map(
-        // |(block, call, _func, _unsafety, _abi, _return_ty, _destination, _span)| {
-        |(expr, ty, fun, _unsafety, _abi, _return_ty)| {
+        |(expr, _ty, fun, _unsafety, _abi, _return_ty)| {
             let target = call_target.get(&fun)?; // none for function pointers
             let (target_desc, function_generics, type_generics) = call_target_desc[&fun];
 
-            // TODO: get def path somehow
+            let def_path = expr_to_def_path(expr);
 
-            let (caller_crate, _, _, _, _) = def_paths.get_unwrap(basic_block_def_paths[&block]);
+            let (caller_crate, _, _, _, _) = def_paths.get_unwrap(def_path);
             let caller_crate_name = strings.get_unwrap(crate_names.get_unwrap(caller_crate));
             let (target_crate, _, _, _, _) = def_paths.get_unwrap(*target);
             let target_crate_name = strings.get_unwrap(crate_names.get_unwrap(target_crate));

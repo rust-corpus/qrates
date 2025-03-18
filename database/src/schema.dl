@@ -484,7 +484,7 @@ relation function_unsafe_use(def_path: DefPath, uses_unsafe: bool);
 relation function_unsafe_reasons(def_path: DefPath, index: u32, reason: InternedString);
 
 /// THIR body expressions
-relation thir_bodies(item: Item, def_path: DefPath, body: auto ThirBlock);
+relation thir_bodies(item: Item, def_path: DefPath, body: auto ThirBlock) keyed by body;
 /// THIR-level block information
 relation thir_blocks(parent: ThirBlock, block: auto ThirBlock, safety: BlockSafety, check_mode: BlockCheckMode, span: Span) keyed by block;
 
@@ -498,6 +498,11 @@ relation thir_stmts_let(stmt: auto ThirStmt, initializer: ThirExpr, else_block: 
 // link a block's expression to its parent block
 relation thir_block_expr(block: ThirBlock, expr: ThirExpr) keyed by expr;
 
+// link an expression to the thir body its contained in
+// expr is a foreign key into `thir_exprs`
+// body is a foreign key into `thir_bodies`
+relation thir_exprs_to_thir_body(expr: ThirExpr, body: ThirBlock) keyed by expr;
+
 // thir expressions
 relation thir_exprs(expr: ThirExpr, block: ThirBlock, closest_unsafe_block: ThirBlock, ty: Type, span: Span);
 relation thir_exprs_scope(expr: auto ThirExpr, inner: ThirExpr);
@@ -509,7 +514,7 @@ relation thir_exprs_call_arg(call: ThirExpr, index: ThirCallArgIndex, arg: ThirE
 relation thir_exprs_call_const_target(fun: ThirExpr, def_id: DefPath) keyed by fun;
 relation thir_exprs_call_const_target_desc(fun: ThirExpr, target: InternedString, function_generics: InternedString, type_generics: InternedString);
 relation thir_exprs_call_const_target_self(fun: ThirExpr, typ: Type);
-relation thir_exprs_call_macro_backtrace(fun: ThirExpr, macro_path: InternedString, caller_def_path: DefPath) keyed by fun;
+relation thir_exprs_call_macro_backtrace(fun: ThirExpr, macro_path: InternedString) keyed by fun;
 
 relation thir_exprs_deref(expr: auto ThirExpr, inner: ThirExpr);
 relation thir_exprs_binary(expr: auto ThirExpr, op: ThirBinOp, lhs: ThirExpr, rhs: ThirExpr);

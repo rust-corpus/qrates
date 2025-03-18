@@ -14,7 +14,7 @@ pub(crate) struct ThirVisitor<'a, 'b, 'thir, 'tcx> {
     body_id: ExprId,
     current_block: ThirBlock,
     closest_unsafe_block: ThirBlock,
-    def_path: types::DefPath,
+    root_block: ThirBlock,
     filler: &'a mut TableFiller<'b, 'tcx>,
 }
 
@@ -24,7 +24,6 @@ impl<'a, 'b, 'thir, 'tcx: 'thir> ThirVisitor<'a, 'b, 'thir, 'tcx> {
         thir: &'thir Thir<'tcx>,
         body_id: ExprId,
         root_block: ThirBlock,
-        def_path: types::DefPath,
         filler: &'a mut TableFiller<'b, 'tcx>,
     ) -> Self {
         Self {
@@ -33,7 +32,7 @@ impl<'a, 'b, 'thir, 'tcx: 'thir> ThirVisitor<'a, 'b, 'thir, 'tcx> {
             body_id,
             current_block: root_block,
             closest_unsafe_block: filler.tables.get_no_thir_block(),
-            def_path,
+            root_block,
             filler,
         }
     }
@@ -128,7 +127,7 @@ impl<'a, 'b, 'thir, 'tcx: 'thir> ThirVisitor<'a, 'b, 'thir, 'tcx> {
                     .last();
                 if let Some(def_id) = top_foreign_macro {
                     let desc = pretty_description(self.tcx, def_id, &[]);
-                    self.filler.tables.register_thir_exprs_call_macro_backtrace(interned_fun, desc.path, self.def_path);
+                    self.filler.tables.register_thir_exprs_call_macro_backtrace(interned_fun, desc.path);
                 }
 
                 match ty.kind() {
@@ -544,6 +543,8 @@ impl<'a, 'b, 'thir, 'tcx: 'thir> ThirVisitor<'a, 'b, 'thir, 'tcx> {
             interned_expr_type,
             interned_span,
         );
+
+        self.filler.tables.register_thir_exprs_to_thir_body(interned_expr, self.root_block);
 
         interned_expr
     }
