@@ -509,6 +509,7 @@ relation thir_exprs_call_arg(call: ThirExpr, index: ThirCallArgIndex, arg: ThirE
 relation thir_exprs_call_const_target(fun: ThirExpr, def_id: DefPath) keyed by fun;
 relation thir_exprs_call_const_target_desc(fun: ThirExpr, target: InternedString, function_generics: InternedString, type_generics: InternedString);
 relation thir_exprs_call_const_target_self(fun: ThirExpr, typ: Type);
+relation thir_exprs_call_macro_backtrace(fun: ThirExpr, macro_path: InternedString, caller_def_path: DefPath) keyed by fun;
 
 relation thir_exprs_deref(expr: auto ThirExpr, inner: ThirExpr);
 relation thir_exprs_binary(expr: auto ThirExpr, op: ThirBinOp, lhs: ThirExpr, rhs: ThirExpr);

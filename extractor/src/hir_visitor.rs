@@ -135,7 +135,7 @@ impl<'a, 'tcx> HirVisitor<'a, 'tcx> {
         let item = self.current_item.expect(&error);
         let (root_block,) = self.filler.tables.register_thir_bodies(item, def_path);
         let mut thir_visitor =
-            ThirVisitor::new(self.tcx, &thir, body_id, root_block, &mut self.filler);
+            ThirVisitor::new(self.tcx, &thir, body_id, root_block, def_path,  &mut self.filler);
         thir_visitor.visit();
     }
     fn visit_type(

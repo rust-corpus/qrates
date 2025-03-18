@@ -27,86 +27,84 @@ pub fn query(loader: &Loader, report_path: &Path) {
     // TODO: Update this query to use THIR information.
     // It is not used by the paper.
 
-    // let call_target = loader.load_terminators_call_const_target_as_map();
-    // let call_target_self = loader.load_terminators_call_const_target_self_as_map();
-    // let call_target_desc: HashMap<_, _> = loader
-    //     .load_terminators_call_const_target_desc()
-    //     .tuple_iter()
-    //     .map(|(call, desc, function_generics, type_generics)| {
-    //         (call, (desc, function_generics, type_generics))
-    //     })
-    //     .collect();
-    // let call_target_macro = loader.load_terminators_call_macro_backtrace_as_map();
+    let call_target = loader.load_thir_exprs_call_const_target_as_map();
+    let call_target_self = loader.load_thir_exprs_call_const_target_self_as_map();
+    let call_target_desc: HashMap<_, _> = loader
+        .load_thir_exprs_call_const_target_desc()
+        .iter()
+        .map(|(call, desc, function_generics, type_generics)| {
+            (call, (desc, function_generics, type_generics))
+        })
+        .collect();
+    let call_target_macro = loader.load_thir_exprs_call_macro_backtrace_relation_map();
 
-    // let strings = loader.load_strings();
-    // let def_paths = loader.load_def_paths();
-    // let crate_names = loader.load_crate_names();
+    let strings = loader.load_strings();
+    let def_paths = loader.load_def_paths();
+    let crate_names = loader.load_crate_names();
 
-    // let type_descriptions: HashMap<_, _> = loader
-    //     .load_type_description()
-    //     .tuple_iter()
-    //     .map(|(ty, desc, generics)| (ty, (desc, generics)))
-    //     .collect();
+    let type_descriptions: HashMap<_, _> = loader
+        .load_type_description()
+        .iter()
+        .map(|(ty, desc, generics)| (ty, (desc, generics)))
+        .collect();
 
-    // let basic_block_def_paths: HashMap<_, _> = loader
-    //     .load_basic_blocks()
-    //     .tuple_iter()
-    //     .map(|(bb, def_path, _kind)| (bb, def_path))
-    //     .collect();
 
-    // let all_calls = loader.load_terminators_call();
-    // let all_calls = all_calls.tuple_iter().filter_map(
-    //     |(block, call, _func, _unsafety, _abi, _return_ty, _destination, _span)| {
-    //         let target = call_target.get(&call)?; // none for function pointers
-    //         let (target_desc, function_generics, type_generics) = call_target_desc[&call];
+    let all_calls = loader.load_thir_exprs_call();
+    let all_calls = all_calls.iter().filter_map(
+        // |(block, call, _func, _unsafety, _abi, _return_ty, _destination, _span)| {
+        |(expr, ty, fun, _unsafety, _abi, _return_ty)| {
+            let target = call_target.get(&fun)?; // none for function pointers
+            let (target_desc, function_generics, type_generics) = call_target_desc[&fun];
 
-    //         let (caller_crate, _, _, _, _) = def_paths.r(basic_block_def_paths[&block]);
-    //         let caller_crate_name = strings.r(crate_names.r(caller_crate));
-    //         let (target_crate, _, _, _, _) = def_paths.r(*target);
-    //         let target_crate_name = strings.r(crate_names.r(target_crate));
+            // TODO: get def path somehow
 
-    //         let (receiver_name, receiver_generics) = call_target_self.get(&call).map_or_else(
-    //             || ("".to_string(), "".to_string()),
-    //             |typ| {
-    //                 let (desc, generics) = type_descriptions[typ];
-    //                 (strings.r(desc), strings.r(generics))
-    //             },
-    //         );
+            let (caller_crate, _, _, _, _) = def_paths.get_unwrap(basic_block_def_paths[&block]);
+            let caller_crate_name = strings.get_unwrap(crate_names.get_unwrap(caller_crate));
+            let (target_crate, _, _, _, _) = def_paths.get_unwrap(*target);
+            let target_crate_name = strings.get_unwrap(crate_names.get_unwrap(target_crate));
 
-    //         let macro_path = call_target_macro
-    //             .get(&call)
-    //             .map_or("".to_string(), |path| strings.r(*path));
+            let (receiver_name, receiver_generics) = call_target_self.get(&fun).map_or_else(
+                || ("".to_string(), "".to_string()),
+                |typ| {
+                    let (desc, generics) = type_descriptions[typ];
+                    (strings.get_unwrap(desc), strings.get_unwrap(generics))
+                },
+            );
 
-    //         Some((
-    //             receiver_name,
-    //             receiver_generics,
-    //             strings.r(target_desc),
-    //             strings.r(type_generics),
-    //             strings.r(function_generics),
-    //             caller_crate_name,
-    //             target_crate_name,
-    //             macro_path,
-    //         ))
-    //     },
-    // );
+            let macro_path = call_target_macro
+                .get(&fun)
+                .map_or("".to_string(), |path| strings.get_unwrap(*path));
 
-    // let counts: HashMap<_, i32> = all_calls.fold(HashMap::new(), |mut counts, row| {
-    //     *counts.entry(row).or_insert(0) += 1;
-    //     counts
-    // });
-    // let all_calls = counts
-    //     .iter()
-    //     .map(|((a, b, c, d, e, f, g, h), count)| (a, b, c, d, e, f, g, h, count));
+            Some((
+                receiver_name,
+                receiver_generics,
+                strings.get_unwrap(target_desc),
+                strings.get_unwrap(type_generics),
+                strings.get_unwrap(function_generics),
+                caller_crate_name,
+                target_crate_name,
+                macro_path,
+            ))
+        },
+    );
 
-    // // sort for much better gzip compression
-    // let all_calls: Vec<_> = all_calls
-    //     .sorted_by_key(|(_, _, target, ..)| target.clone())
-    //     .collect();
+    let counts: HashMap<_, i32> = all_calls.fold(HashMap::new(), |mut counts, row| {
+        *counts.entry(row).or_insert(0) += 1;
+        counts
+    });
+    let all_calls = counts
+        .iter()
+        .map(|((a, b, c, d, e, f, g, h), count)| (a, b, c, d, e, f, g, h, count));
 
-    // let cross_crate_calls = all_calls
-    //     .iter()
-    //     .filter(|&(_, _, _, _, _, caller_crate, target_crate, _, _)| caller_crate != target_crate);
-    // write_csv!(report_path, cross_crate_calls);
+    // sort for much better gzip compression
+    let all_calls: Vec<_> = all_calls
+        .sorted_by_key(|(_, _, target, ..)| target.clone())
+        .collect();
 
-    // write_csv!(report_path, all_calls);
+    let cross_crate_calls = all_calls
+        .iter()
+        .filter(|&(_, _, _, _, _, caller_crate, target_crate, _, _)| caller_crate != target_crate);
+    write_csv!(report_path, cross_crate_calls);
+
+    write_csv!(report_path, all_calls);
 }
