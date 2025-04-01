@@ -31,7 +31,6 @@ impl<'a, 'b, 'tcx> MirVisitor<'a, 'b, 'tcx> {
     ) -> Self {
         let body_path = filler.resolve_local_def_id(body_id);
         let (root_scope,) = filler.tables.register_mir_cfgs(item, body_path);
-        // eprintln!("{:?}", safety_map);
         Self {
             tcx,
             body_path,
