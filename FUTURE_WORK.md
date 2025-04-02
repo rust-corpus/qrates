@@ -33,6 +33,8 @@ There are at least two options to take here:
 * Pretend the entire row is the key, and the value is just `()`. When exposing the `Relation` interface, don't include the `()`s in the output. 
 * Make the (autoinc) index of the row explicit, use that as a key, but then project it away when exposing the `Relation` interface.
 
+In a ~1600 crate database, getting rid of this duplicate data would save 11GB of 58GB, or 19%.
+
 ## Rust Jupyter Kernel
 
 Currently, there are two places to define a query and there is no clear separation of concerns: The `manager/src/queries` Rust module, and the Jupyter notebooks.
