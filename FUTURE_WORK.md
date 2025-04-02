@@ -22,6 +22,17 @@ Because the data still exists, though, this causes a large speed loss (due to me
 
 It might be worth looking into whether we can determine if a build (and its rows) should be included in our merged database _before_ the `update-database` step completes.
 
+## Duplicate data across Relation/RelationMap
+
+Currently, `RelationMap` is stored in a separate database from its source `Relation`, meaning every row is duplicated.
+By adding the option to read a `Relation` from the backing file from a `RelationMap`, we could get rid of the `Relation` backing database.
+The API translation should be straightforward: `RelationMap` supports `key => value` streaming, by mapping the iterator to `(key, value)` we get the interface that `Relation` wants to expose.
+The only difficulty is in engineering a robust solution that still permits `Relation`s without a backing `RelationMap`, since we do not know in general which field of a relation is the primary key (nor does such a single field exist always).
+
+There are at least two options to take here:
+* Pretend the entire row is the key, and the value is just `()`. When exposing the `Relation` interface, don't include the `()`s in the output. 
+* Make the (autoinc) index of the row explicit, use that as a key, but then project it away when exposing the `Relation` interface.
+
 ## Rust Jupyter Kernel
 
 Currently, there are two places to define a query and there is no clear separation of concerns: The `manager/src/queries` Rust module, and the Jupyter notebooks.
