@@ -117,7 +117,7 @@ fn generate_relation_registration(
     quote! {
         pub fn #registration_function_name(&mut self, #param_tokens) -> (#return_type_tokens) {
             #interning_tokens
-            self.relations.#table_name.insert((#arg_tokens));
+            self.relations.#table_name.push((#arg_tokens));
             (#return_tokens)
         }
     }

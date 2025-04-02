@@ -69,13 +69,14 @@ pub(super) fn generate_merge_functions(schema: &ast::DatabaseSchema) -> TokenStr
     tokens.extend(merge_counters(schema));
     quote! {
 
+        /// Merges arbitrary amount of Tables into a DiskTables
         pub struct TableMerger {
-            pub(crate) tables: Tables,
+            pub(crate) tables: DiskTables,
             #field_tokens
         }
 
         impl TableMerger {
-            pub fn new(tables: super::tables::Tables) -> Self {
+            pub fn new(tables: super::tables::DiskTables) -> Self {
                 Self {
                     #field_init_tokens
                     tables,
@@ -84,7 +85,7 @@ pub(super) fn generate_merge_functions(schema: &ast::DatabaseSchema) -> TokenStr
             pub fn merge(&mut self, other: super::tables::Tables) {
                 #tokens
             }
-            pub fn tables(&mut self) -> &mut Tables {
+            pub fn tables(&mut self) -> &mut DiskTables {
                 &mut self.tables
             }
         }
@@ -105,7 +106,7 @@ fn merge_interning_tables(
         } else {
             let arg_remap = if let Some(map) = interning_remap.get(&table.value) {
                 quote! {
-                    let new_value = #map[&value];
+                    let new_value = #map.get_unwrap(value);
                 }
             } else {
                 quote! {
@@ -113,7 +114,7 @@ fn merge_interning_tables(
                 }
             };
             tokens.extend(quote! {
-                let #name: HashMap<_, _> = other
+                let #name: DiskMap<_, _> = other
                    .interning_tables
                    .#name
                    .into_iter()
@@ -137,7 +138,7 @@ fn merge_interning_tables(
             let arg = name_generator.get_fresh_ident();
             if let Some(map) = interning_remap.get(value_type) {
                 arg_remap.extend(quote! {
-                    let #arg = #map[&#param];
+                    let #arg = #map.get_unwrap(#param);
                 });
             } else {
                 debug!("Not an interned type: {:?}", value_type);
@@ -150,7 +151,7 @@ fn merge_interning_tables(
             params.extend(quote! {#param,})
         }
         tokens.extend(quote! {
-            let #name: HashMap<_, _> = other
+            let #name: DiskMap<_, _> = other
                 .interning_tables
                 .#name
                 .into_iter()
@@ -249,7 +250,7 @@ fn merge_relations(
                 ast::TypeKind::InternedId(table) => {
                     let map = &table.name;
                     params_remap.extend(quote! {
-                        let #new_name = #map[#param_name];
+                        let #new_name = #map.get_unwrap(*#param_name);
                     });
                 }
             }
@@ -302,14 +303,18 @@ fn merge_relations(
             &mut relation_without_target_remap_tokens
         };
         target_tokens.extend(quote! {
-            for (#params) in other.relations.#name.iter() {
-                #params_remap
-                #filter_tokens
-                self.tables
+            self.tables
                     .relations
                     .#name
-                    .insert((#new_params));
-            }
+                    .insert_iter(
+                        other.relations.#name.iter()
+                            .map(|(#params)| {
+                                #params_remap
+                                #filter_tokens
+                                RelationElement((#new_params))
+                            })
+                    );
+            drop(other.relations.#name);
         });
     }
     tokens.extend(relation_with_target_remap_tokens);

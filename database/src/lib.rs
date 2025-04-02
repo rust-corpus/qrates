@@ -1,19 +1,75 @@
 #![deny(unsafe_op_in_unsafe_fn)]
+#![feature(macro_metavar_expr)] // for deriving rust eq/ord
 
 include!(concat!(env!("OUT_DIR"), "/schema.rs"));
 
 mod data_structures;
 mod storage;
 
+use std::path::PathBuf;
+use std::sync::LazyLock;
+use std::sync::Mutex;
+use std::sync::OnceLock;
+
+pub use self::data_structures::DiskInterningTable;
+pub use self::data_structures::DiskMap;
+pub use self::data_structures::DiskVec;
 pub use self::data_structures::InterningTable;
+pub use self::data_structures::RelationElement;
+pub use self::data_structures::RelationMap;
+
+// Temporary directory for all diskvecs/diskmaps
+static DISK_MAP_TEMP_DIR_ROOT: OnceLock<PathBuf> = OnceLock::new();
+static DISK_MAP_COUNTER: LazyLock<Mutex<u64>> = LazyLock::new(|| Mutex::new(0));
+
+pub fn set_disk_map_temp_dir_root(root: PathBuf) {
+    // Ignoring error, because we don't care if it was already set. These are just temporary diskmap locations.
+    let _ = DISK_MAP_TEMP_DIR_ROOT.set(root);
+}
+
+/// `set_disk_map_temp_dir_root` must be called before this function.
+pub fn get_new_disk_map_temp_dir() -> PathBuf {
+    let mut counter = DISK_MAP_COUNTER
+        .lock()
+        .expect("Disk map counter lock poisoned");
+    let root = DISK_MAP_TEMP_DIR_ROOT
+        .get()
+        .expect("Disk map temp dir root not set");
+    let random = rand::random::<u64>();
+    let path = root.join(format!("disk_map_{}_{}", *counter, random));
+    *counter += 1;
+    path
+}
 
 #[cfg(test)]
 mod tests {
 
+    use std::{collections::HashSet, fmt::Debug};
+
     use super::*;
+
+    fn init() {
+        let mut t = std::env::temp_dir();
+        t.push("tmp_diskmap");
+        // create
+        std::fs::create_dir_all(&t).unwrap();
+        set_disk_map_temp_dir_root(t);
+    }
+
+    #[track_caller]
+    fn check_unordered_eq<T: Eq + std::hash::Hash + Debug, U: Into<T>>(
+        a: impl IntoIterator<Item = T>,
+        b: impl IntoIterator<Item = U>,
+    ) {
+        let a = a.into_iter().collect::<HashSet<_>>();
+        let b = b.into_iter().map(Into::into).collect::<HashSet<_>>();
+        assert_eq!(a, b);
+    }
 
     #[test]
     fn test_crate_names() {
+        init();
+
         // Create and populate with crate names tables 1.
         let mut tables1 = tables::Tables::default();
         assert_eq!(tables1.interning_tables.strings.len(), 0);
@@ -53,35 +109,35 @@ mod tests {
         assert_eq!(tables3.interning_tables.crate_names.len(), 2);
 
         // Merge tables 1 and 2.
-        let mut merger1 = tables::TableMerger::new(tables1);
+        let mut merger1 = tables::TableMerger::new(tables::DiskTables::from_tables(tables1));
         merger1.merge(tables2);
         assert_eq!(merger1.tables.interning_tables.strings.len(), 3);
         assert_eq!(merger1.tables.interning_tables.crate_names.len(), 3);
         let expected = ["crate1", "crate2", "crate4"];
-        for (cn, expected_name) in merger1
-            .tables
-            .interning_tables
-            .crate_names
-            .iter_values()
-            .zip(&expected)
-        {
-            assert_eq!(&merger1.tables.interning_tables.strings[*cn], expected_name);
-        }
+        check_unordered_eq(
+            merger1
+                .tables
+                .interning_tables
+                .crate_names
+                .iter_values()
+                .map(|cn| merger1.tables.interning_tables.strings.get_unwrap(cn)),
+            expected,
+        );
 
         // Merge tables 1 and 3.
         merger1.merge(tables3);
         assert_eq!(merger1.tables.interning_tables.strings.len(), 3);
         assert_eq!(merger1.tables.interning_tables.crate_names.len(), 3);
         let expected = ["crate1", "crate2", "crate4"];
-        for (cn, expected_name) in merger1
-            .tables
-            .interning_tables
-            .crate_names
-            .iter_values()
-            .zip(&expected)
-        {
-            assert_eq!(&merger1.tables.interning_tables.strings[*cn], expected_name);
-        }
+        check_unordered_eq(
+            merger1
+                .tables
+                .interning_tables
+                .crate_names
+                .iter_values()
+                .map(|cn| merger1.tables.interning_tables.strings.get_unwrap(cn)),
+            expected,
+        );
     }
     #[test]
     fn test_builds_and_build_crate_types() {
@@ -91,7 +147,7 @@ mod tests {
             String::from("package1"),
             String::from("version1"),
             String::from("crate1"),
-            1usize.into(),
+            1u128.into(),
             String::from("edition1"),
         );
         assert_eq!(tables1.interning_tables.builds.len(), 1);
@@ -106,7 +162,7 @@ mod tests {
             String::from("package2"),
             String::from("version2"),
             String::from("crate2"),
-            2usize.into(),
+            2u128.into(),
             String::from("edition2"),
         );
         assert_ne!(build_1_1, build_1_2);
@@ -119,7 +175,7 @@ mod tests {
             String::from("package1"),
             String::from("version2"),
             String::from("crate1"),
-            2usize.into(),
+            2u128.into(),
             String::from("edition1"),
         );
         assert_ne!(build_1_1, build_1_3);
@@ -139,7 +195,7 @@ mod tests {
             String::from("package1"),
             String::from("version1"),
             String::from("crate1"),
-            1usize.into(),
+            1u128.into(),
             String::from("edition1"),
         );
         assert_eq!(tables2.interning_tables.builds.len(), 1);
@@ -154,7 +210,7 @@ mod tests {
             String::from("package1"),
             String::from("version1"),
             String::from("crate1"),
-            1usize.into(),
+            1u128.into(),
             String::from("edition1"),
         );
         assert_eq!(build_2_1, build_2_2);
@@ -170,7 +226,7 @@ mod tests {
             String::from("package1"),
             String::from("version2"),
             String::from("crate1"),
-            2usize.into(),
+            2u128.into(),
             String::from("edition1"),
         );
         assert_ne!(build_2_1, build_2_3);
@@ -190,7 +246,7 @@ mod tests {
             String::from("package4"),
             String::from("version4"),
             String::from("crate4"),
-            4usize.into(),
+            4u128.into(),
             String::from("edition2"),
         );
         assert_eq!(tables3.interning_tables.builds.len(), 1);
@@ -205,7 +261,7 @@ mod tests {
             String::from("package2"),
             String::from("version2"),
             String::from("crate2"),
-            2usize.into(),
+            2u128.into(),
             String::from("edition2"),
         );
         assert_ne!(build_3_1, build_3_2);
@@ -219,7 +275,7 @@ mod tests {
         assert_eq!(tables3.relations.build_crate_types.len(), 2);
 
         // Merge tables 1 and 2.
-        let mut merger1 = tables::TableMerger::new(tables1);
+        let mut merger1 = tables::TableMerger::new(tables::DiskTables::from_tables(tables1));
         merger1.merge(tables2);
         assert_eq!(merger1.tables.interning_tables.builds.len(), 3);
         assert_eq!(merger1.tables.interning_tables.strings.len(), 9);
@@ -228,29 +284,60 @@ mod tests {
         assert_eq!(merger1.tables.interning_tables.editions.len(), 2);
         assert_eq!(merger1.tables.relations.build_crate_types.len(), 5);
         let expected = [
-            ("package1", "version1", "crate1", 1usize.into(), "edition1"),
-            ("package2", "version2", "crate2", 2usize.into(), "edition2"),
-            ("package1", "version2", "crate1", 2usize.into(), "edition1"),
+            (
+                "package1".into(),
+                "version1".into(),
+                "crate1".into(),
+                1u128.into(),
+                "edition1".into(),
+            ),
+            (
+                "package2".into(),
+                "version2".into(),
+                "crate2".into(),
+                2u128.into(),
+                "edition2".into(),
+            ),
+            (
+                "package1".into(),
+                "version2".into(),
+                "crate1".into(),
+                2u128.into(),
+                "edition1".into(),
+            ),
         ];
-        for (build, expected_uild) in merger1
-            .tables
-            .interning_tables
-            .builds
-            .iter_values()
-            .zip(&expected)
-        {
-            let &(package, version, krate, crate_hash, edition) = build;
-            let (package_e, version_e, krate_e, crate_hash_e, edition_e) = expected_uild;
-            let p = merger1.tables.interning_tables.package_names[package];
-            assert_eq!(&merger1.tables.interning_tables.strings[p], package_e);
-            let v = merger1.tables.interning_tables.package_versions[version];
-            assert_eq!(&merger1.tables.interning_tables.strings[v], version_e);
-            let k = merger1.tables.interning_tables.crate_names[krate];
-            assert_eq!(&merger1.tables.interning_tables.strings[k], krate_e);
-            assert_eq!(crate_hash, *crate_hash_e);
-            let e = merger1.tables.interning_tables.editions[edition];
-            assert_eq!(&merger1.tables.interning_tables.strings[e], edition_e);
-        }
+        check_unordered_eq(
+            merger1
+                .tables
+                .interning_tables
+                .builds
+                .iter_values()
+                .map(|build| {
+                    let (package, version, krate, crate_hash, edition) = build;
+                    let p = merger1
+                        .tables
+                        .interning_tables
+                        .package_names
+                        .get_unwrap(package);
+                    let v = merger1
+                        .tables
+                        .interning_tables
+                        .package_versions
+                        .get_unwrap(version);
+                    let k = merger1
+                        .tables
+                        .interning_tables
+                        .crate_names
+                        .get_unwrap(krate);
+                    let e = merger1.tables.interning_tables.editions.get_unwrap(edition);
+                    let p = merger1.tables.interning_tables.strings.get_unwrap(p);
+                    let v = merger1.tables.interning_tables.strings.get_unwrap(v);
+                    let k = merger1.tables.interning_tables.strings.get_unwrap(k);
+                    let e = merger1.tables.interning_tables.strings.get_unwrap(e);
+                    (p, v, k, crate_hash, e)
+                }),
+            expected,
+        );
 
         // Merge tables 1 and 3.
         merger1.merge(tables3);
@@ -262,30 +349,67 @@ mod tests {
         assert_eq!(merger1.tables.interning_tables.editions.len(), 2);
         assert_eq!(merger1.tables.relations.build_crate_types.len(), 7);
         let expected = [
-            ("package1", "version1", "crate1", 1usize.into(), "edition1"),
-            ("package2", "version2", "crate2", 2usize.into(), "edition2"),
-            ("package1", "version2", "crate1", 2usize.into(), "edition1"),
-            ("package4", "version4", "crate4", 4usize.into(), "edition2"),
+            (
+                "package1".into(),
+                "version1".into(),
+                "crate1".into(),
+                1u128.into(),
+                "edition1".into(),
+            ),
+            (
+                "package2".into(),
+                "version2".into(),
+                "crate2".into(),
+                2u128.into(),
+                "edition2".into(),
+            ),
+            (
+                "package1".into(),
+                "version2".into(),
+                "crate1".into(),
+                2u128.into(),
+                "edition1".into(),
+            ),
+            (
+                "package4".into(),
+                "version4".into(),
+                "crate4".into(),
+                4u128.into(),
+                "edition2".into(),
+            ),
         ];
-        for (build, expected_uild) in merger1
-            .tables
-            .interning_tables
-            .builds
-            .iter_values()
-            .zip(&expected)
-        {
-            let &(package, version, krate, crate_hash, edition) = build;
-            let (package_e, version_e, krate_e, crate_hash_e, edition_e) = expected_uild;
-            let p = merger1.tables.interning_tables.package_names[package];
-            assert_eq!(&merger1.tables.interning_tables.strings[p], package_e);
-            let v = merger1.tables.interning_tables.package_versions[version];
-            assert_eq!(&merger1.tables.interning_tables.strings[v], version_e);
-            let k = merger1.tables.interning_tables.crate_names[krate];
-            assert_eq!(&merger1.tables.interning_tables.strings[k], krate_e);
-            assert_eq!(crate_hash, *crate_hash_e);
-            let e = merger1.tables.interning_tables.editions[edition];
-            assert_eq!(&merger1.tables.interning_tables.strings[e], edition_e);
-        }
+        check_unordered_eq(
+            merger1
+                .tables
+                .interning_tables
+                .builds
+                .iter_values()
+                .map(|build| {
+                    let (package, version, krate, crate_hash, edition) = build;
+                    let p = merger1
+                        .tables
+                        .interning_tables
+                        .package_names
+                        .get_unwrap(package);
+                    let v = merger1
+                        .tables
+                        .interning_tables
+                        .package_versions
+                        .get_unwrap(version);
+                    let k = merger1
+                        .tables
+                        .interning_tables
+                        .crate_names
+                        .get_unwrap(krate);
+                    let e = merger1.tables.interning_tables.editions.get_unwrap(edition);
+                    let p = merger1.tables.interning_tables.strings.get_unwrap(p);
+                    let v = merger1.tables.interning_tables.strings.get_unwrap(v);
+                    let k = merger1.tables.interning_tables.strings.get_unwrap(k);
+                    let e = merger1.tables.interning_tables.strings.get_unwrap(e);
+                    (p, v, k, crate_hash, e)
+                }),
+            expected,
+        );
     }
     #[test]
     fn test_submodules() {
@@ -296,7 +420,7 @@ mod tests {
                 String::from("package1"),
                 String::from("version1"),
                 String::from("crate1"),
-                1usize.into(),
+                1u128.into(),
                 String::from("edition1"),
             );
             assert_eq!(tables1.interning_tables.builds.len(), 1);
@@ -309,9 +433,9 @@ mod tests {
             assert_eq!(tables1.relations.root_modules.len(), 1);
             let def_path_1_1 = tables1.register_def_paths(
                 String::from("crate1"),
-                1usize.into(),
+                1u128.into(),
                 String::from("relative_def_id1"),
-                (1u64, 2u64).into(),
+                (1u128).into(),
                 String::from("summary_1"),
             );
             assert_eq!(tables1.interning_tables.def_paths.len(), 1);
@@ -320,9 +444,9 @@ mod tests {
             assert_eq!(tables1.interning_tables.strings.len(), 6);
             let def_path_1_2 = tables1.register_def_paths(
                 String::from("crate1"),
-                1usize.into(),
+                1u128.into(),
                 String::from("relative_def_id2"),
-                (3u64, 4u64).into(),
+                (2u128).into(),
                 String::from("summary_2"),
             );
             assert_eq!(tables1.interning_tables.def_paths.len(), 2);
@@ -363,7 +487,7 @@ mod tests {
                 String::from("package2"),
                 String::from("version1"),
                 String::from("crate2"),
-                1usize.into(),
+                1u128.into(),
                 String::from("edition1"),
             );
             assert_eq!(tables2.interning_tables.builds.len(), 1);
@@ -376,9 +500,9 @@ mod tests {
             assert_eq!(tables2.relations.root_modules.len(), 1);
             let def_path_2_1 = tables2.register_def_paths(
                 String::from("crate2"),
-                1usize.into(),
+                1u128.into(),
                 String::from("relative_def_id1"),
-                (1u64, 2u64).into(),
+                (1u128).into(),
                 String::from("summary_1"),
             );
             assert_eq!(tables2.interning_tables.def_paths.len(), 1);
@@ -387,9 +511,9 @@ mod tests {
             assert_eq!(tables2.interning_tables.strings.len(), 6);
             let def_path_2_2 = tables2.register_def_paths(
                 String::from("crate2"),
-                1usize.into(),
+                1u128.into(),
                 String::from("relative_def_id2"),
-                (3u64, 4u64).into(),
+                (2u128).into(),
                 String::from("summary_2"),
             );
             assert_eq!(tables2.interning_tables.def_paths.len(), 2);
@@ -422,7 +546,7 @@ mod tests {
         }
         let tables3 = create_table_3();
 
-        let mut merger1 = tables::TableMerger::new(tables1);
+        let mut merger1 = tables::TableMerger::new(tables::DiskTables::from_tables(tables1));
         merger1.merge(tables2);
         assert_eq!(merger1.tables.counters.modules, 6);
         assert_eq!(merger1.tables.interning_tables.builds.len(), 1);
@@ -442,7 +566,7 @@ mod tests {
             (0usize.into(), 0usize.into()),
             (0usize.into(), 3usize.into()),
         ];
-        for ((build, root_module), (build_e, root_module_e)) in
+        for ((build, root_module), &(build_e, root_module_e)) in
             merger1.tables.relations.root_modules.iter().zip(&expected)
         {
             assert_eq!(build, build_e);
@@ -451,9 +575,9 @@ mod tests {
         let expected = [
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
-                (1u64, 2u64).into(),
+                (1u128).into(),
                 "summary_1",
                 0usize.into(),
                 1usize.into(),
@@ -463,9 +587,9 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
-                (3u64, 4u64).into(),
+                (2u128).into(),
                 "summary_2",
                 1usize.into(),
                 2usize.into(),
@@ -475,9 +599,9 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
-                (1u64, 2u64).into(),
+                (1u128).into(),
                 "summary_1",
                 3usize.into(),
                 4usize.into(),
@@ -487,9 +611,9 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
-                (3u64, 4u64).into(),
+                (2u128).into(),
                 "summary_2",
                 4usize.into(),
                 5usize.into(),
@@ -499,9 +623,12 @@ mod tests {
             ),
         ];
         for (submodule, submodule_e) in merger1.tables.relations.submodules.iter().zip(&expected) {
-            let &(def_path, parent, child, name, visibility, abi) = submodule;
-            let (krate, crate_hash, relative_def_id, def_path_hash, summary_id) =
-                merger1.tables.interning_tables.def_paths[def_path];
+            let (def_path, parent, child, name, visibility, abi) = submodule;
+            let (krate, crate_hash, relative_def_id, def_path_hash, summary_id) = merger1
+                .tables
+                .interning_tables
+                .def_paths
+                .get_unwrap(def_path);
             let (
                 krate_e,
                 crate_hash_e,
@@ -514,24 +641,48 @@ mod tests {
                 visibility_e,
                 abi_e,
             ) = submodule_e;
-            let k = merger1.tables.interning_tables.crate_names[krate];
-            assert_eq!(&merger1.tables.interning_tables.strings[k], krate_e);
-            assert_eq!(crate_hash, *crate_hash_e);
-            let r = merger1.tables.interning_tables.relative_def_paths[relative_def_id];
+            let k = merger1
+                .tables
+                .interning_tables
+                .crate_names
+                .get_unwrap(krate);
             assert_eq!(
-                &merger1.tables.interning_tables.strings[r],
+                &merger1.tables.interning_tables.strings.get_unwrap(k),
+                krate_e
+            );
+            assert_eq!(crate_hash, *crate_hash_e);
+            let r = merger1
+                .tables
+                .interning_tables
+                .relative_def_paths
+                .get_unwrap(relative_def_id);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(r),
                 relative_def_id_e
             );
             assert_eq!(def_path_hash, *def_path_hash_e);
-            let s = merger1.tables.interning_tables.summary_keys[summary_id];
-            assert_eq!(&merger1.tables.interning_tables.strings[s], summary_id_e);
+            let s = merger1
+                .tables
+                .interning_tables
+                .summary_keys
+                .get_unwrap(summary_id);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(s),
+                summary_id_e
+            );
             assert_eq!(parent, *parent_e);
             assert_eq!(child, *child_e);
-            let n = merger1.tables.interning_tables.names[name];
-            assert_eq!(&merger1.tables.interning_tables.strings[n], name_e);
+            let n = merger1.tables.interning_tables.names.get_unwrap(name);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(n),
+                name_e
+            );
             assert_eq!(visibility, *visibility_e);
-            let a = merger1.tables.interning_tables.abis[abi];
-            assert_eq!(&merger1.tables.interning_tables.strings[a], abi_e);
+            let a = merger1.tables.interning_tables.abis.get_unwrap(abi);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(a),
+                abi_e
+            );
         }
 
         merger1.merge(tables3);
@@ -554,7 +705,7 @@ mod tests {
             (0usize.into(), 3usize.into()),
             (1usize.into(), 6usize.into()),
         ];
-        for ((build, root_module), (build_e, root_module_e)) in
+        for ((build, root_module), &(build_e, root_module_e)) in
             merger1.tables.relations.root_modules.iter().zip(&expected)
         {
             assert_eq!(build, build_e);
@@ -563,9 +714,9 @@ mod tests {
         let expected = [
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
-                (1u64, 2u64).into(),
+                (1u128).into(),
                 "summary_1",
                 0usize.into(),
                 1usize.into(),
@@ -575,9 +726,9 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
-                (3u64, 4u64).into(),
+                (2u128).into(),
                 "summary_2",
                 1usize.into(),
                 2usize.into(),
@@ -587,9 +738,9 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
-                (1u64, 2u64).into(),
+                (1u128).into(),
                 "summary_1",
                 3usize.into(),
                 4usize.into(),
@@ -599,9 +750,9 @@ mod tests {
             ),
             (
                 "crate1",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
-                (3u64, 4u64).into(),
+                (2u128).into(),
                 "summary_2",
                 4usize.into(),
                 5usize.into(),
@@ -611,9 +762,9 @@ mod tests {
             ),
             (
                 "crate2",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id1",
-                (1u64, 2u64).into(),
+                (1u128).into(),
                 "summary_1",
                 6usize.into(),
                 7usize.into(),
@@ -623,9 +774,9 @@ mod tests {
             ),
             (
                 "crate2",
-                1usize.into(),
+                1u128.into(),
                 "relative_def_id2",
-                (3u64, 4u64).into(),
+                (2u128).into(),
                 "summary_2",
                 7usize.into(),
                 8usize.into(),
@@ -635,9 +786,12 @@ mod tests {
             ),
         ];
         for (submodule, submodule_e) in merger1.tables.relations.submodules.iter().zip(&expected) {
-            let &(def_path, parent, child, name, visibility, abi) = submodule;
-            let (krate, crate_hash, relative_def_id, def_path_hash, summary_id) =
-                merger1.tables.interning_tables.def_paths[def_path];
+            let (def_path, parent, child, name, visibility, abi) = submodule;
+            let (krate, crate_hash, relative_def_id, def_path_hash, summary_id) = merger1
+                .tables
+                .interning_tables
+                .def_paths
+                .get_unwrap(def_path);
             let (
                 krate_e,
                 crate_hash_e,
@@ -650,24 +804,48 @@ mod tests {
                 visibility_e,
                 abi_e,
             ) = submodule_e;
-            let k = merger1.tables.interning_tables.crate_names[krate];
-            assert_eq!(&merger1.tables.interning_tables.strings[k], krate_e);
-            assert_eq!(crate_hash, *crate_hash_e);
-            let r = merger1.tables.interning_tables.relative_def_paths[relative_def_id];
+            let k = merger1
+                .tables
+                .interning_tables
+                .crate_names
+                .get_unwrap(krate);
             assert_eq!(
-                &merger1.tables.interning_tables.strings[r],
+                &merger1.tables.interning_tables.strings.get_unwrap(k),
+                krate_e
+            );
+            assert_eq!(crate_hash, *crate_hash_e);
+            let r = merger1
+                .tables
+                .interning_tables
+                .relative_def_paths
+                .get_unwrap(relative_def_id);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(r),
                 relative_def_id_e
             );
             assert_eq!(def_path_hash, *def_path_hash_e);
-            let s = merger1.tables.interning_tables.summary_keys[summary_id];
-            assert_eq!(&merger1.tables.interning_tables.strings[s], summary_id_e);
+            let s = merger1
+                .tables
+                .interning_tables
+                .summary_keys
+                .get_unwrap(summary_id);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(s),
+                summary_id_e
+            );
             assert_eq!(parent, *parent_e);
             assert_eq!(child, *child_e);
-            let n = merger1.tables.interning_tables.names[name];
-            assert_eq!(&merger1.tables.interning_tables.strings[n], name_e);
+            let n = merger1.tables.interning_tables.names.get_unwrap(name);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(n),
+                name_e
+            );
             assert_eq!(visibility, *visibility_e);
-            let a = merger1.tables.interning_tables.abis[abi];
-            assert_eq!(&merger1.tables.interning_tables.strings[a], abi_e);
+            let a = merger1.tables.interning_tables.abis.get_unwrap(abi);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(a),
+                abi_e
+            );
         }
     }
     #[test]
@@ -753,7 +931,7 @@ mod tests {
         }
         let tables2 = create_table_2();
 
-        let mut merger1 = tables::TableMerger::new(tables1);
+        let mut merger1 = tables::TableMerger::new(tables::DiskTables::from_tables(tables1));
         merger1.merge(tables2);
         assert_eq!(merger1.tables.interning_tables.strings.len(), 9);
         assert_eq!(merger1.tables.interning_tables.span_file_names.len(), 4);
@@ -825,17 +1003,28 @@ mod tests {
             ),
         ];
         for (span, span_e) in merger1.tables.relations.spans.iter().zip(&expected) {
-            let &(child, parent, kind, expansion_descr, file_name, line, col) = span;
+            let (child, parent, kind, expansion_descr, file_name, line, col) = span;
             let (child_e, parent_e, kind_e, expansion_e, file_name_e, line_e, col_e) = span_e;
             assert_eq!(parent, *parent_e);
             assert_eq!(child, *child_e);
             assert_eq!(kind, *kind_e);
             assert_eq!(
-                &merger1.tables.interning_tables.strings[expansion_descr],
+                &merger1
+                    .tables
+                    .interning_tables
+                    .strings
+                    .get_unwrap(expansion_descr),
                 expansion_e
             );
-            let l = merger1.tables.interning_tables.span_file_names[file_name];
-            assert_eq!(&merger1.tables.interning_tables.strings[l], file_name_e);
+            let l = merger1
+                .tables
+                .interning_tables
+                .span_file_names
+                .get_unwrap(file_name);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(l),
+                file_name_e
+            );
             assert_eq!(line, *line_e);
             assert_eq!(col, *col_e);
         }
@@ -938,17 +1127,28 @@ mod tests {
             ),
         ];
         for (span, span_e) in merger1.tables.relations.spans.iter().zip(&expected) {
-            let &(child, parent, kind, expansion_descr, file_name, line, col) = span;
+            let (child, parent, kind, expansion_descr, file_name, line, col) = span;
             let (child_e, parent_e, kind_e, expansion_e, file_name_e, line_e, col_e) = span_e;
             assert_eq!(parent, *parent_e);
             assert_eq!(child, *child_e);
             assert_eq!(kind, *kind_e);
             assert_eq!(
-                &merger1.tables.interning_tables.strings[expansion_descr],
+                &merger1
+                    .tables
+                    .interning_tables
+                    .strings
+                    .get_unwrap(expansion_descr),
                 expansion_e
             );
-            let l = merger1.tables.interning_tables.span_file_names[file_name];
-            assert_eq!(&merger1.tables.interning_tables.strings[l], file_name_e);
+            let l = merger1
+                .tables
+                .interning_tables
+                .span_file_names
+                .get_unwrap(file_name);
+            assert_eq!(
+                &merger1.tables.interning_tables.strings.get_unwrap(l),
+                file_name_e
+            );
             assert_eq!(line, *line_e);
             assert_eq!(col, *col_e);
         }
@@ -957,9 +1157,9 @@ mod tests {
     fn create_def_path(tables: &mut tables::Tables, counter: u32) -> types::DefPath {
         tables.register_def_paths(
             String::from("crate1"),
-            (counter as usize).into(),
+            (counter as u128).into(),
             format!("relative_def_id_{}", counter),
-            (counter as u64, 0u64).into(),
+            (counter as u128).into(),
             format!("summary_{}", counter),
         )
     }
@@ -1091,7 +1291,7 @@ mod tests {
         let tables1 = create_table_1();
         let tables2 = create_table_1();
 
-        let mut merger1 = tables::TableMerger::new(tables1);
+        let mut merger1 = tables::TableMerger::new(tables::DiskTables::from_tables(tables1));
         merger1.merge(tables2);
         assert_eq!(merger1.tables.interning_tables.strings.len(), 32);
         assert_eq!(merger1.tables.counters.types, 18);
@@ -1117,7 +1317,7 @@ mod tests {
             (17usize.into(), 5usize.into()),
         ];
         assert_eq!(expected.len(), merger1.tables.relations.types.len());
-        for (actual, expected) in merger1.tables.relations.types.iter().zip(&expected) {
+        for (actual, &expected) in merger1.tables.relations.types.iter().zip(&expected) {
             assert_eq!(actual, expected);
         }
         assert_eq!(merger1.tables.relations.types.len(), expected.len());
@@ -1133,7 +1333,7 @@ mod tests {
             merger1.tables.relations.types_primitive.len(),
             expected.len()
         );
-        for (actual, expected) in merger1
+        for (actual, &expected) in merger1
             .tables
             .relations
             .types_primitive
@@ -1174,7 +1374,7 @@ mod tests {
             ),
         ];
         assert_eq!(merger1.tables.relations.types_adt_def.len(), expected.len());
-        for (actual, expected) in merger1.tables.relations.types_adt_def.iter().zip(&expected) {
+        for (actual, &expected) in merger1.tables.relations.types_adt_def.iter().zip(&expected) {
             assert_eq!(actual, expected);
         }
 
@@ -1191,7 +1391,7 @@ mod tests {
             merger1.tables.relations.types_adt_variant.len(),
             expected.len()
         );
-        for (actual, expected) in merger1
+        for (actual, &expected) in merger1
             .tables
             .relations
             .types_adt_variant
@@ -1280,7 +1480,7 @@ mod tests {
             merger1.tables.relations.types_adt_field.len(),
             expected.len()
         );
-        for (actual, expected) in merger1
+        for (actual, &expected) in merger1
             .tables
             .relations
             .types_adt_field
@@ -1292,11 +1492,25 @@ mod tests {
 
         assert_eq!(merger1.tables.relations.types_fn_ptr.len(), 2);
         assert_eq!(
-            merger1.tables.relations.types_fn_ptr.facts[0],
+            merger1
+                .tables
+                .relations
+                .types_fn_ptr
+                .facts
+                .get(0)
+                .unwrap()
+                .into_inner(),
             (4u64.into(),)
         );
         assert_eq!(
-            merger1.tables.relations.types_fn_ptr.facts[1],
+            merger1
+                .tables
+                .relations
+                .types_fn_ptr
+                .facts
+                .get(1)
+                .unwrap()
+                .into_inner(),
             (13u64.into(),)
         );
 
@@ -1307,7 +1521,7 @@ mod tests {
             (14usize.into(), 0u32, 29usize.into()),
             (15usize.into(), 1u32, 30usize.into()),
         ];
-        for (actual, expected) in merger1.tables.relations.types_param.iter().zip(&expected) {
+        for (actual, &expected) in merger1.tables.relations.types_param.iter().zip(&expected) {
             assert_eq!(actual, expected);
         }
         assert_eq!(merger1.tables.relations.types_tuple.len(), 4);
@@ -1317,7 +1531,7 @@ mod tests {
             (16usize.into(),),
             (17usize.into(),),
         ];
-        for (actual, expected) in merger1.tables.relations.types_tuple.iter().zip(&expected) {
+        for (actual, &expected) in merger1.tables.relations.types_tuple.iter().zip(&expected) {
             assert_eq!(actual, expected);
         }
         assert_eq!(merger1.tables.relations.types_tuple_element.len(), 20);
@@ -1347,7 +1561,7 @@ mod tests {
             merger1.tables.relations.types_tuple_element.len(),
             expected.len()
         );
-        for (actual, expected) in merger1
+        for (actual, &expected) in merger1
             .tables
             .relations
             .types_tuple_element

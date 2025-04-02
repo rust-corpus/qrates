@@ -11,6 +11,8 @@ mod kw {
     syn::custom_keyword!(relation);
     syn::custom_keyword!(auto);
     syn::custom_keyword!(key);
+    syn::custom_keyword!(keyed);
+    syn::custom_keyword!(by);
 }
 
 impl Parse for ast::CustomId {
@@ -126,6 +128,21 @@ impl Parse for ast::RelationParameter {
     }
 }
 
+impl Parse for ast::RelationMapKey {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        // parse "keyed by <ident>"
+        input.parse::<kw::keyed>()?;
+        input.parse::<kw::by>()?;
+        let source: syn::Ident = input.parse()?;
+
+        Ok(Self {
+            source,
+            // Will be filled in later.
+            source_idx: 0,
+        })
+    }
+}
+
 /// A helper struct for parsing the relation key.
 #[derive(PartialEq, Eq)]
 enum RelationKey {
@@ -198,6 +215,7 @@ impl Parse for ast::Relation {
             .into_pairs()
             .map(|pair| pair.into_value())
             .collect();
+        let relation_map_key = input.parse::<ast::RelationMapKey>().ok();
         input.parse::<Token![;]>()?;
         if parsed_key != RelationKey::None
             && parameters
@@ -233,10 +251,21 @@ impl Parse for ast::Relation {
                 }),
             },
         };
+        let relation_map_key = relation_map_key.map(|key| {
+            let source_idx = parameters
+                .iter()
+                .position(|parameter| parameter.name == key.source)
+                .unwrap();
+            ast::RelationMapKey {
+                source: key.source,
+                source_idx,
+            }
+        });
         Ok(Self {
             name,
             parameters,
             key,
+            relation_map_key,
         })
     }
 }

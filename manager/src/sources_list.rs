@@ -4,14 +4,17 @@
 
 //! Module for managing lists of crate sources.
 
-use cargo::core::{Dependency, Source, SourceId};
+use cargo::core::{Dependency, SourceId};
+use cargo::sources::source::{QueryKind, Source};
 use cargo::sources::RegistrySource;
+use cargo::util::cache_lock::CacheLockMode;
 use cargo::util::interning::InternedString;
-use cargo::util::Config;
+use cargo::GlobalContext;
 use log_derive::{logfn, logfn_inputs};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
+use std::task::Poll;
 use std::time::SystemTime;
 
 /// A create on crates.io.
@@ -53,34 +56,40 @@ impl CratesList {
     /// `all_versions` – should get all versions or only the newest one?
     #[logfn(Trace)]
     pub fn top_crates_by_download_count(count: usize, all_versions: bool) -> Self {
-        let config = Config::default().expect("Unable to create default Cargo config");
-        let _lock = config.acquire_package_cache_lock();
+        let config = GlobalContext::default().expect("Unable to create default Cargo config");
+        let _lock = config.acquire_package_cache_lock(CacheLockMode::MutateExclusive);
         let crates_io = SourceId::crates_io(&config).expect("Unable to create crates.io source ID");
-        let mut source = RegistrySource::remote(crates_io, &HashSet::new(), &config);
-        source.update().expect("Unable to update registry");
+        let mut source = RegistrySource::remote(crates_io, &HashSet::new(), &config)
+            .expect("Unable to create registry source");
+        source
+            .block_until_ready()
+            .expect("Unable to block until ready");
         let creation_date = SystemTime::now();
         let mut crates = Vec::new();
         for crate_name in super::top_crates::top_crates_by_download_count(count) {
             let query = Dependency::new_override(InternedString::new(&crate_name), crates_io);
-            let summaries = source.query_vec(&query).unwrap_or_else(|err| {
-                panic!("Querying for {} failed: {}", crate_name, err);
-            });
+            let poll = source.query_vec(&query, QueryKind::Normalized);
+            while poll.is_pending() {}
+            let Poll::Ready(summaries) = poll else {
+                panic!("Querying for crate failed");
+            };
+            let summaries = summaries.expect("No summaries found");
             if all_versions {
                 for summary in summaries {
                     let package = Package {
                         name: crate_name.clone(),
-                        version: summary.version().to_string(),
+                        version: summary.as_summary().version().to_string(),
                     };
                     crates.push(Crate::Package(package));
                 }
             } else {
                 let maybe_summary = summaries
                     .into_iter()
-                    .max_by_key(|summary| summary.version().clone());
+                    .max_by_key(|summary| summary.as_summary().version().clone());
                 if let Some(summary) = maybe_summary {
                     let package = Package {
                         name: crate_name.clone(),
-                        version: summary.version().to_string(),
+                        version: summary.as_summary().version().to_string(),
                     };
                     crates.push(Crate::Package(package));
                 }
@@ -98,7 +107,7 @@ impl CratesList {
     #[logfn_inputs(Trace)]
     pub fn all_crates(all_versions: bool) -> Self {
         let creation_date = SystemTime::now();
-        let mut index = crates_index::Index::new_cargo_default().unwrap();
+        let mut index = crates_index::GitIndex::new_cargo_default().unwrap();
         index.update().expect("Unable to update registry");
         let mut crates = Vec::new();
         for krate in index.crates() {

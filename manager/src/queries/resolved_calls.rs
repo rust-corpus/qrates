@@ -24,17 +24,16 @@ use std::path::Path;
 /// Note that function references & closures are always reported as `$fn`.
 /// Further, and perhaps unexpectedly, the path to the target includes generic parameters, but they are simply what the corresponding `impl` block calls them, not the actual types used---these are found in the type generics (here, `&str` is the value of `T`).
 pub fn query(loader: &Loader, report_path: &Path) {
-    let call_target = loader.load_terminators_call_const_target_as_map();
-    let call_target_self = loader.load_terminators_call_const_target_self_as_map();
+    let call_target = loader.load_thir_exprs_call_const_target_as_map();
+    let call_target_self = loader.load_thir_exprs_call_const_target_self_as_map();
     let call_target_desc: HashMap<_, _> = loader
-        .load_terminators_call_const_target_desc()
+        .load_thir_exprs_call_const_target_desc()
         .iter()
-        .copied()
         .map(|(call, desc, function_generics, type_generics)| {
             (call, (desc, function_generics, type_generics))
         })
         .collect();
-    let call_target_macro = loader.load_terminators_call_macro_backtrace_as_map();
+    let call_target_macro = loader.load_thir_exprs_call_macro_backtrace_as_map();
 
     let strings = loader.load_strings();
     let def_paths = loader.load_def_paths();
@@ -43,45 +42,49 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let type_descriptions: HashMap<_, _> = loader
         .load_type_description()
         .iter()
-        .copied()
         .map(|(ty, desc, generics)| (ty, (desc, generics)))
         .collect();
 
-    let basic_block_def_paths: HashMap<_, _> = loader
-        .load_basic_blocks()
-        .iter()
-        .map(|&(bb, def_path, _kind)| (bb, def_path))
-        .collect();
+    let exprs_to_body_map = loader.load_thir_exprs_to_thir_body_relation_map();
+    let thir_body_to_bodies = loader.load_thir_bodies_relation_map();
+    let expr_to_def_path = |expr| {
+        let body = exprs_to_body_map.get_unwrap(expr);
+        let (_, def_path) = thir_body_to_bodies.get_unwrap(body);
+        def_path
+    };
 
-    let all_calls = loader.load_terminators_call();
+
+    let all_calls = loader.load_thir_exprs_call();
     let all_calls = all_calls.iter().filter_map(
-        |&(block, call, _func, _unsafety, _abi, _return_ty, _destination, _span)| {
-            let target = call_target.get(&call)?; // none for function pointers
-            let (target_desc, function_generics, type_generics) = call_target_desc[&call];
+        |(expr, _ty, fun, _unsafety, _abi, _return_ty)| {
+            let target = call_target.get(&fun)?; // none for function pointers
+            let (target_desc, function_generics, type_generics) = call_target_desc[&fun];
 
-            let (caller_crate, _, _, _, _) = def_paths[basic_block_def_paths[&block]];
-            let caller_crate_name = &strings[crate_names[caller_crate]];
-            let (target_crate, _, _, _, _) = def_paths[*target];
-            let target_crate_name = &strings[crate_names[target_crate]];
+            let def_path = expr_to_def_path(expr);
 
-            let (receiver_name, receiver_generics) = call_target_self.get(&call).map_or_else(
-                || ("", ""),
+            let (caller_crate, _, _, _, _) = def_paths.get_unwrap(def_path);
+            let caller_crate_name = strings.get_unwrap(crate_names.get_unwrap(caller_crate));
+            let (target_crate, _, _, _, _) = def_paths.get_unwrap(*target);
+            let target_crate_name = strings.get_unwrap(crate_names.get_unwrap(target_crate));
+
+            let (receiver_name, receiver_generics) = call_target_self.get(&fun).map_or_else(
+                || ("".to_string(), "".to_string()),
                 |typ| {
                     let (desc, generics) = type_descriptions[typ];
-                    (&strings[desc], &strings[generics])
+                    (strings.get_unwrap(desc), strings.get_unwrap(generics))
                 },
             );
 
             let macro_path = call_target_macro
-                .get(&call)
-                .map_or("", |path| &strings[*path]);
+                .get(&fun)
+                .map_or("".to_string(), |path| strings.get_unwrap(*path));
 
             Some((
                 receiver_name,
                 receiver_generics,
-                &strings[target_desc],
-                &strings[type_generics],
-                &strings[function_generics],
+                strings.get_unwrap(target_desc),
+                strings.get_unwrap(type_generics),
+                strings.get_unwrap(function_generics),
                 caller_crate_name,
                 target_crate_name,
                 macro_path,

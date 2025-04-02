@@ -14,21 +14,21 @@ fn report_unsafe_function_spans(loader: &Loader, report_path: &Path) {
     let span_resolver = SpanResolver::new(loader);
     let strings = loader.load_strings();
     let abis = loader.load_abis();
-    let def_path_spans = loader.load_def_path_span();
-    let def_path_spans: HashMap<_, _> = def_path_spans.iter().copied().collect();
+
+    let def_path_spans = loader.load_def_path_span_relation_map();
 
     let selected_function_definitions = loader.load_selected_function_definitions();
     let unsafe_function_spans = selected_function_definitions.iter().flat_map(
-        |&(build, _item, def_path, _module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
-            if unsafety == types::Unsafety::Unsafe {
+        |(build, _item, def_path, _module, visibility, unsafety, abi, _return_ty, uses_unsafe)| {
+            if unsafety == types::Safety::Unsafe {
                 Some((
                     build,
                     build_resolver.resolve(build),
                     def_path_resolver.resolve(def_path),
                     visibility.to_string(),
-                    &strings[abis[abi]],
+                    strings.get_unwrap(abis.get_unwrap(abi)),
                     uses_unsafe,
-                    span_resolver.resolve(def_path_spans[&def_path]),
+                    span_resolver.resolve(def_path_spans.get_unwrap(def_path)),
                 ))
             } else {
                 None

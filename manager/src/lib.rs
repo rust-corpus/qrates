@@ -14,6 +14,7 @@ mod top_crates;
 use self::compilation::CompileManager;
 use self::database::DatabaseManager;
 use self::sources_list::CratesList;
+use corpus_database::set_disk_map_temp_dir_root;
 use log_derive::logfn;
 use std::path::Path;
 use std::time::Duration;
@@ -97,7 +98,12 @@ pub fn run_query(
     if !report_path.exists() {
         std::fs::create_dir_all(&report_path).unwrap();
     }
+    let tmp_database_root = database_root.join("tmp");
+    std::fs::create_dir_all(&tmp_database_root).unwrap();
+    set_disk_map_temp_dir_root(tmp_database_root);
+    let loader = corpus_database::tables::Loader::new(database_root.to_path_buf());
     queries::run_query(
+        &loader,
         query_name,
         database_root,
         report_path,

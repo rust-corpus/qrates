@@ -1,5 +1,5 @@
-use corpus_database::InterningTable;
 use corpus_database::{tables::Loader, types};
+use corpus_database::{DiskInterningTable, InterningTable, RelationMap};
 use itertools::Itertools;
 use std::cell::Ref;
 use std::collections::HashMap;
@@ -42,7 +42,7 @@ impl<T: ?Sized> GroupByIterator for T where T: Itertools {}
 pub struct BuildResolver<'b> {
     builds: Ref<
         'b,
-        InterningTable<
+        DiskInterningTable<
             types::Build,
             (
                 types::Package,
@@ -53,11 +53,11 @@ pub struct BuildResolver<'b> {
             ),
         >,
     >,
-    package_names: Ref<'b, InterningTable<types::Package, types::InternedString>>,
-    package_versions: Ref<'b, InterningTable<types::PackageVersion, types::InternedString>>,
-    crate_names: Ref<'b, InterningTable<types::Krate, types::InternedString>>,
-    editions: Ref<'b, InterningTable<types::Edition, types::InternedString>>,
-    strings: Ref<'b, InterningTable<types::InternedString, String>>,
+    package_names: Ref<'b, DiskInterningTable<types::Package, types::InternedString>>,
+    package_versions: Ref<'b, DiskInterningTable<types::PackageVersion, types::InternedString>>,
+    crate_names: Ref<'b, DiskInterningTable<types::Krate, types::InternedString>>,
+    editions: Ref<'b, DiskInterningTable<types::Edition, types::InternedString>>,
+    strings: Ref<'b, DiskInterningTable<types::InternedString, String>>,
 }
 
 impl<'b> BuildResolver<'b> {
@@ -71,14 +71,18 @@ impl<'b> BuildResolver<'b> {
             strings: loader.load_strings(),
         }
     }
-    pub fn resolve(&self, build: types::Build) -> (&str, &str, &str, String, &str) {
-        let (package_name, package_version, crate_name, crate_hash, edition) = self.builds[build];
+    pub fn resolve(&self, build: types::Build) -> (String, String, String, String, String) {
+        let (package_name, package_version, crate_name, crate_hash, edition) =
+            self.builds.get_unwrap(build);
         (
-            &self.strings[self.package_names[package_name]],
-            &self.strings[self.package_versions[package_version]],
-            &self.strings[self.crate_names[crate_name]],
+            self.strings
+                .get_unwrap(self.package_names.get_unwrap(package_name)),
+            self.strings
+                .get_unwrap(self.package_versions.get_unwrap(package_version)),
+            self.strings
+                .get_unwrap(self.crate_names.get_unwrap(crate_name)),
             format!("{:x}", crate_hash),
-            &self.strings[self.editions[edition]],
+            self.strings.get_unwrap(self.editions.get_unwrap(edition)),
         )
     }
 }
@@ -88,7 +92,7 @@ impl<'b> BuildResolver<'b> {
 pub struct DefPathResolver<'b> {
     def_paths: Ref<
         'b,
-        InterningTable<
+        DiskInterningTable<
             types::DefPath,
             (
                 types::Krate,
@@ -99,10 +103,10 @@ pub struct DefPathResolver<'b> {
             ),
         >,
     >,
-    crate_names: Ref<'b, InterningTable<types::Krate, types::InternedString>>,
-    relative_def_paths: Ref<'b, InterningTable<types::RelativeDefId, types::InternedString>>,
-    summary_keys: Ref<'b, InterningTable<types::SummaryId, types::InternedString>>,
-    strings: Ref<'b, InterningTable<types::InternedString, String>>,
+    crate_names: Ref<'b, DiskInterningTable<types::Krate, types::InternedString>>,
+    relative_def_paths: Ref<'b, DiskInterningTable<types::RelativeDefId, types::InternedString>>,
+    summary_keys: Ref<'b, DiskInterningTable<types::SummaryId, types::InternedString>>,
+    strings: Ref<'b, DiskInterningTable<types::InternedString, String>>,
 }
 
 impl<'b> DefPathResolver<'b> {
@@ -115,15 +119,19 @@ impl<'b> DefPathResolver<'b> {
             strings: loader.load_strings(),
         }
     }
-    pub fn resolve(&self, def_path: types::DefPath) -> (&str, String, &str, String, &str) {
+    pub fn resolve(&self, def_path: types::DefPath) -> (String, String, String, String, String) {
         let (crate_name, crate_hash, relative_def_path, def_path_hash, summary_key) =
-            self.def_paths[def_path];
+            self.def_paths.get_unwrap(def_path);
+        let crate_name = self.crate_names.get(crate_name).unwrap();
+        // TODO: Strings are not loaded/saved via our hooked functions, but rather serde.
         (
-            &self.strings[self.crate_names[crate_name]],
+            self.strings.get_unwrap(crate_name),
             format!("{:x}", crate_hash),
-            &self.strings[self.relative_def_paths[relative_def_path]],
+            self.strings
+                .get_unwrap(self.relative_def_paths.get_unwrap(relative_def_path)),
             format!("{:x}", def_path_hash),
-            &self.strings[self.summary_keys[summary_key]],
+            self.strings
+                .get_unwrap(self.summary_keys.get_unwrap(summary_key)),
         )
     }
 }
@@ -131,61 +139,48 @@ impl<'b> DefPathResolver<'b> {
 /// A helper struct for converting an interned `span` into human readable
 /// tuple of strings.
 pub struct SpanResolver<'b> {
-    spans: HashMap<
-        types::Span,
-        (
-            types::SpanExpansionKind,
-            types::InternedString,
-            types::SpanFileName,
-            u16,
-            u16,
-        ),
+    spans: Ref<
+        'b,
+        RelationMap<
+            types::Span,
+            (
+                types::Span,
+                types::SpanExpansionKind,
+                types::InternedString,
+                types::SpanFileName,
+                u16,
+                u16,
+            ),
+        >,
     >,
-    span_file_names: Ref<'b, InterningTable<types::SpanFileName, types::InternedString>>,
-    strings: Ref<'b, InterningTable<types::InternedString, String>>,
+    span_file_names: Ref<'b, DiskInterningTable<types::SpanFileName, types::InternedString>>,
+    strings: Ref<'b, DiskInterningTable<types::InternedString, String>>,
 }
 
 impl<'b> SpanResolver<'b> {
     pub fn new(loader: &'b Loader) -> Self {
-        let spans = loader
-            .load_spans()
-            .iter()
-            .map(
-                |&(
-                    span,
-                    _call_site_span,
-                    expansion_kind,
-                    expansion_kind_descr,
-                    file_name,
-                    line,
-                    col,
-                )| {
-                    (
-                        span,
-                        (expansion_kind, expansion_kind_descr, file_name, line, col),
-                    )
-                },
-            )
-            .collect();
         Self {
-            spans,
+            spans: loader.load_spans_relation_map(),
             span_file_names: loader.load_span_file_names(),
             strings: loader.load_strings(),
         }
     }
-    pub fn resolve(&self, span: types::Span) -> (types::Span, String, &str, &str, u16, u16) {
-        let (expansion_kind, expansion_kind_descr, file_name, line, col) = self.spans[&span];
+    pub fn resolve(&self, span: types::Span) -> (types::Span, String, String, String, u16, u16) {
+        let (_parent, expansion_kind, expansion_kind_descr, file_name, line, col) =
+            self.spans.get_unwrap(span);
         (
             span,
             format!("{:?}", expansion_kind),
-            &self.strings[expansion_kind_descr],
-            &self.strings[self.span_file_names[file_name]],
+            self.strings.get_unwrap(expansion_kind_descr),
+            self.strings
+                .get_unwrap(self.span_file_names.get_unwrap(file_name)),
             line,
             col,
         )
     }
     pub fn get_expansion_kind(&self, span: types::Span) -> types::SpanExpansionKind {
-        let (expansion_kind, _expansion_kind_descr, _file_name, _line, _col) = self.spans[&span];
+        let (_parent, expansion_kind, _expansion_kind_descr, _file_name, _line, _col) =
+            self.spans.get_unwrap(span);
         expansion_kind
     }
 }
@@ -193,15 +188,17 @@ impl<'b> SpanResolver<'b> {
 /// From relation `iter` filters the facts that belong only to `selected_builds`.
 pub fn filter_selected<F1, F2, I, O>(
     iter: impl Iterator<Item = I>,
-    selected_builds: &[(
-        types::Build,
-        types::Package,
-        types::PackageVersion,
-        types::Krate,
-        types::CrateHash,
-        types::Edition,
-    )],
-    def_paths: &InterningTable<
+    selected_builds: impl Iterator<
+        Item = (
+            types::Build,
+            types::Package,
+            types::PackageVersion,
+            types::Krate,
+            types::CrateHash,
+            types::Edition,
+        ),
+    >,
+    def_paths: &DiskInterningTable<
         types::DefPath,
         (
             types::Krate,
@@ -220,16 +217,13 @@ where
     I: Clone,
 {
     let selected_builds_set: HashMap<_, _> = selected_builds
-        .iter()
-        .map(
-            |&(build, _package, _version, krate, crate_hash, _edition)| {
-                ((krate, crate_hash), build)
-            },
-        )
+        .map(|(build, _package, _version, krate, crate_hash, _edition)| {
+            ((krate, crate_hash), build)
+        })
         .collect();
     iter.flat_map(|element| {
         let def_path = extract_def_path(element.clone());
-        let (krate, crate_hash, _, _, _) = def_paths[def_path];
+        let (krate, crate_hash, _, _, _) = def_paths.get_unwrap(def_path);
         selected_builds_set
             .get(&(krate, crate_hash))
             .map(|build| construct_result(*build, element))

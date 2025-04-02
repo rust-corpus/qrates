@@ -301,6 +301,7 @@ impl<'a> CrateCompiler<'a> {
                         .cargo()
                         .timeout(self.timeout)
                         .args(&["check", "--all", "--frozen"])
+                        .rw_cargo_home() // We need incremental compilation for some code paths it enables in rustc, and for that we need a read-write cargo home.
                         .env("RUST_BACKTRACE", "1");
                     if !self.use_original_rustc {
                         builder = builder

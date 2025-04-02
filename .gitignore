@@ -10,3 +10,6 @@ executor/src/query.rs
 queries/corpus_queries.dl
 *.swp
 *.bincode
+heaptracks-top250
+heaptracks-top500
+heaptracks-top2000

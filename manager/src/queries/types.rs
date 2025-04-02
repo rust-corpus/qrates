@@ -15,7 +15,8 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let strings = loader.load_strings();
     let type_defs = loader.load_type_defs();
     let type_kinds = loader.load_type_kinds();
-    let types: HashMap<_, _> = loader.load_types().iter().cloned().collect();
+    let types = loader.load_types_relation_map();
+    // let types: HashMap<_, _> = loader.load_iter_types().collect();
 
     info!(
         "Number of all type definitions (type_defs): {}",
@@ -23,10 +24,10 @@ pub fn query(loader: &Loader, report_path: &Path) {
     );
     let selected_type_defs_relation = super::utils::filter_selected(
         type_defs.iter(),
-        &selected_builds,
+        selected_builds.iter(),
         &def_paths,
-        |&(_item, _typ, def_path, _name, _visibility, _kind)| def_path,
-        |build, &(item, typ, def_path, name, visibility, kind)| {
+        |(_item, _typ, def_path, _name, _visibility, _kind)| def_path,
+        |build, (item, typ, def_path, name, visibility, kind)| {
             (
                 build,
                 item,
@@ -34,7 +35,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 def_path,
                 name,
                 visibility,
-                types[&typ],
+                types.get_unwrap(typ),
                 kind,
             )
         },
@@ -51,29 +52,31 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 item,
                 typ,
                 def_path_resolver.resolve(def_path),
-                &strings[name],
+                strings.get_unwrap(name),
                 visibility.to_string(),
-                &strings[type_kinds[type_kind]],
+                strings.get_unwrap(type_kinds.get_unwrap(type_kind)),
                 def_kind.to_string(),
             )
         },
     );
     write_csv!(report_path, selected_type_defs);
 
-    let adts: HashMap<_, _> = loader
-        .load_types_adt_def()
-        .iter()
-        .map(|&(typ, def_path, kind, c_repr, is_phantom)| {
-            (typ, (def_path, kind, c_repr, is_phantom))
-        })
-        .collect();
+    // let adts: HashMap<_, _> = loader
+    //     .load_types_adt_def()
+    //     .iter()
+    //     .map(|&(typ, def_path, kind, c_repr, is_phantom)| {
+    //         (typ, (def_path, kind, c_repr, is_phantom))
+    //     })
+    //     .collect();
+
+    let adts = loader.load_types_adt_def_relation_map();
 
     let selected_adts_relation: Vec<_> = selected_type_defs_relation
         .iter()
         .flat_map(
             |&(build, item, typ, def_path, name, visibility, type_kind, def_kind)| {
-                adts.get(&typ)
-                    .map(|&(resolved_def_path, kind, c_repr, is_phantom)| {
+                adts.get(typ)
+                    .map(|(resolved_def_path, kind, c_repr, is_phantom)| {
                         (
                             build,
                             item,
@@ -114,9 +117,9 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 typ,
                 def_path_resolver.resolve(def_path),
                 def_path_resolver.resolve(resolved_def_path),
-                &strings[name],
+                strings.get_unwrap(name),
                 visibility.to_string(),
-                &strings[type_kinds[type_kind]],
+                strings.get_unwrap(type_kinds.get_unwrap(type_kind)),
                 def_kind.to_string(),
                 kind.to_string(),
                 c_repr,
@@ -167,7 +170,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
     let selected_adt_field_types_relation: Vec<_> = types_adt_field
         .iter()
         .flat_map(
-            |&(
+            |(
                 _field,
                 adt,
                 adt_variant,
@@ -208,7 +211,7 @@ pub fn query(loader: &Loader, report_path: &Path) {
                             field_name,
                             field_visibility,
                             field_type,
-                            types[&field_type],
+                            types.get_unwrap(field_type),
                         )
                     },
                 )
@@ -249,18 +252,18 @@ pub fn query(loader: &Loader, report_path: &Path) {
                 def_path_resolver.resolve(resolved_adt_def_path),
                 def_path_resolver.resolve(field_def_path),
                 (
-                    &strings[name],
+                    strings.get_unwrap(name),
                     visibility.to_string(),
-                    &strings[type_kinds[type_kind]],
+                    strings.get_unwrap(type_kinds.get_unwrap(type_kind)),
                     def_kind.to_string(),
                     kind.to_string(),
                     c_repr,
                     is_phantom,
                 ),
-                &strings[field_name],
+                strings.get_unwrap(field_name),
                 field_visibility.to_string(),
                 field_type,
-                &strings[type_kinds[field_type_kind]],
+                strings.get_unwrap(type_kinds.get_unwrap(field_type_kind)),
             )
         },
     );

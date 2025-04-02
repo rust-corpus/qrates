@@ -5,7 +5,7 @@
 //! Module responsible for managing the database.
 
 use anyhow::Result;
-use corpus_database::tables;
+use corpus_database::{set_disk_map_temp_dir_root, tables};
 use log::{debug, error, info, trace};
 use log_derive::logfn;
 use std::collections::HashSet;
@@ -40,12 +40,19 @@ impl DatabaseManager {
             });
             (
                 loaded_crates,
-                tables::Tables::load_multifile(&database_root).unwrap(),
+                tables::DiskTables::load_multifile(&database_root).unwrap(),
             )
         } else {
             fs::create_dir_all(&database_root)
                 .expect("Failed to create the directory for the database");
-            (HashSet::new(), tables::Tables::default())
+            fs::create_dir_all(&database_root.join("relations"))
+                .expect("Failed to create the directory for the database relations");
+            fs::create_dir_all(&database_root.join("interning"))
+                .expect("Failed to create the directory for the database interning tables");
+            (
+                HashSet::new(),
+                tables::DiskTables::create_in(&database_root).unwrap(),
+            )
         };
         Self {
             loaded_crates_path,
@@ -56,6 +63,10 @@ impl DatabaseManager {
     }
     #[logfn(Trace)]
     pub fn update_database(&mut self, workspace_root: &Path) {
+        let tmp_dir = self.database_root.join("diskmap_tmp");
+        std::fs::create_dir_all(&tmp_dir).unwrap();
+        set_disk_map_temp_dir_root(tmp_dir);
+
         let crates = self.scan_crates(&workspace_root.join("rust-corpus"));
         let mut success_counter = 0;
         let mut fail_counter = 0;

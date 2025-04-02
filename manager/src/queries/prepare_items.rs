@@ -41,23 +41,39 @@ fn compute_selected_functions_and_mir_cfgs(loader: &Loader) {
     let def_paths = loader.load_def_paths();
 
     let selected_mir_cfgs = super::utils::filter_selected(
-        loader.load_mir_cfgs().iter(),
-        &selected_builds,
+        loader.load_iter_mir_cfgs(),
+        selected_builds.iter(),
         &def_paths,
-        |&(_item, body_def_path, _root_scope)| body_def_path,
-        |build, &(item, body_def_path, root_scope)| (build, item, body_def_path, root_scope),
+        |(_item, body_def_path, _root_scope)| body_def_path,
+        |build, (item, body_def_path, root_scope)| (build, item, body_def_path, root_scope),
     );
     info!("selected_mir_cfgs.len = {}", selected_mir_cfgs.len());
     loader.store_selected_mir_cfgs(selected_mir_cfgs);
-    let function_unsafe_use: HashMap<_, _> =
-        loader.load_function_unsafe_use().iter().cloned().collect();
+
+    // additionally compute selected thir bodies
+    let selected_thir_bodies: Vec<(
+        corpus_database::types::Build,
+        corpus_database::types::Item,
+        corpus_database::types::DefPath,
+        corpus_database::types::ThirBlock,
+    )> = super::utils::filter_selected(
+        loader.load_iter_thir_bodies(),
+        selected_builds.iter(),
+        &def_paths,
+        |(_item, body_def_path, _root_block)| body_def_path,
+        |build, (item, body_def_path, root_block)| (build, item, body_def_path, root_block),
+    );
+    info!("selected_thir_bodies.len = {}", selected_thir_bodies.len());
+    loader.store_selected_thir_bodies(selected_thir_bodies);
+
+    let function_unsafe_use: HashMap<_, _> = loader.load_iter_function_unsafe_use().collect();
 
     let selected_functions = super::utils::filter_selected(
-        loader.load_function_definitions().iter(),
-        &selected_builds,
+        loader.load_iter_function_definitions(),
+        selected_builds.iter(),
         &def_paths,
-        |&(_item, def_path, _module, _visibility, _unsafety, _abi, _return_ty)| def_path,
-        |build, &(item, def_path, module, visibility, unsafety, abi, return_ty)| {
+        |(_item, def_path, _module, _visibility, _unsafety, _abi, _return_ty)| def_path,
+        |build, (item, def_path, module, visibility, unsafety, abi, return_ty)| {
             let uses_unsafe = function_unsafe_use.get(&def_path).cloned().unwrap_or(false);
             (
                 build,

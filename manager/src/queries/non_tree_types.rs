@@ -19,20 +19,39 @@ fn report_non_tree_types(loader: &Loader, report_path: &Path) {
     let strings = loader.load_strings();
     let type_kinds = loader.load_type_kinds();
 
-    let non_tree_types;
-    datapond_query! {
-        load loader {
-            relations(types_adt_field, types_raw_ptr),
-        }
-        output non_tree_types(typ: Type)
-        non_tree_types(adt) :-
-            types_adt_field(.adt=adt, .typ=typ),
-            types_raw_ptr(.typ=typ).
-    }
+    // let non_tree_types;
+    // datapond_query! {
+    //     load loader {
+    //         relations(types_adt_field, types_raw_ptr),
+    //     }
+    //     output non_tree_types(typ: Type)
+    //     non_tree_types(adt) :-
+    //         types_adt_field(.adt=adt, .typ=typ),
+    //         types_raw_ptr(.typ=typ).
+    // }
 
-    let non_tree_types: HashSet<_> = non_tree_types.elements.iter().map(|&(typ,)| typ).collect();
+    // let non_tree_types: HashSet<_> = non_tree_types.elements.iter().map(|&(typ,)| typ).collect();
+
+    let raw_ptr_types: HashSet<_> = loader
+        .load_iter_types_raw_ptr()
+        .map(|(typ, _, _)| typ)
+        .collect();
+
+    let non_tree_types: HashSet<_> = loader
+        .load_iter_types_adt_field()
+        .filter_map(
+            |(_field, adt, _index, _def_path, _ident, _visibility, typ)| {
+                if raw_ptr_types.contains(&typ) {
+                    Some(adt)
+                } else {
+                    None
+                }
+            },
+        )
+        .collect();
+
     let non_tree_adts = selected_adts.iter().flat_map(
-        |&(
+        |(
             build,
             item,
             typ,
@@ -54,9 +73,9 @@ fn report_non_tree_types(loader: &Loader, report_path: &Path) {
                     typ,
                     def_path_resolver.resolve(def_path),
                     def_path_resolver.resolve(resolved_def_path),
-                    &strings[name],
+                    strings.get_unwrap(name),
                     visibility.to_string(),
-                    &strings[type_kinds[type_kind]],
+                    strings.get_unwrap(type_kinds.get_unwrap(type_kind)),
                     def_kind.to_string(),
                     kind.to_string(),
                     c_repr,

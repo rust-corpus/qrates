@@ -135,6 +135,32 @@ pub struct RelationKey {
     pub target: Option<syn::Ident>,
 }
 
+/// A key for a relations, indicating that a RelationMap should be generated.
+///
+/// Syntax: `relation <relation_name>(...) keyed by <key_column>;`
+#[derive(Hash)]
+pub struct RelationMapKey {
+    pub source: syn::Ident,
+    /// Index into the relation's parameters vec.
+    pub source_idx: usize,
+}
+
+impl RelationMapKey {
+    pub fn get_value_type(&self, params: &[RelationParameter]) -> syn::Type {
+        // construct a tuple with every type except self.source_idx
+        let mut punctuated = syn::punctuated::Punctuated::new();
+        for (i, param) in params.iter().enumerate() {
+            if i != self.source_idx {
+                punctuated.push(param.typ.clone());
+            }
+        }
+        syn::Type::Tuple(syn::TypeTuple {
+            paren_token: Default::default(),
+            elems: punctuated,
+        })
+    }
+}
+
 /// A Datalog relation.
 #[derive(Hash)]
 pub struct Relation {
@@ -144,6 +170,8 @@ pub struct Relation {
     /// merging databases. That is, any duplicate entries having the same `key.source`
     /// should be dropped and `key.target` should be remapped.
     pub key: Option<RelationKey>,
+    /// The key field to be used for a generated RelationMap.
+    pub relation_map_key: Option<RelationMapKey>,
 }
 
 impl Relation {

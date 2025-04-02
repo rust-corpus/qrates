@@ -10,5 +10,3 @@ members = [
 exclude = [
     "extractor-test",
 ]
-
-[profile.release]

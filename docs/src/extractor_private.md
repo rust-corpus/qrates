@@ -29,8 +29,8 @@ export LD_LIBRARY_PATH="$SYSROOT/lib"
 We also need to create a directory to store the extracted data and set the environment variable `CORPUS_RESULTS_DIR` to point to it:
 
 ```bash
-mkdir -p ../workspace/rust-corpus/
-export CORPUS_RESULTS_DIR="$(pwd)/../workspace/rust-corpus/"
+mkdir -p ../workspace/rust-corpus/crate_name-0.0.0/
+export CORPUS_RESULTS_DIR="$(pwd)/../workspace/rust-corpus/crate_name-0.0.0/"
 ```
 
 ## Compiling a Project
@@ -61,4 +61,10 @@ build_script_build_641a6913d88f2b1b.bincode  ppv_lite86_89695c0a0a962fc8.bincode
 build_script_build_679051cf1df6d8f8.bincode  rand_0330e33c1ee64866.bincode
 cfg_if_f903336a35b88a26.bincode              rand_chacha_23c71b977e463cb8.bincode
 getrandom_9a46159fdf341523.bincode           rand_core_272caddfb637ce01.bincode
+```
+
+If you want to use the query functionality, `CrateList.json` needs to contain the crate, and there needs to be a `success` file in the extracted directory:
+
+```bash
+touch $CORPUS_RESULTS_DIR/success
 ```

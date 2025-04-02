@@ -69,6 +69,39 @@ fn generate_id_decl(name: &syn::Ident, typ: &syn::Type) -> TokenStream {
                 }
             }
 
+            impl redb::Value for #name {
+                type SelfType<'a> = Self;
+                type AsBytes<'a> = Vec<u8>;
+
+                fn fixed_width() -> Option<usize> {
+                    Some(std::mem::size_of::<#typ>())
+                }
+
+                fn from_bytes<'a>(data: &'a [u8]) -> Self::SelfType<'a>
+                where Self: 'a
+                {
+                    let value = <#typ>::qrates_from_bytes(data);
+                    Self(value)
+                }
+
+                fn as_bytes<'a, 'b: 'a>(value: &'a Self::SelfType<'b>) -> Self::AsBytes<'a> {
+                    value.0.qrates_as_bytes()
+                }
+
+                fn type_name() -> redb::TypeName {
+                    redb::TypeName::new(stringify!(#name))
+                }
+
+            }
+
+            impl redb::Key for #name {
+                fn compare(data1: &[u8], data2: &[u8]) -> std::cmp::Ordering {
+                    let value1 = <#typ>::qrates_from_bytes(data1);
+                    let value2 = <#typ>::qrates_from_bytes(data2);
+                    value1.cmp(&value2)
+                }
+            }
+
             impl #name {
                 /// Shift the id by given `offset`.
                 pub fn shift(&self, offset: #typ) -> Self {
@@ -106,11 +139,59 @@ fn generate_enum_types(schema: &ast::DatabaseSchema) -> TokenStream {
                 }),
             ));
         }
+        let item_names = new_item.variants.iter().map(|variant| &variant.ident);
+        let item_discriminants = new_item
+            .variants
+            .iter()
+            .map(|variant| variant.discriminant.as_ref().unwrap().1.clone());
         let enum_tokens = quote! {
 
             #[repr(u8)]
             #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy, Deserialize, Serialize, PartialOrd, Ord)]
             pub #new_item
+
+            impl redb::Value for #enum_name {
+                type SelfType<'a> = Self;
+                type AsBytes<'a> = Vec<u8>;
+
+                fn fixed_width() -> Option<usize> {
+                    Some(1)
+                }
+
+                fn from_bytes<'a>(data: &'a [u8]) -> Self::SelfType<'a>
+                where Self: 'a
+                {
+                    let value = data[0];
+                    Self::from_u8(value).unwrap()
+                }
+
+                fn as_bytes<'a, 'b: 'a>(value: &'a Self::SelfType<'b>) -> Self::AsBytes<'a> {
+                    vec![*value as u8]
+                }
+
+                fn type_name() -> redb::TypeName {
+                    redb::TypeName::new(stringify!(#enum_name))
+                }
+            }
+
+            impl redb::Key for #enum_name {
+                fn compare(data1: &[u8], data2: &[u8]) -> std::cmp::Ordering {
+                    let value1 = data1[0];
+                    let value2 = data2[0];
+                    value1.cmp(&value2)
+                }
+            }
+
+            impl #enum_name {
+                pub fn from_u8(value: u8) -> Option<Self> {
+                    match value {
+                        #(
+                            #item_discriminants => Some(#enum_name::#item_names),
+                        )*
+                        _ => None,
+                    }
+                }
+            }
 
             impl Default for #enum_name {
                 fn default() -> Self {

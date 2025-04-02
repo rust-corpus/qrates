@@ -1,3 +1,5 @@
+extern crate rustc_type_ir;
+
 use itertools::Itertools;
 use rustc_hir::definitions::DefPathData;
 use rustc_hir::{def::DefKind, def_id::DefId};
@@ -99,10 +101,10 @@ fn build_pretty_description<'t>(
             let generics = tcx.generics_of(def_id);
 
             let resolved_generics = generics
-                .own_substs_no_defaults(tcx, substs)
+                .own_args_no_defaults(tcx, substs)
                 .iter()
                 .flat_map(|arg| {
-                    use ty::GenericArgKind::*;
+                    use rustc_type_ir::GenericArgKind::*;
                     let subst_ty = match arg.unpack() {
                         Type(ty) => ty,
                         Lifetime(_) | Const(_) => return None,

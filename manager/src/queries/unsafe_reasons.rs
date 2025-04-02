@@ -17,7 +17,12 @@ pub fn query(loader: &Loader, report_path: &Path) {
         .map(|(def_path, _index, reason)| (def_path, reason))
         .collect::<HashSet<_>>()
         .into_iter()
-        .map(|(def_path, reason)| (def_path_resolver.resolve(*def_path), &strings[*reason]))
+        .map(|(def_path, reason)| {
+            (
+                def_path_resolver.resolve(def_path),
+                strings.get_unwrap(reason),
+            )
+        })
         .collect();
     write_csv!(report_path, function_unsafe_reasons);
 }
